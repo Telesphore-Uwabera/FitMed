@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+/* ─── Font variables ─────────────────────────────────────────────── */
+@theme {
+  --font-family-sans: var(--font-primary), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-family-body: var(--font-body), "DM Sans", system-ui, sans-serif;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: #ffffff;
+  color: #0f172a;
+  overflow-x: hidden;
+  line-height: 1.65;
+  font-family: var(--font-body, "DM Sans"), system-ui, sans-serif;
+  width: 100%;
+  max-width: 100vw;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary, "Plus Jakarta Sans"), system-ui, sans-serif;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #0ea5e9, #14b8a6);
+  border-radius: 3px;
+}
+
+/* ─── Section backgrounds ────────────────────────────────────────── */
+.section-white  { background: #ffffff; }
+.section-gray   { background: #f8fafc; }
+.section-light  { background: #f0f9ff; }
+.section-slate  { background: #f1f5f9; }
+.section-dark   { background: #0f172a; }
+.section-navy   { background: #0c1a3a; }
+
+/* ─── Glass (used on dark hero) ──────────────────────────────────── */
+.glass-dark {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.glass-light {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(14,165,233,0.15);
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────── */
+.card-white {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+}
+.card-white:hover {
+  border-color: #bae6fd;
+  box-shadow: 0 4px 24px rgba(14,165,233,.12);
+}
+.card-tinted {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+/* ─── Gradient text ──────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 60%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gradient-text-dark {
+  background: linear-gradient(135deg, #0369a1, #0f766e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────── */
+.btn-primary {
+  background: linear-gradient(135deg, #0ea5e9, #14b8a6);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  color: #fff;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #38bdf8, #2dd4bf);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.btn-primary:hover::before { opacity: 1; }
+.btn-primary > * { position: relative; z-index: 1; }
+
+.btn-outline-primary {
+  background: transparent;
+  border: 1.5px solid #0ea5e9;
+  color: #0ea5e9;
+  transition: all 0.25s ease;
+}
+.btn-outline-primary:hover {
+  background: #0ea5e9;
+  color: #fff;
+}
+
+.btn-white {
+  background: #fff;
+  color: #0ea5e9;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 12px rgba(0,0,0,.1);
+}
+.btn-white:hover {
+  background: #f0f9ff;
+  box-shadow: 0 4px 20px rgba(0,0,0,.15);
+}
+
+/* ─── Badge ──────────────────────────────────────────────────────── */
+.badge-primary   { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.badge-teal      { background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4; }
+.badge-violet    { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+.badge-fit       { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.badge-review    { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
+.badge-notfit    { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ─── Dividers — removed, sections flow without borders ─────────── */
+.section-divider-light { display: none; }
+.section-divider-dark  { display: none; }
+
+/* ─── Glow (hero only) ───────────────────────────────────────────── */
+.glow-white { box-shadow: 0 0 40px rgba(255,255,255,.25); }
+
+/* ─── Pulse glow ─────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(14,165,233,.3); }
+  50%       { box-shadow: 0 0 45px rgba(14,165,233,.6); }
+}
+.pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* ─── Animations ─────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+.float-anim { animation: float 5s ease-in-out infinite; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Hero slider ────────────────────────────────────────────────── */
+@keyframes heroFadeZoom {
+  0%   { opacity: 0; transform: scale(1.08); }
+  8%   { opacity: 1; transform: scale(1.04); }
+  30%  { opacity: 1; transform: scale(1.0); }
+  38%  { opacity: 0; transform: scale(0.97); }
+  100% { opacity: 0; transform: scale(0.97); }
+}
+
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  animation: heroFadeZoom 20s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+.hero-slide:nth-child(1) { animation-delay:  0s; }
+.hero-slide:nth-child(2) { animation-delay:  5s; }
+.hero-slide:nth-child(3) { animation-delay: 10s; }
+.hero-slide:nth-child(4) { animation-delay: 15s; }
+
+/* ─── Focus ──────────────────────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+}
+
+/* ─── Layout safety ──────────────────────────────────────────────── */
+section, footer, header, main {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ─── Full-width content containers ─────────────────────────────── */
+/*
+ * .container-full  — full viewport width, generous horizontal padding
+ * .container-wide  — very wide max, for large screens
+ * All sections use these instead of the narrow max-w-7xl (80rem / 1280px)
+ * so content fills the page on large monitors.
+ */
+.container-full {
+  width: 100%;
+  padding-left: clamp(1.25rem, 4vw, 5rem);
+  padding-right: clamp(1.25rem, 4vw, 5rem);
+}
+
+.container-wide {
+  width: 100%;
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1.25rem, 4vw, 5rem);
+  padding-right: clamp(1.25rem, 4vw, 5rem);
+}
+
+/* ─── Stat number counter ────────────────────────────────────────── */
+.stat-number {
+  font-family: var(--font-primary, "Plus Jakarta Sans"), sans-serif;
+  font-weight: 800;
+  line-height: 1;
+}

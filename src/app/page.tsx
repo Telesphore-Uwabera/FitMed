@@ -1,0 +1,58 @@
+import Navbar from "@/components/Navbar";
+import Hero from "@/components/Hero";
+import HowItWorks from "@/components/HowItWorks";
+import CertificateCategories from "@/components/CertificateCategories";
+import EmployerPortal from "@/components/EmployerPortal";
+import DoctorDashboard from "@/components/DoctorDashboard";
+import TechFeatures from "@/components/TechFeatures";
+import CertificatePreview from "@/components/CertificatePreview";
+import Pricing from "@/components/Pricing";
+import Testimonials from "@/components/Testimonials";
+import FAQ from "@/components/FAQ";
+import CTA from "@/components/CTA";
+import Footer from "@/components/Footer";
+
+/*
+ * Section order matches the navbar links exactly:
+ *   1. How It Works   → #how-it-works
+ *   2. Certificates   → #certificates      (CertificateCategories)
+ *   3. For Employers  → #employers         (EmployerPortal)
+ *   4. Technology     → #technology        (DoctorDashboard + TechFeatures + CertificatePreview)
+ *   5. Pricing        → #pricing
+ *
+ * DoctorDashboard, TechFeatures, CertificatePreview all sit under
+ * the Technology anchor so scrolling to #technology leads naturally
+ * through all three.
+ */
+export default function Home() {
+  return (
+    <main className="min-h-screen w-full overflow-x-hidden">
+      <Navbar />
+      <Hero />
+
+      {/* How It Works */}
+      <HowItWorks />
+
+      {/* Certificates */}
+      <CertificateCategories />
+      <CertificatePreview />
+
+      {/* For Employers */}
+      <EmployerPortal />
+
+      {/* Technology */}
+      <DoctorDashboard />
+      <TechFeatures />
+
+      {/* Pricing */}
+      <Pricing />
+
+      {/* Social proof & conversion */}
+      <Testimonials />
+      <FAQ />
+      <CTA />
+
+      <Footer />
+    </main>
+  );
+}

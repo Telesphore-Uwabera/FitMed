@@ -1,0 +1,162 @@
+"use client";
+
+import { Mail, Phone, MapPin, Globe, Share2, MessageCircle } from "lucide-react";
+import Image from "next/image";
+
+const footerLinks = {
+  Platform: [
+    { label: "How It Works",           href: "#how-it-works",              ext: false },
+    { label: "Certificate Categories",  href: "#certificates",              ext: false },
+    { label: "For Employers",           href: "#employers",                 ext: false },
+    { label: "Technology",              href: "#technology",                ext: false },
+    { label: "Pricing",                 href: "#pricing",                   ext: false },
+  ],
+  Company: [
+    { label: "About FitMed",  href: "https://fitmed.rw/about",   ext: true },
+    { label: "Our Doctors",   href: "https://fitmed.rw/doctors", ext: true },
+    { label: "Careers",       href: "https://fitmed.rw/careers", ext: true },
+    { label: "Press",         href: "https://fitmed.rw/press",   ext: true },
+    { label: "MediConnect",   href: "https://mediconnect.rw",    ext: true },
+  ],
+  Legal: [
+    { label: "Privacy Policy",   href: "/privacy",  ext: false },
+    { label: "Terms of Service", href: "/terms",    ext: false },
+    { label: "Cookie Policy",    href: "/cookies",  ext: false },
+    { label: "Compliance",       href: "/compliance",ext: false },
+    { label: "HIPAA Notice",     href: "/hipaa",    ext: false },
+  ],
+  Support: [
+    { label: "Help Centre",      href: "https://help.fitmed.rw",     ext: true  },
+    { label: "Contact Us",       href: "mailto:hello@fitmed.rw",     ext: false },
+    { label: "Doctor Support",   href: "mailto:doctors@fitmed.rw",   ext: false },
+    { label: "Employer Support", href: "mailto:employers@fitmed.rw", ext: false },
+    { label: "Report an Issue",  href: "mailto:support@fitmed.rw",   ext: false },
+  ],
+};
+
+const socials = [
+  { icon: MessageCircle, label: "X / Twitter", href: "https://twitter.com/fitmedrw",              ariaLabel: "Follow FitMed on X (Twitter)" },
+  { icon: Share2,        label: "LinkedIn",     href: "https://linkedin.com/company/fitmedrw",    ariaLabel: "Connect with FitMed on LinkedIn" },
+  { icon: Globe,         label: "Website",      href: "https://fitmed.rw",                        ariaLabel: "Visit the FitMed website" },
+];
+
+export default function Footer() {
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className="bg-slate-900">
+      <div className="container-wide pt-20 pb-10">
+
+        {/* ── Main grid ─────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10 mb-16">
+
+          {/* Brand col — spans 2 on lg */}
+          <div className="col-span-2">
+
+            {/* ── Logo: landscape, no blank space ── */}
+            <a href="#" aria-label="FitMed home" className="inline-block mb-7 group">
+              <Image
+                src="/logo.webp"
+                alt="FitMed"
+                width={939}
+                height={330}
+                className="w-56 h-auto object-contain group-hover:opacity-90 transition-opacity"
+              />
+            </a>
+
+            <p className="text-sm text-slate-400 leading-relaxed mb-7 max-w-xs">
+              Secure digital medical fitness assessments, conducted by licensed doctors and verified online.
+            </p>
+
+            <div className="space-y-3">
+              <a
+                href="mailto:hello@fitmed.rw"
+                className="flex items-center gap-2.5 text-xs text-slate-500 hover:text-sky-400 transition-colors group"
+              >
+                <Mail className="w-3.5 h-3.5 text-sky-500/60 group-hover:text-sky-400 flex-shrink-0 transition-colors" />
+                <span>hello@fitmed.rw</span>
+              </a>
+              <a
+                href="tel:+250700000000"
+                className="flex items-center gap-2.5 text-xs text-slate-500 hover:text-sky-400 transition-colors group"
+              >
+                <Phone className="w-3.5 h-3.5 text-sky-500/60 group-hover:text-sky-400 flex-shrink-0 transition-colors" />
+                <span>+250 700 000 000</span>
+              </a>
+              <div className="flex items-center gap-2.5 text-xs text-slate-500">
+                <MapPin className="w-3.5 h-3.5 text-sky-500/60 flex-shrink-0" />
+                <span>Kigali, Rwanda</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Link columns */}
+          {Object.entries(footerLinks).map(([cat, links]) => (
+            <div key={cat}>
+              <h4
+                className="text-xs font-extrabold text-slate-200 uppercase tracking-[0.18em] mb-5"
+                style={{ fontFamily: "var(--font-primary)" }}
+              >
+                {cat}
+              </h4>
+              <ul className="space-y-3">
+                {links.map((l) => (
+                  <li key={l.label}>
+                    <a
+                      href={l.href}
+                      target={l.ext ? "_blank" : undefined}
+                      rel={l.ext ? "noopener noreferrer" : undefined}
+                      className="text-sm text-slate-500 hover:text-sky-400 transition-colors duration-200"
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Divider ─────────────────────────────────────────── */}
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent mb-8" />
+
+        {/* ── Bottom bar ──────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+
+          <p className="text-xs text-slate-600 order-2 md:order-1">
+            © {year} FitMed. All rights reserved. A{" "}
+            <a
+              href="https://mediconnect.rw"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-500/60 hover:text-sky-400 transition-colors"
+            >
+              MediConnect
+            </a>{" "}
+            product.
+          </p>
+
+          {/* Social icons */}
+          <div className="flex items-center gap-2.5 order-1 md:order-2">
+            {socials.map(({ icon: Icon, label, href, ariaLabel }) => (
+              <a
+                key={label}
+                href={href}
+                aria-label={ariaLabel}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 hover:text-sky-400 hover:border-sky-500/40 hover:bg-slate-800/80 transition-all"
+              >
+                <Icon className="w-4 h-4" />
+              </a>
+            ))}
+          </div>
+
+          <p className="text-xs text-slate-600 order-3">
+            Built with clinical safety and privacy in mind.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

@@ -1,0 +1,166 @@
+"use client";
+
+import { motion, useInView, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
+import { ChevronDown, HelpCircle } from "lucide-react";
+
+const faqs = [
+  {
+    q: "Is a digital medical fitness certificate legally valid?",
+    a: "FitMed certificates are issued by licensed doctors and digitally signed. Compliance with Rwandan laws — including telemedicine, electronic signature, and professional licensing requirements — is reviewed before launching each certificate category. High-risk categories requiring physical examination are referred for in-person assessment.",
+  },
+  {
+    q: "Can AI issue the certificate on its own?",
+    a: "No. AI is strictly a decision-support tool. It screens questionnaires, flags red flags, summarises patient history, and assists with documentation — but the final fitness decision is always made by a licensed doctor after a live video consultation.",
+  },
+  {
+    q: "What if I need a certificate for a high-risk occupation like aviation or heavy machinery?",
+    a: "Some certificate categories require an in-person physical examination. If your purpose falls into that category, FitMed will inform you and refer you to an appropriate in-person facility. The platform clearly communicates which categories are telemedicine-eligible.",
+  },
+  {
+    q: "How does the employer verify my certificate without seeing my medical history?",
+    a: "Employers access a public verification page linked to your QR code. This shows only certificate validity status, issue and expiry dates, purpose, and certificate number. Your full medical history and clinical notes are never shared with employers.",
+  },
+  {
+    q: "How long does the process take?",
+    a: "For standard employment and general fitness certificates, the process typically takes 1–4 hours from account creation to issuance, depending on doctor availability. Priority appointments are available for Professional plan users.",
+  },
+  {
+    q: "What measurements or devices do I need?",
+    a: "You will be asked to provide basic measurements — height, weight, blood pressure, and heart rate. You can enter these manually or connect a wearable device (Fitbit, Apple Health, Garmin, etc.) or Bluetooth medical device.",
+  },
+  {
+    q: "What if the doctor determines I need further assessment?",
+    a: "The doctor may issue a 'Further Assessment Required' decision if physical examination, specialist review, or additional investigation is needed. This reflects real clinical uncertainty and ensures safe escalation. You will receive clear guidance on next steps.",
+  },
+  {
+    q: "How is my health data protected?",
+    a: "FitMed uses encryption in transit and at rest, role-based access control, and audit logging. We comply with applicable Rwandan health and data-protection requirements. Your data is used solely for your medical assessment and is never sold.",
+  },
+];
+
+/* Single accordion item */
+function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
+      className="bg-white rounded-2xl border border-slate-200 hover:border-sky-200 transition-all duration-300 overflow-hidden shadow-sm h-fit"
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-start justify-between p-5 md:p-6 text-left gap-4"
+        aria-expanded={open}
+      >
+        <span
+          className="text-sm md:text-base font-semibold text-slate-800 leading-snug flex-1"
+          style={{ fontFamily: "var(--font-primary)" }}
+        >
+          {faq.q}
+        </span>
+        <motion.div
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.3 }}
+          className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors mt-0.5 ${
+            open ? "bg-sky-100 text-sky-600" : "bg-slate-100 text-slate-400"
+          }`}
+        >
+          <ChevronDown className="w-4 h-4" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <div className="px-5 md:px-6 pb-5 md:pb-6">
+              <div className="w-full h-px bg-slate-100 mb-4" />
+              <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export default function FAQ() {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
+  /* Split into two columns for large screens */
+  const col1 = faqs.filter((_, i) => i % 2 === 0);
+  const col2 = faqs.filter((_, i) => i % 2 === 1);
+
+  return (
+    <section className="relative py-28 section-white overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6">
+
+        {/* Header */}
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7 }}
+          className="text-center mb-16"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full badge-primary text-sm font-bold mb-6">
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>Frequently Asked Questions</span>
+          </div>
+          <h2
+            className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
+            style={{ fontFamily: "var(--font-primary)" }}
+          >
+            Got <span className="gradient-text">Questions?</span>
+          </h2>
+          <p className="text-slate-500 text-lg max-w-xl mx-auto leading-relaxed">
+            Everything you need to know about FitMed.{" "}
+            <a
+              href="mailto:hello@fitmed.rw"
+              className="text-sky-600 hover:text-sky-700 font-semibold underline underline-offset-4"
+            >
+              Contact us
+            </a>{" "}
+            if you can&apos;t find the answer.
+          </p>
+        </motion.div>
+
+        {/*
+          Layout:
+          - Mobile / tablet  → single column (space-y-3)
+          - Large screens    → two equal columns side by side
+        */}
+        <div className="block lg:hidden space-y-3">
+          {faqs.map((faq, i) => (
+            <FAQItem key={faq.q} faq={faq} index={i} />
+          ))}
+        </div>
+
+        {/* Two-column layout on lg+ */}
+        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
+          {/* Column 1 — questions 1, 3, 5, 7 */}
+          <div className="space-y-4">
+            {col1.map((faq, i) => (
+              <FAQItem key={faq.q} faq={faq} index={i * 2} />
+            ))}
+          </div>
+          {/* Column 2 — questions 2, 4, 6, 8 */}
+          <div className="space-y-4">
+            {col2.map((faq, i) => (
+              <FAQItem key={faq.q} faq={faq} index={i * 2 + 1} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
