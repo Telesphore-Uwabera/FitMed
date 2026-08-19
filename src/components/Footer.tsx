@@ -53,14 +53,14 @@ export default function Footer() {
           {/* Brand col — spans 2 on lg */}
           <div className="col-span-2">
 
-            {/* ── Logo: logo-4.webp (transparent bg) on dark footer ── */}
+            {/* ── Logo: logo-4.webp has transparent background, shows cleanly on dark footer ── */}
             <a href="#" aria-label="FitMed home" className="inline-block mb-7 group">
               <Image
                 src="/logo-4.webp"
                 alt="FitMed"
-                width={761}
-                height={463}
-                className="w-52 h-auto object-contain group-hover:opacity-80 transition-opacity"
+                width={641}
+                height={390}
+                className="w-56 h-auto object-contain group-hover:opacity-80 transition-opacity"
               />
             </a>
 

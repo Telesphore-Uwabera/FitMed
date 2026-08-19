@@ -23,12 +23,12 @@ export default function PageLayout({ title, subtitle, lastUpdated, children }: P
             Back to FitMed
           </Link>
           <div className="flex items-center gap-5 mb-5">
-            <div className="relative flex-shrink-0" style={{ width: 160, height: 97 }}>
+            <div className="relative flex-shrink-0" style={{ width: 160, height: 56 }}>
               <Image
-                src="/logo-4.webp"
+                src="/logo.webp"
                 alt="FitMed"
                 fill
-                className="object-contain"
+                className="object-contain brightness-0 invert"
               />
             </div>
           </div>
