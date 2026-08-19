@@ -15,20 +15,22 @@ const navLinks = [
 ];
 
 /*
- * Navbar heights (px):
- *  At top of page  → 68px
- *  After scrolling → 50px
+ * Navbar heights (px)
+ *  At top / hero  → 80px
+ *  After scrolling → 58px
  */
-const NAV_H_TOP      = 68;
-const NAV_H_SCROLLED = 50;
+const NAV_H_TOP      = 80;
+const NAV_H_SCROLLED = 58;
 
 /*
- * Breakpoint strategy:
- *  < 1024px (below lg) → show hamburger + MENU label
- *  ≥ 1024px (lg+)      → show full desktop nav
+ * Logo strategy
+ *  On hero (dark bg)  → logo-4.webp (full colour, bg removed)
+ *  After scroll (white bg) → logo-3.webp (full colour, bg removed)
  *
- * This prevents the nav links wrapping on 768–1023px tablets.
+ * Both files have transparent backgrounds so they render cleanly
+ * on any background colour.
  */
+
 export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -46,6 +48,16 @@ export default function Navbar() {
   }, []);
 
   const navH = scrolled ? NAV_H_SCROLLED : NAV_H_TOP;
+
+  /* Active logo src:
+   *   hero / top-of-page → logo-4 (coloured, transparent bg)
+   *   scrolled past hero  → logo-3 (coloured, transparent bg)
+   */
+  const logoSrc   = onHero ? "/logo-4.webp" : "/logo-3.webp";
+  /* logo-4 is 761×463, logo-3 is 773×464 — both ~1.65:1 */
+  const logoW     = scrolled ? 110 : 160;   /* rendered width px */
+  const logoNatW  = 773;
+  const logoNatH  = 464;
 
   return (
     <>
@@ -69,35 +81,40 @@ export default function Navbar() {
       >
         <div className="container-wide h-full flex items-center justify-between gap-4">
 
-          {/* ── Logo ─────────────────────────────────────────── */}
+          {/* ── Logo ─────────────────────────────────────────────
+              Switches between logo-4 (hero) and logo-3 (scrolled).
+              Width animates with framer-motion for smooth shrink.
+          ───────────────────────────────────────────────────── */}
           <a href="#" aria-label="FitMed home" className="flex-shrink-0 block">
             <motion.div
-              animate={{ width: scrolled ? 90 : 130 }}
+              animate={{ width: logoW }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               className="overflow-hidden"
-              /*
-               * On lg screens the logo is 90/130px.
-               * On xl+ it can be slightly bigger: handled by
-               * the xl: overrides on nav/cta, not the logo itself.
-               */
             >
-              <Image
-                src="/logo.webp"
-                alt="FitMed"
-                width={939}
-                height={330}
-                priority
-                className="w-full h-auto object-contain"
-              />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={logoSrc}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <Image
+                    src={logoSrc}
+                    alt="FitMed"
+                    width={logoNatW}
+                    height={logoNatH}
+                    priority
+                    className="w-full h-auto object-contain"
+                  />
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           </a>
 
-          {/* ── Desktop nav — visible from lg (1024px) up ─────
-              flex-nowrap + overflow-hidden ensures links NEVER
-              wrap to a second row regardless of screen width.
-          ─────────────────────────────────────────────────── */}
+          {/* ── Desktop nav ── */}
           <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-hidden">
             {navLinks.map((link) => (
               <a
@@ -115,7 +132,7 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* ── CTA — desktop only (lg+) ──────────────────────── */}
+          {/* ── CTA ── */}
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             <a
               href="#"
@@ -139,9 +156,7 @@ export default function Navbar() {
             </motion.a>
           </div>
 
-          {/* ── Hamburger — visible below lg (< 1024px) ─────────
-              Shows icon + "MENU" / "CLOSE" label.
-          ─────────────────────────────────────────────────── */}
+          {/* ── Hamburger ── */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={cn(
@@ -154,23 +169,15 @@ export default function Navbar() {
           >
             <AnimatePresence mode="wait">
               {mobileOpen ? (
-                <motion.div
-                  key="x"
-                  initial={{ rotate: -90, opacity: 0 }}
-                  animate={{ rotate: 0,   opacity: 1 }}
-                  exit={{   rotate: 90,   opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                >
+                <motion.div key="x"
+                  initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
                   <X className="w-5 h-5" />
                 </motion.div>
               ) : (
-                <motion.div
-                  key="m"
-                  initial={{ rotate: 90,  opacity: 0 }}
-                  animate={{ rotate: 0,   opacity: 1 }}
-                  exit={{   rotate: -90,  opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                >
+                <motion.div key="m"
+                  initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
                   <Menu className="w-5 h-5" />
                 </motion.div>
               )}
@@ -180,52 +187,38 @@ export default function Navbar() {
         </div>
       </motion.header>
 
-      {/* ── Mobile / tablet drawer — slides in from right ──── */}
+      {/* ── Mobile drawer ── */}
       <AnimatePresence>
         {mobileOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
               onClick={() => setMobileOpen(false)}
             />
-
-            {/* Drawer */}
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
               className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white shadow-2xl lg:hidden flex flex-col"
             >
-              {/* Drawer header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                {/* Mobile drawer always shows logo-4 */}
                 <Image
-                  src="/logo.webp"
+                  src="/logo-4.webp"
                   alt="FitMed"
-                  width={939}
-                  height={330}
-                  className="w-32 h-auto object-contain"
+                  width={761}
+                  height={463}
+                  className="w-36 h-auto object-contain"
                 />
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-                >
+                <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
                   <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
-
-              {/* Nav links */}
               <div className="flex flex-col p-4 gap-1 flex-1 overflow-y-auto">
                 {navLinks.map((link, i) => (
                   <motion.a
-                    key={link.href}
-                    href={link.href}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    key={link.href} href={link.href}
+                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
                     onClick={() => setMobileOpen(false)}
                     className="px-4 py-3.5 text-slate-700 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all text-sm font-semibold"
@@ -234,22 +227,9 @@ export default function Navbar() {
                   </motion.a>
                 ))}
               </div>
-
-              {/* Bottom actions */}
               <div className="p-4 border-t border-slate-100 flex flex-col gap-3">
-                <a
-                  href="#"
-                  className="py-3 text-center text-slate-600 rounded-xl border border-slate-200 hover:border-slate-300 text-sm font-semibold transition-all"
-                >
-                  Sign In
-                </a>
-                <a
-                  href="#request"
-                  onClick={() => setMobileOpen(false)}
-                  className="py-3 text-center rounded-xl font-bold text-white btn-primary text-sm"
-                >
-                  Request Certificate
-                </a>
+                <a href="#" className="py-3 text-center text-slate-600 rounded-xl border border-slate-200 hover:border-slate-300 text-sm font-semibold transition-all">Sign In</a>
+                <a href="#request" onClick={() => setMobileOpen(false)} className="py-3 text-center rounded-xl font-bold text-white btn-primary text-sm">Request Certificate</a>
               </div>
             </motion.div>
           </>

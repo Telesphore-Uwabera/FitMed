@@ -5,32 +5,32 @@ import Image from "next/image";
 
 const footerLinks = {
   Platform: [
-    { label: "How It Works",           href: "#how-it-works",              ext: false },
-    { label: "Certificate Categories",  href: "#certificates",              ext: false },
-    { label: "For Employers",           href: "#employers",                 ext: false },
-    { label: "Technology",              href: "#technology",                ext: false },
-    { label: "Pricing",                 href: "#pricing",                   ext: false },
+    { label: "How It Works",           href: "#how-it-works",   ext: false },
+    { label: "Certificate Categories",  href: "#certificates",   ext: false },
+    { label: "For Employers",           href: "#employers",      ext: false },
+    { label: "Technology",              href: "#technology",     ext: false },
+    { label: "Pricing",                 href: "#pricing",        ext: false },
   ],
   Company: [
-    { label: "About FitMed",  href: "https://fitmed.rw/about",   ext: true },
-    { label: "Our Doctors",   href: "https://fitmed.rw/doctors", ext: true },
-    { label: "Careers",       href: "https://fitmed.rw/careers", ext: true },
-    { label: "Press",         href: "https://fitmed.rw/press",   ext: true },
-    { label: "MediConnect",   href: "https://mediconnect.rw",    ext: true },
+    { label: "About FitMed",  href: "/about",    ext: false },
+    { label: "Our Doctors",   href: "/doctors",  ext: false },
+    { label: "Careers",       href: "/careers",  ext: false },
+    { label: "Press",         href: "/press",    ext: false },
+    { label: "MediConnect",   href: "https://mediconnect.rw", ext: true },
   ],
   Legal: [
-    { label: "Privacy Policy",   href: "/privacy",  ext: false },
-    { label: "Terms of Service", href: "/terms",    ext: false },
-    { label: "Cookie Policy",    href: "/cookies",  ext: false },
-    { label: "Compliance",       href: "/compliance",ext: false },
-    { label: "HIPAA Notice",     href: "/hipaa",    ext: false },
+    { label: "Privacy Policy",   href: "/privacy",    ext: false },
+    { label: "Terms of Service", href: "/terms",      ext: false },
+    { label: "Cookie Policy",    href: "/cookies",    ext: false },
+    { label: "Compliance",       href: "/compliance", ext: false },
+    { label: "HIPAA Notice",     href: "/hipaa",      ext: false },
   ],
   Support: [
-    { label: "Help Centre",      href: "https://help.fitmed.rw",     ext: true  },
-    { label: "Contact Us",       href: "mailto:hello@fitmed.rw",     ext: false },
-    { label: "Doctor Support",   href: "mailto:doctors@fitmed.rw",   ext: false },
-    { label: "Employer Support", href: "mailto:employers@fitmed.rw", ext: false },
-    { label: "Report an Issue",  href: "mailto:support@fitmed.rw",   ext: false },
+    { label: "Help Centre",      href: "/contact",          ext: false },
+    { label: "Contact Us",       href: "/contact",          ext: false },
+    { label: "Doctor Support",   href: "/contact#doctors",  ext: false },
+    { label: "Employer Support", href: "/contact#employers",ext: false },
+    { label: "Report an Issue",  href: "/contact#report",   ext: false },
   ],
 };
 
@@ -53,14 +53,14 @@ export default function Footer() {
           {/* Brand col — spans 2 on lg */}
           <div className="col-span-2">
 
-            {/* ── Logo: landscape, no blank space ── */}
+            {/* ── Logo: logo-4.webp (transparent bg) on dark footer ── */}
             <a href="#" aria-label="FitMed home" className="inline-block mb-7 group">
               <Image
-                src="/logo.webp"
+                src="/logo-4.webp"
                 alt="FitMed"
-                width={939}
-                height={330}
-                className="w-56 h-auto object-contain group-hover:opacity-90 transition-opacity"
+                width={761}
+                height={463}
+                className="w-52 h-auto object-contain group-hover:opacity-80 transition-opacity"
               />
             </a>
 

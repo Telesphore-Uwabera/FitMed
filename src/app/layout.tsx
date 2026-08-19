@@ -35,13 +35,18 @@ export const metadata: Metadata = {
     type: "website",
     images: [{ url: "/logo.webp", width: 939, height: 330 }],
   },
+  /*
+   * favicon-white.webp is the square icon (256×256) from favicon-icon.webp
+   * with all visible pixels turned white — clearly visible in the browser tab.
+   * src/app/favicon.ico is the same image saved as PNG (Next.js serves it automatically).
+   */
   icons: {
     icon: [
-      { url: "/logo.webp",            type: "image/webp", sizes: "any" },
-      { url: "/apple-touch-icon.webp",type: "image/webp", sizes: "180x180" },
+      { url: "/favicon.ico" },
+      { url: "/favicon-white.webp", type: "image/webp", sizes: "256x256" },
     ],
-    shortcut: "/logo.webp",
-    apple:    "/apple-touch-icon.webp",
+    shortcut: "/favicon.ico",
+    apple:    "/favicon-white.webp",
   },
 };
 
