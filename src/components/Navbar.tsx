@@ -129,7 +129,7 @@ export default function Navbar() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={cn(
-              "md:hidden p-2 rounded-xl transition-colors",
+              "md:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase",
               onHero ? "text-white hover:bg-white/10" : "text-slate-700 hover:bg-slate-100"
             )}
             aria-label="Toggle menu"
@@ -151,6 +151,7 @@ export default function Navbar() {
                 </motion.div>
               )}
             </AnimatePresence>
+            <span>{mobileOpen ? "CLOSE" : "MENU"}</span>
           </button>
         </div>
       </motion.header>
