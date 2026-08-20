@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ import {
   Building2,
   Video,
   FileSignature,
+  FileText as FileTextIcon,
   DollarSign,
   Lock,
   ChevronRight,
@@ -106,15 +107,14 @@ const roleConfigs: Record<
     badgeBorder: "border-sky-500/30",
     badgeText: "text-sky-400",
     navItems: [
-      { id: "queue",        label: "Intake Queue",           icon: LayoutDashboard, badge: "3 Pending" },
-      { id: "appointments", label: "Meetings",               icon: CalendarCheck,   badge: "Upcoming" },
-      { id: "telehealth",   label: "Telehealth Room & Chat", icon: Video,           badge: "Live" },
-      { id: "reports",      label: "My Reports",             icon: Activity,        badge: "Stats" },
-      { id: "schedule",     label: "Weekly Availability",    icon: Calendar,        badge: "Active" },
-      { id: "signed",       label: "Issued Certificates",    icon: FileSignature,   badge: "14" },
-      { id: "referrals",    label: "Physical Referrals",     icon: Building2,       badge: "4" },
-      { id: "clinical",     label: "Decision Matrix (4-Tier)",icon: Activity },
-      { id: "settings",     label: "Practitioner Profile",   icon: Settings },
+      { id: "queue",        label: "Applicant Queue",         icon: LayoutDashboard, badge: "Pending" },
+      { id: "telehealth",   label: "Video Consultation",      icon: Video,           badge: "Live" },
+      { id: "appointments", label: "Meetings",  icon: CalendarCheck,   badge: "Upcoming" },
+      { id: "reports",      label: "Assessment Reports",      icon: FileTextIcon,        badge: "Stats" },
+      { id: "signed",       label: "Issued Certificates",     icon: FileSignature,   badge: "History" },
+      { id: "schedule",     label: "My Availability",         icon: Calendar,        badge: "Active" },
+      { id: "referrals",    label: "Physical Referrals",      icon: Building2,       badge: "Referrals" },
+      { id: "settings",     label: "Profile Settings",        icon: Settings },
     ],
   },
   admin: {
@@ -151,8 +151,13 @@ export default function DashboardShell({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [shellReady, setShellReady] = useState(false);
   const router = useRouter();
   const config = roleConfigs[role];
+
+  useEffect(() => {
+    setShellReady(true);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("fitmed_session");
@@ -225,7 +230,7 @@ export default function DashboardShell({
         subject: "Doctor License Verification Pending: Dr. Divine Umutesi",
         from: "Rwanda Medical Council Integration",
         date: "Yesterday, 04:30 PM",
-        snippet: "New physician registration submitted with license #RW-MMC-2024-9912.",
+        snippet: "New physician registration submitted with license #RW-RMDC-2024-9912.",
         unread: true,
       },
       {
@@ -238,6 +243,10 @@ export default function DashboardShell({
       },
     ],
   }[role];
+
+  if (!shellReady) {
+    return <div className="dashboard-app min-h-screen bg-[#f8fafc] dark:bg-[#071422]" />;
+  }
 
   return (
     <div className="dashboard-app min-h-screen bg-[#f8fafc] dark:bg-[#071422] flex flex-col lg:flex-row text-slate-800 dark:text-slate-100 antialiased">
@@ -408,6 +417,8 @@ export default function DashboardShell({
         <header className="sticky top-0 z-30 w-full bg-white/95 dark:bg-[#08162c]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm h-[72px]">
           <div className="flex items-center gap-3 min-w-0">
             <button
+              type="button"
+              suppressHydrationWarning
               onClick={() => setMobileSidebarOpen(true)}
               className="p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 lg:hidden flex-shrink-0"
               aria-label="Open sidebar menu"
@@ -441,6 +452,7 @@ export default function DashboardShell({
             {/* Theme toggle — RBAC keeps role fixed; users only switch appearance */}
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => {
                 toggleTheme();
                 setShowNotifications(false);

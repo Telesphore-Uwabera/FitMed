@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Message from "@/models/Message";
+import { listMessages, saveMessage } from "@/lib/memoryStore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, messages });
     } catch (dbErr) {
       console.warn("MongoDB fetch chat fallback:", dbErr);
-      return NextResponse.json({ success: true, messages: [] });
+      return NextResponse.json({ success: true, messages: listMessages(consultationId), source: "memory" });
     }
   } catch (error: any) {
     console.error("Fetch chat error:", error);
@@ -45,16 +46,18 @@ export async function POST(request: NextRequest) {
     } catch (dbErr) {
       // Fallback response for dev without active MongoDB URI
       console.warn("MongoDB write fallback:", dbErr);
+      const localMsg = saveMessage({
+        id: `local-msg-${Date.now()}`,
+        senderName,
+        senderRole,
+        messageText,
+        consultationId: consultationId || "ROOM-FM-9941",
+        timestamp: new Date().toISOString(),
+      });
       return NextResponse.json({
         success: true,
-        message: {
-          id: `local-msg-${Date.now()}`,
-          senderName,
-          senderRole,
-          messageText,
-          consultationId,
-          timestamp: new Date().toISOString(),
-        },
+        message: localMsg,
+        source: "memory",
       });
     }
   } catch (error: any) {

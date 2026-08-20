@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,36 +24,8 @@ export async function GET(request: NextRequest) {
       console.warn("MongoDB fetch appointments fallback:", dbErr);
       return NextResponse.json({
         success: true,
-        appointments: [
-          {
-            appointmentId: "APT-2026-891",
-            applicantName: "Telesphore Uwabera",
-            applicantEmail: "telesphore91073@gmail.com",
-            doctorId: "DOC-RW-4091",
-            doctorName: "Dr. Telesphore Uwabera, MD",
-            purpose: "Workplace & Office Fitness Certification",
-            scheduledDate: "Today",
-            scheduledTime: "14:30",
-            durationMinutes: 15,
-            status: "scheduled",
-            roomUrl: "/dashboard/user?tab=consultation",
-            notes: "Routine medical clearance and identity verification.",
-          },
-          {
-            appointmentId: "APT-2026-904",
-            applicantName: "Jean-Paul Habimana",
-            applicantEmail: "jp.habimana@gmail.com",
-            doctorId: "DOC-RW-4091",
-            doctorName: "Dr. Telesphore Uwabera, MD",
-            purpose: "Commercial Driver & Transport License",
-            scheduledDate: "Tomorrow",
-            scheduledTime: "10:00",
-            durationMinutes: 20,
-            status: "scheduled",
-            roomUrl: "/dashboard/doctor?nav=telehealth",
-            notes: "Vision and reflex check review.",
-          },
-        ],
+        appointments: listAppointments({ doctorId, applicantEmail, status }),
+        source: "memory",
       });
     }
   } catch (error: any) {
@@ -109,6 +82,7 @@ export async function POST(request: NextRequest) {
       savedAppointment = await Appointment.create(savedAppointment);
     } catch (dbErr) {
       console.warn("MongoDB appointment save fallback:", dbErr);
+      savedAppointment = saveAppointment(savedAppointment);
     }
 
     // Dispatch Brevo email notification to the applicant
@@ -161,7 +135,13 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true, appointment: updated });
     } catch (dbErr) {
       console.warn("MongoDB patch appointment fallback:", dbErr);
-      return NextResponse.json({ success: true, message: "Appointment updated (local fallback)" });
+      const updated = patchAppointment(appointmentId, {
+        ...(status && { status }),
+        ...(notes && { notes }),
+        ...(scheduledDate && { scheduledDate }),
+        ...(scheduledTime && { scheduledTime }),
+      });
+      return NextResponse.json({ success: true, appointment: updated, source: "memory" });
     }
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -72,7 +72,7 @@ const contactDepartments = [
     badgeBg: "bg-amber-50 border-amber-200 text-amber-800",
     title: "Legal & Regulatory Compliance",
     email: "legal@fitmed.rw",
-    desc: "Regulatory queries, MMC doctor licensing verification, or legal documentation.",
+    desc: "Regulatory queries, RMDC doctor licensing verification, or legal documentation.",
   },
 ];
 

@@ -94,12 +94,12 @@ export default function OfficialMedicalCertificate({
       mentalHealth: "Alert, oriented, stable affect, physically and mentally fit.",
     },
     doctorName: data?.doctorName || "Dr. Telesphore Uwabera, MD",
-    doctorLicense: data?.doctorLicense || "RW-MMC-4091",
+    doctorLicense: data?.doctorLicense || "RW-RMDC-4091",
     doctorId: data?.doctorId || "DOC-RW-4091",
     doctorSpecialty: data?.doctorSpecialty || "Occupational Medicine & Telemedicine Evaluator",
     hospitalPartner: data?.hospitalPartner || "King Faisal Hospital Rwanda / MediConnect Alliance",
     issueDate: data?.issueDate || "18 August 2026",
-    expiryDate: data?.expiryDate || "18 August 2027",
+    expiryDate: data?.expiryDate || "18 February 2027",
     sha256Hash: data?.sha256Hash || "e9b4c27f9011a684b3d7c2e55198df44a1087cb1a29938e744b1c8f331902f82",
     qrUrl:
       data?.qrUrl ||
@@ -175,7 +175,7 @@ export default function OfficialMedicalCertificate({
         </div>
 
         {/* Outer Official Certificate Border */}
-        <div className="official-certificate-border border-4 border-double border-[#0B2D5C] p-5 sm:p-6 rounded-2xl relative">
+        <div className="official-certificate-border border-4 border-double border-[#0B2D5C] p-8 sm:p-10 rounded-2xl relative">
           {/* Header 1: Republic of Rwanda & Clinical Healthcare Network */}
           <div className="flex items-center justify-between border-b-2 border-[#0B2D5C] pb-4 mb-5">
             <div className="flex items-center gap-3">
@@ -224,7 +224,7 @@ export default function OfficialMedicalCertificate({
           </div>
 
           {/* Section 1: Applicant image and certificate purpose */}
-          <div className="my-6 space-y-2.5 font-sans text-xs">
+          <div className="my-8 space-y-2.5 font-sans text-xs">
             <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C] mb-3 pb-1 border-b border-slate-200 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-[#12B8B0]" />
               <span>1. Applicant & Certificate Purpose</span>
@@ -249,48 +249,39 @@ export default function OfficialMedicalCertificate({
             </div>
           </div>
 
-          {/* Section 2: Clinical review confirmation */}
-          <div className="my-6 space-y-2.5 font-sans text-xs">
-            <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C] mb-2 flex items-center gap-1.5">
-              <Stethoscope className="w-3.5 h-3.5 text-[#12B8B0]" />
-              <span>2. Clinical Review</span>
-            </div>
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-600">
-              Clinical assessment completed by the evaluating physician. Detailed medical findings remain confidential in the clinical record and are not displayed on this certificate.
-            </div>
-          </div>
-
-          {/* Section 3: Physician declaration and fitness decision */}
+          {/* Section 2: Physician declaration and fitness decision */}
           <div className="my-6 space-y-2.5 font-sans">
             <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C] mb-2 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#12B8B0]" />
-              <span>3. Physician Declaration & Determination</span>
+              <span>2. Physician Declaration & Determination</span>
             </div>
 
-            <div className="p-5 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300 space-y-3">
-              <div className="flex justify-end">
-                <span className="px-3 py-1 rounded-full bg-emerald-600 text-white font-extrabold text-xs shadow-sm">
-                  DECISION: {cert.decision} FOR DUTIES
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-emerald-950 leading-relaxed font-serif italic text-justify">
-                "I, the undersigned licensed medical practitioner, <strong>{cert.doctorName}</strong> (License #<strong>{cert.doctorLicense}</strong>), certify that I have reviewed the assessment of <strong>{cert.candidateName}</strong> and, based on the clinical information available on the issue date, determine the applicant to be <strong>{cert.decision === "FIT_RESTRICTED" ? "fit with the restrictions stated below" : "fit for the stated purpose"}</strong>: <strong>{cert.purpose}</strong>."
+            <div className="p-5 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300 space-y-4">
+              <p className="text-xs sm:text-sm text-emerald-950 leading-relaxed font-serif text-justify">
+                Based on the medical history provided by the applicant, the virtual clinical interview, and the physical assessment possible through the FitMed platform, I have assessed the applicant for fitness for the stated purpose.
               </p>
+              <div className="mt-3">
+                <div className="text-xs sm:text-sm text-emerald-950 font-semibold mb-2">At the time of assessment, the applicant is considered:</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-emerald-600 rounded bg-white flex items-center justify-center">
+                    {cert.decision === "FIT" && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                  </div>
+                  <span className="text-sm font-bold text-emerald-950">{cert.decision}</span>
+                </div>
+              </div>
+              <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-relaxed">
+                <strong>Important:</strong> This certification reflects the applicant's condition at the time of the virtual assessment and is limited to findings that can reasonably be assessed remotely. It does not replace an in-person examination or investigations where these are clinically indicated.
+              </div>
             </div>
           </div>
 
-          <div className="mb-6 p-3 rounded-xl border border-amber-200 bg-amber-50 font-sans text-[10px] text-amber-900">
-            <strong>Scope of this certificate:</strong> This document confirms medical fitness for the stated purpose only. It is not a diagnosis, treatment record, or clearance for duties outside the purpose listed above. Any restrictions or referral requirements remain applicable.
-          </div>
-
-          {/* Section 4: Signatures and verification footer */}
-          <div className="mt-8 pt-6 border-t-2 border-[#0B2D5C] grid sm:grid-cols-3 gap-6 items-end font-sans">
+          {/* Section 3: Signatures and verification footer */}
+          <div className="mt-8 mb-8 pt-6 border-t-2 border-[#0B2D5C] grid sm:grid-cols-3 gap-6 items-end font-sans">
             {/* Evaluating Physician Details & Stamp */}
             <div className="space-y-1.5 text-xs">
               <div className="text-[10px] text-slate-400 font-bold uppercase">Evaluating Physician</div>
               <div className="font-extrabold text-sm text-[#0B2D5C]">{cert.doctorName}</div>
-              <div className="text-slate-600 text-[11px]">Doctor ID: <strong className="font-mono">{cert.doctorId}</strong></div>
-              <div className="text-slate-600 text-[11px]">MMC License: <strong className="font-mono">{cert.doctorLicense}</strong></div>
+              <div className="text-slate-600 text-[11px]">RMDC License: <strong className="font-mono">{cert.doctorLicense}</strong></div>
               <div className="text-slate-500 text-[10px]">{cert.doctorSpecialty}</div>
 
               <div className="pt-2 flex items-center gap-1.5 text-[10px] text-teal-700 font-bold">

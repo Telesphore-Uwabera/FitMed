@@ -7,6 +7,7 @@ import DashboardShell from "@/components/DashboardShell";
 import BrandDatePicker from "@/components/BrandDatePicker";
 import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
 import VideoCallOverlay from "@/components/VideoCallOverlay";
+import WebRTCVideoCall from "@/components/WebRTCVideoCall";
 import { useToast } from "@/components/ToastProvider";
 import {
   FileCheck2,
@@ -141,9 +142,10 @@ export default function UserDashboard() {
   const [newPass, setNewPass] = useState("");
   const [showNewPass, setShowNewPass] = useState(false);
 
-  // Google Meet-style video call state
+  // WebRTC video call state
   const [isCallActive, setIsCallActive] = useState(false);
   const [activeCallAppointment, setActiveCallAppointment] = useState<any>(null);
+  const [videoCallRoomId, setVideoCallRoomId] = useState<string>("");
   const [chatMessages, setChatMessages] = useState([
     {
       sender: "doctor" as const,
@@ -168,6 +170,8 @@ export default function UserDashboard() {
   const handleStartCall = (apt?: any) => {
     const appointment = apt || appointments[0] || null;
     setActiveCallAppointment(appointment);
+    const roomId = appointment?.appointmentId || `ROOM-${Date.now()}`;
+    setVideoCallRoomId(roomId);
     if (appointment?.appointmentId) {
       localStorage.setItem(`fitmed_meeting:${appointment.appointmentId}`, "connected");
     }
@@ -180,6 +184,7 @@ export default function UserDashboard() {
     }
     setIsCallActive(false);
     setActiveCallAppointment(null);
+    setVideoCallRoomId("");
   };
 
   const [showIremboModal, setShowIremboModal] = useState(false);
@@ -194,7 +199,7 @@ export default function UserDashboard() {
       id: "FM-2024-88421",
       purpose: "Workplace & Office Fitness",
       doctor: "Dr. Telesphore Uwabera, MD",
-      license: "RW-MMC-4091",
+      license: "RW-RMDC-4091",
       issueDate: "18 Aug 2026",
       expiryDate: "18 Aug 2027",
       status: "approved",
@@ -209,7 +214,7 @@ export default function UserDashboard() {
       id: "FM-2026-99412",
       purpose: "Transport & Commercial Driver",
       doctor: "Dr. Amina Nshimiyimana, MD",
-      license: "RW-MMC-3382",
+      license: "RW-RMDC-3382",
       issueDate: "Today, 11:30 AM",
       expiryDate: "20 Aug 2027",
       status: "approved",
@@ -224,7 +229,7 @@ export default function UserDashboard() {
       id: "FM-2026-77301",
       purpose: "Construction & Heights Fitness",
       doctor: "Dr. Patrick Uwase, MBBS",
-      license: "RW-MMC-2910",
+      license: "RW-RMDC-2910",
       issueDate: "Today, 09:15 AM",
       expiryDate: "—",
       status: "video appointment requested",
@@ -239,7 +244,7 @@ export default function UserDashboard() {
       id: "FM-2026-88102",
       purpose: "Food Handler & Hygiene Clearance",
       doctor: "Dr. Claire Akamanzi, MD",
-      license: "RW-MMC-4890",
+      license: "RW-RMDC-4890",
       issueDate: "Yesterday",
       expiryDate: "—",
       status: "physical check up requested",
@@ -254,7 +259,7 @@ export default function UserDashboard() {
       id: "FM-2026-66419",
       purpose: "Sports, Gym & Athletic Fitness",
       doctor: "Dr. Telesphore Uwabera, MD",
-      license: "RW-MMC-4091",
+      license: "RW-RMDC-4091",
       issueDate: "17 Aug 2026",
       expiryDate: "—",
       status: "rejected",
@@ -292,7 +297,7 @@ export default function UserDashboard() {
       appointmentId: "APT-2026-891",
       doctorName: "Dr. Telesphore Uwabera, MD",
       doctorSpecialty: "Licensed Telehealth & Occupational Physician",
-      doctorLicense: "RW-MMC-4091",
+      doctorLicense: "RW-RMDC-4091",
       purpose: "Workplace & Office Fitness Certification",
       scheduledDate: "Today",
       scheduledTime: "14:30",
@@ -305,7 +310,7 @@ export default function UserDashboard() {
       appointmentId: "APT-2026-904",
       doctorName: "Dr. Amina Nshimiyimana, MD",
       doctorSpecialty: "High-Risk & Transport Clearance Lead",
-      doctorLicense: "RW-MMC-3382",
+      doctorLicense: "RW-RMDC-3382",
       purpose: "Commercial Driver & Transport License",
       scheduledDate: "22 Aug 2026",
       scheduledTime: "10:00",
@@ -344,6 +349,40 @@ export default function UserDashboard() {
       } catch (err) {
         console.warn("Could not load appointments:", err);
       }
+
+      try {
+        const certRes = await fetch("/api/certificates?applicantEmail=telesphore91073@gmail.com", { signal: AbortSignal.timeout(8000) });
+        const certData = await certRes.json();
+        if (certData.success && certData.certificates?.length > 0) {
+          setActiveCerts((prev) => {
+            const byId = new Map(prev.map((c) => [c.id, c]));
+            for (const cert of certData.certificates) {
+              const id = cert.certificateId;
+              const existing = byId.get(id) || {};
+              byId.set(id, {
+                ...existing,
+                id,
+                purpose: cert.purpose || existing.purpose,
+                doctor: cert.assignedDoctor || existing.doctor || "Dr. Telesphore Uwabera",
+                license: existing.license || "RW-RMDC-4091",
+                issueDate: existing.issueDate || "Today",
+                expiryDate: existing.expiryDate || "—",
+                status: cert.status || existing.status,
+                statusLabel: cert.status === "approved"
+                  ? (cert.paymentStatus === "PAID" ? "VERIFIED FIT" : "APPROVED — PAYMENT DUE")
+                  : existing.statusLabel || "SUBMITTED - AWAITING DOCTOR REVIEW",
+                paymentStatus: cert.paymentStatus || existing.paymentStatus || "UNPAID",
+                fee: existing.fee || "5,000 FRW",
+                notes: existing.notes || cert.additionalNotes || "",
+                qrUrl: cert.qrCodeUrl || existing.qrUrl,
+              });
+            }
+            return Array.from(byId.values());
+          });
+        }
+      } catch (err) {
+        console.warn("Could not load applicant certificates:", err);
+      }
     }
 
     loadData();
@@ -352,40 +391,80 @@ export default function UserDashboard() {
 
 
 
-  const handleWizardComplete = (data: any) => {
-    const newId = `FM-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+  const handleWizardComplete = async (data: any) => {
+    try {
+      // Prepare data for API submission
+      const submissionData = {
+        applicantEmail: profileData.email,
+        applicantPhone: profileData.phone,
+        candidateName: profileData.name,
+        candidateIdNumber: profileData.nationalId,
+        avatarUrl: profileData.avatarUrl,
+        age: new Date().getFullYear() - new Date(profileData.dob).getFullYear(),
+        gender: "Male", // You may want to add this to profileData
+        purpose: data.purpose,
+        jobType: data.jobType,
+        height: data.height,
+        weight: data.weight,
+        bmi: data.bmi,
+        vitals: data.vitals,
+        redFlags: data.redFlags,
+        symptoms: data.symptoms,
+        history: data.history,
+        functional: data.functional,
+        additionalNotes: data.additionalNotes,
+      };
 
-    // ALWAYS SUBMITTED FIRST — DOCTOR MUST REVIEW BEFORE APPROVAL
-    const newCert = {
-      id: newId,
-      purpose: data.purpose,
-      doctor: "Dr. Telesphore Uwabera, MD (Assigned Physician)",
-      license: "RW-MMC-4091",
-      issueDate: "Today",
-      expiryDate: "—",
-      status: "submitted",
-      statusLabel: "SUBMITTED - AWAITING DOCTOR REVIEW",
-      paymentStatus: "UNPAID",
-      iremboRef: null,
-      fee: "5,000 FRW",
-      notes: "Your responses have been securely submitted and routed to Dr. Telesphore Uwabera for clinical evaluation.",
-      qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/${newId}`,
-    };
+      // Submit to API
+      const res = await fetch("/api/certificates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submissionData),
+      });
 
-    setActiveCerts((prev) => [newCert, ...prev]);
+      const result = await res.json();
 
-    const newEntry = {
-      id: newId,
-      purpose: data.purpose,
-      date: "Just now",
-      doctor: "Dr. Telesphore Uwabera, MD (Assigned)",
-      outcome: "Awaiting Clinical Review",
-      status: "Submitted",
-    };
+      if (result.success) {
+        const cert = result.certificate;
+        
+        // Update local state with the saved certificate
+        const newCert = {
+          id: cert.certificateId,
+          purpose: cert.purpose,
+          doctor: cert.assignedDoctor,
+          license: "RW-RMDC-4091",
+          issueDate: "Today",
+          expiryDate: "—",
+          status: cert.status,
+          statusLabel: "SUBMITTED - AWAITING DOCTOR REVIEW",
+          paymentStatus: cert.paymentStatus,
+          iremboRef: null,
+          fee: "5,000 FRW",
+          notes: "Your responses have been securely submitted and routed to Dr. Telesphore Uwabera for clinical evaluation.",
+          qrUrl: cert.qrCodeUrl,
+        };
 
-    setHistory((prev) => [newEntry, ...prev]);
-    success("Application Submitted", `Your fitness certificate application for "${data.purpose}" is now in review with Dr. Telesphore.`);
-    goToTab("certificates");
+        setActiveCerts((prev) => [newCert, ...prev]);
+
+        const newEntry = {
+          id: cert.certificateId,
+          purpose: cert.purpose,
+          date: "Just now",
+          doctor: cert.assignedDoctor,
+          outcome: "Awaiting Clinical Review",
+          status: "Submitted",
+        };
+
+        setHistory((prev) => [newEntry, ...prev]);
+        success("Application Submitted", `Your fitness certificate application for "${data.purpose}" is now in review with Dr. Telesphore.`);
+        goToTab("certificates");
+      } else {
+        error("Submission Failed", result.error || "Failed to submit application");
+      }
+    } catch (err) {
+      console.error("Wizard submission error:", err);
+      error("Submission Error", "Failed to submit application. Please try again.");
+    }
   };
 
   const handlePayIrembo = (e: React.FormEvent) => {
@@ -393,8 +472,21 @@ export default function UserDashboard() {
     if (!certToPay) return;
     setIsPayingIrembo(true);
 
-    setTimeout(() => {
+      setTimeout(async () => {
       const txRef = `IREMBO-RW-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+      try {
+        await fetch("/api/certificates", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            certificateId: certToPay.id,
+            paymentStatus: "PAID",
+            status: certToPay.status === "submitted" ? "approved" : certToPay.status,
+          }),
+        });
+      } catch {
+        /* local dashboard state still updates below */
+      }
       setActiveCerts((prev) =>
         prev.map((c) =>
           c.id === certToPay.id
@@ -1003,25 +1095,13 @@ export default function UserDashboard() {
               </p>
             </div>
 
-            {/* Active call indicator (if call is running) */}
-            {isCallActive && (
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-extrabold text-emerald-900">Consultation in Progress</p>
-                    <p className="text-xs text-emerald-700">
-                      You are in a live session with {activeCallAppointment?.doctorName || "Dr. Telesphore Uwabera, MD"}. Navigate freely — the call continues in a floating window.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsCallActive(false)}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center gap-1.5 flex-shrink-0 transition-colors"
-                >
-                  End Call
-                </button>
-              </div>
+            {/* Active WebRTC call */}
+            {isCallActive && videoCallRoomId && (
+              <WebRTCVideoCall
+                roomId={videoCallRoomId}
+                userName={profileData.name}
+                onCallEnd={handleEndCall}
+              />
             )}
 
             {/* Scheduled appointments waiting room */}

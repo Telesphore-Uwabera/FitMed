@@ -14,7 +14,7 @@ export interface IDoctor extends Document {
   user: mongoose.Types.ObjectId;
   fullName: string;
   email: string;
-  licenseNumber: string; // Rwanda Medical Council (MMC)
+  licenseNumber: string; // Rwanda Medical Council (RMDC)
   specialty: string;
   phone?: string;
   avatarUrl: string;

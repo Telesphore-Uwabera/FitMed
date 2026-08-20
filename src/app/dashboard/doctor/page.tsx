@@ -44,12 +44,17 @@ import {
   Lock,
   TrendingUp,
   IdCard,
+  FileText,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, formatBytes, WebPConversionResult } from "@/lib/imageUtils";
 import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
 import DoctorAssessmentForm, { DoctorDecision } from "@/components/DoctorAssessmentForm";
+import WebRTCVideoCall from "@/components/WebRTCVideoCall";
+import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessmentForm";
+import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
 import { useToast } from "@/components/ToastProvider";
 import { useDialog } from "@/components/DialogProvider";
+import { FALLBACK_QUEUE } from "@/lib/demoQueue";
 
 export default function DoctorDashboardPage() {
   const { success, error, warning, info } = useToast();
@@ -86,11 +91,16 @@ export default function DoctorDashboardPage() {
     applicantEmail: "telesphore91073@gmail.com",
     applicantPhone: "+250 788 123 456",
     purpose: "Workplace & Office Fitness Certification",
-    scheduledDate: new Date().toISOString().split("T")[0],
+    scheduledDate: "",
     scheduledTime: "14:30",
     durationMinutes: 15,
     notes: "Follow-up clinical video consultation and vital review.",
   });
+  useEffect(() => {
+    setScheduleForm((prev) =>
+      prev.scheduledDate ? prev : { ...prev, scheduledDate: new Date().toISOString().split("T")[0] }
+    );
+  }, []);
   const [doctorAppointments, setDoctorAppointments] = useState<any[]>([
     {
       appointmentId: "APT-2026-891",
@@ -183,10 +193,27 @@ export default function DoctorDashboardPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("telesphore91073@gmail.com");
   const [inviteSentAlert, setInviteSentAlert] = useState<string | null>(null);
+  
+  // WebRTC video call state
+  const [isWebRTCCallActive, setIsWebRTCCallActive] = useState(false);
+  const [webRTCRoomId, setWebRTCRoomId] = useState<string>("");
+
+  // Doctor notes and documents state
+  const [showDoctorNotesModal, setShowDoctorNotesModal] = useState(false);
+  const [doctorNotes, setDoctorNotes] = useState("");
+  const [doctorDocuments, setDoctorDocuments] = useState<Array<{ name: string; url: string; type: string }>>([]);
+
+  // Structured assessment form state
+  const [showStructuredAssessmentModal, setShowStructuredAssessmentModal] = useState(false);
+
+  // Evaluate & Sign modal state (to view applicant's questionnaire)
+  const [showEvaluateSignModal, setShowEvaluateSignModal] = useState(false);
 
   const startMeeting = (roomId = meetingRoomId) => {
     setMeetingRoomId(roomId);
+    setWebRTCRoomId(roomId);
     setMeetingStatus("waiting");
+    setIsWebRTCCallActive(true);
     localStorage.setItem(`fitmed_meeting:${roomId}`, "waiting");
   };
 
@@ -255,7 +282,7 @@ export default function DoctorDashboardPage() {
     }
   };
 
-  // Load chat messages and appointments from MongoDB
+  // Load chat messages, appointments, and applicant queue from MongoDB
   useEffect(() => {
     async function loadData() {
       try {
@@ -282,6 +309,44 @@ export default function DoctorDashboardPage() {
         }
       } catch (err) {
         console.warn("Could not load doctor appointments:", err);
+      }
+
+      try {
+        const certRes = await fetch("/api/certificates?status=submitted&assignedDoctorId=DOC-RW-4091", { signal: AbortSignal.timeout(15000) });
+        const certData = await certRes.json();
+        if (certData.success && certData.certificates?.length > 0) {
+          const formattedQueue = certData.certificates.map((cert: any) => ({
+            id: cert.certificateId,
+            name: cert.candidateName,
+            age: cert.age || 30,
+            gender: cert.gender || "Male",
+            nationalId: cert.candidateIdNumber,
+            avatarUrl: cert.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
+            nationalIdImageUrl: cert.nationalIdImageUrl || "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
+            purpose: cert.purpose,
+            appliedDate: cert.appliedDate ? new Date(cert.appliedDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "Just now",
+            riskLevel: cert.riskLevel || "Low Risk",
+            riskColor: cert.riskColor || "bg-emerald-100 text-emerald-800 border-emerald-300",
+            vitals: {
+              bp: cert.vitals?.bloodPressure || "—",
+              hr: cert.vitals?.heartRate || "—",
+              bmi: cert.vitals?.bmi || "—",
+              spo2: cert.vitals?.spo2 || "—",
+            },
+            flags: cert.redFlags ? `${Object.values(cert.redFlags).filter(Boolean).length} Red Flags` : "0 Red Flags",
+            history: cert.additionalNotes || "No additional notes provided.",
+            assignedDoctor: cert.assignedDoctor || "Dr. Telesphore Uwabera (You)",
+            assignedDoctorId: cert.assignedDoctorId || "DOC-RW-4091",
+            // Store full certificate data for assessment
+            fullCertificate: cert,
+          }));
+          setQueue(formattedQueue);
+        } else {
+          setQueue(FALLBACK_QUEUE);
+        }
+      } catch (err) {
+        console.warn("Could not load applicant queue:", err);
+        setQueue(FALLBACK_QUEUE);
       }
     }
 
@@ -350,62 +415,7 @@ export default function DoctorDashboardPage() {
       setTimeout(() => setInviteSentAlert(null), 4000);
       setShowInviteModal(false);
     }
-  };  const [queue, setQueue] = useState([
-    {
-      id: "CAN-9941",
-      name: "Telesphore (Candidate)",
-      age: 29,
-      gender: "Male",
-      nationalId: "1199580048123049",
-      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
-      nationalIdImageUrl: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
-      purpose: "Workplace & Office Fitness",
-      appliedDate: "Today, 10:14 AM",
-      riskLevel: "Low Risk",
-      riskColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
-      vitals: { bp: "118/78", hr: "72 bpm", bmi: "23.4", spo2: "98%" },
-      flags: "0 Red Flags",
-      history: "No chronic conditions. Non-smoker. Regular physical activity.",
-      assignedDoctor: "Dr. Telesphore Uwabera (You)",
-      assignedDoctorId: "DOC-RW-4091",
-    },
-    {
-      id: "CAN-9942",
-      name: "Claudine Uwamahoro",
-      age: 34,
-      gender: "Female",
-      nationalId: "1199200012340001",
-      avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80&auto=format&fit=crop",
-      nationalIdImageUrl: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
-      purpose: "Transport & Commercial Driver",
-      appliedDate: "Today, 11:30 AM",
-      riskLevel: "Moderate Risk",
-      riskColor: "bg-amber-100 text-amber-800 border-amber-300",
-      vitals: { bp: "138/88", hr: "84 bpm", bmi: "26.8", spo2: "97%" },
-      flags: "1 Warning: Borderline BP",
-      history: "Family history of hypertension. Requested driver clearance.",
-      assignedDoctor: "Dr. Amina Nshimiyimana",
-      assignedDoctorId: "DOC-RW-3382",
-    },
-    {
-      id: "CAN-9943",
-      name: "Eric Ndayishimiye",
-      age: 41,
-      gender: "Male",
-      nationalId: "1198500023451002",
-      avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop",
-      nationalIdImageUrl: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
-      purpose: "Construction & Heights Fitness",
-      appliedDate: "Today, 01:15 PM",
-      riskLevel: "Elevated Risk",
-      riskColor: "bg-rose-100 text-rose-800 border-rose-300",
-      vitals: { bp: "145/92", hr: "91 bpm", bmi: "29.1", spo2: "95%" },
-      flags: "2 Red Flags: High BP & Dizziness",
-      history: "Reports occasional vertigo working at height. Physical exam required.",
-      assignedDoctor: "Dr. Telesphore Uwabera (You)",
-      assignedDoctorId: "DOC-RW-4091",
-    },
-  ]);
+  };  const [queue, setQueue] = useState<any[]>(FALLBACK_QUEUE);
 
   const [activeDoctorsOnDuty] = useState([
     { id: "DOC-RW-4091", name: "Dr. Telesphore Uwabera (You)", specialty: "Occupational Health", status: "Online" },
@@ -541,7 +551,7 @@ export default function DoctorDashboardPage() {
               </div>
               <div className="text-xs font-bold text-sky-300/80 uppercase tracking-wider mb-1">License ID</div>
               <div className="text-lg font-extrabold text-white font-mono" style={{ fontFamily: "var(--font-primary)" }}>
-                RW-MMC-4091
+                RW-RMDC-4091
               </div>
               <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
                 <Stethoscope className="w-3 h-3 text-[#12B8B0]" />
@@ -568,12 +578,10 @@ export default function DoctorDashboardPage() {
               <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1.5 font-extrabold text-[#0B2D5C]">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>3 Physicians Online:</span>
+                  <span>Dr. Telesphore Online:</span>
                 </div>
                 <div className="flex gap-1.5 text-[11px] font-bold text-slate-600">
-                  <span className="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200">Dr. Telesphore (2)</span>
-                  <span className="px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 border border-sky-200">Dr. Amina (1)</span>
-                  <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">Dr. Patrick (0)</span>
+                  <span className="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200">Pending: {queue.length}</span>
                 </div>
               </div>
             </div>
@@ -582,165 +590,172 @@ export default function DoctorDashboardPage() {
               {queue.map((candidate) => (
                 <div
                   key={candidate.id}
-                  className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4 hover:border-[#12B8B0] transition-colors"
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-[#12B8B0] transition-all overflow-visible"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#12B8B0] flex-shrink-0">
-                        <img
-                          src={candidate.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop"}
-                          alt={candidate.name}
-                          className="w-full h-full object-cover"
-                        />
+                  {/* Status Bar */}
+                  <div className={`h-1.5 rounded-t-2xl ${candidate.riskLevel === 'High Risk' ? 'bg-rose-500' : candidate.riskLevel === 'Moderate Risk' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+
+                  <div className="p-5 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                      {/* Avatar & Basic Info */}
+                      <div className="flex items-start gap-4 flex-shrink-0">
+                        <div className="relative w-14 h-14 rounded-xl overflow-hidden border-2 border-[#12B8B0] flex-shrink-0 shadow-sm">
+                          <img
+                            src={candidate.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop"}
+                            alt={candidate.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-extrabold text-[#0B2D5C]">
+                              {candidate.name}
+                            </h3>
+                            <span className="text-xs text-slate-400 font-bold">· {candidate.age}y</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            ID: {candidate.nationalId || "1199580048123049"}
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${candidate.riskColor}`}>
+                              {candidate.riskLevel}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                              {candidate.purpose}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
+
+                      {/* Vitals & Quick Stats */}
+                      <div className="flex-1 grid grid-cols-4 gap-2 text-center">
+                        <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                          <div className="text-sky-600 font-bold text-sm">{candidate.vitals.bp}</div>
+                          <div className="text-[9px] text-slate-500 uppercase font-bold">BP</div>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                          <div className="text-teal-600 font-bold text-sm">{candidate.vitals.hr}</div>
+                          <div className="text-[9px] text-slate-500 uppercase font-bold">HR</div>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                          <div className="text-indigo-600 font-bold text-sm">{candidate.vitals.bmi}</div>
+                          <div className="text-[9px] text-slate-500 uppercase font-bold">BMI</div>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                          <div className="text-emerald-600 font-bold text-sm">{candidate.vitals.spo2}</div>
+                          <div className="text-[9px] text-slate-500 uppercase font-bold">SpO₂</div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-col gap-2 sm:w-48">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span>Applied: {candidate.appliedDate}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">NEW</span>
+                        </div>
+                        <BrandSelect
+                          size="compact"
+                          value={candidate.fullCertificate?.status || "submitted"}
+                          options={[
+                            { value: "submitted", label: "Submitted" },
+                            { value: "under-review", label: "Under Review" },
+                            { value: "approved", label: "Approved" },
+                            { value: "rejected", label: "Rejected" },
+                          ]}
+                          onChange={async (newStatus) => {
+                            try {
+                              await fetch(`/api/certificates`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  certificateId: candidate.id,
+                                  status: newStatus,
+                                }),
+                              });
+                              success("Status Updated", `Application status changed to ${newStatus}`);
+                              setQueue(queue.map((c) =>
+                                c.id === candidate.id
+                                  ? { ...c, fullCertificate: { ...c.fullCertificate, status: newStatus } }
+                                  : c
+                              ));
+                            } catch {
+                              error("Error", "Failed to update status");
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            setIdCandidate(candidate);
+                            setShowIdModal(true);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0B2D5C] font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <IdCard className="w-3 h-3 text-[#12B8B0]" />
+                          <span>View ID</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Flags & Notes */}
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-base font-extrabold text-[#0B2D5C]">
-                            {candidate.name}
-                          </h3>
-                          <span className="text-xs text-slate-400 font-bold">Age: {candidate.age}</span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${candidate.riskColor}`}>
-                            {candidate.riskLevel}
+                          <span className="text-slate-500 font-bold">Flags:</span>
+                          <span className={`font-bold ${candidate.flags.includes('0') ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {candidate.flags}
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                          <span className="font-mono font-bold text-slate-600">ID: {candidate.nationalId || "1199580048123049"}</span>
-                          <span>·</span>
-                          <span>{candidate.purpose}</span>
-                        </div>
-                      </div>
-
-                      {/* Load Balancing Assignment Chip */}
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#0B2D5C] text-[#12B8B0] border border-[#12B8B0]/30 flex items-center gap-1">
-                        <Stethoscope className="w-3 h-3" />
-                        <span>{candidate.assignedDoctor}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setIdCandidate(candidate);
-                          setShowIdModal(true);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0B2D5C] dark:bg-teal-400/10 dark:hover:bg-teal-400/20 dark:border-teal-400/30 dark:text-slate-100 font-bold text-xs flex items-center gap-1.5 transition-colors"
-                      >
-                        <IdCard className="w-3.5 h-3.5 text-[#12B8B0]" />
-                        <span>Inspect National ID</span>
-                      </button>
-
-                      <BrandSelect
-                        value={candidate.assignedDoctor}
-                        onChange={(doctor) => reassignCandidate(candidate.id, doctor)}
-                        options={activeDoctorsOnDuty.map((doc) => ({ value: doc.name, label: `Route to ${doc.name}` }))}
-                        className="text-[11px]"
-                      />
-                      <span className="text-xs font-bold text-slate-400 font-mono">{candidate.appliedDate}</span>
-                    </div>
-                  </div>
-
-                  {/* Clinical Summary & Vitals */}
-                  <div className="grid md:grid-cols-3 gap-4 text-xs">
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                      <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                        <Activity className="w-4 h-4 text-sky-600" />
-                        Captured Vitals
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-center font-bold">
-                        <div className="bg-white p-2 rounded-lg border border-slate-200">
-                          <div className="text-sky-600">{candidate.vitals.bp}</div>
-                          <div className="text-[10px] text-slate-400">BP</div>
-                        </div>
-                        <div className="bg-white p-2 rounded-lg border border-slate-200">
-                          <div className="text-teal-600">{candidate.vitals.hr}</div>
-                          <div className="text-[10px] text-slate-400">HR</div>
-                        </div>
-                        <div className="bg-white p-2 rounded-lg border border-slate-200">
-                          <div className="text-indigo-600">{candidate.vitals.bmi}</div>
-                          <div className="text-[10px] text-slate-400">BMI</div>
-                        </div>
-                        <div className="bg-white p-2 rounded-lg border border-slate-200">
-                          <div className="text-emerald-600">{candidate.vitals.spo2}</div>
-                          <div className="text-[10px] text-slate-400">SpO₂</div>
+                        <div className="text-slate-400 italic max-w-md truncate">
+                          {candidate.history}
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                      <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                        <Brain className="w-4 h-4 text-indigo-600" />
-                        AI Triage & Clinical Notes
-                      </div>
-                      <div className="text-slate-600 leading-relaxed">
-                        <strong className="text-slate-800">{candidate.flags}</strong>
-                      </div>
-                      <div className="text-[11px] text-slate-500 italic">
-                        {candidate.history}
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 flex flex-col justify-between">
-                      <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                        <ClipboardList className="w-4 h-4 text-teal-600" />
-                        Doctor Actions
-                      </div>
-
-                      <div className="space-y-2">
+                    {/* Doctor Actions */}
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedCandidate(candidate);
+                            setShowEvaluateSignModal(true);
+                          }}
+                          className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Evaluate</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCandidate(candidate);
+                            setShowStructuredAssessmentModal(true);
+                          }}
+                          className="px-3 py-2 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <ClipboardList className="w-3.5 h-3.5" />
+                          <span>Assess</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCandidate(candidate);
+                            setDoctorNotes(candidate.fullCertificate?.doctorNotes || "");
+                            setDoctorDocuments(candidate.fullCertificate?.doctorDocuments || []);
+                            setShowDoctorNotesModal(true);
+                          }}
+                          className="px-3 py-2 rounded-lg bg-[#0B2D5C] hover:bg-slate-800 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <FileCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
+                          <span>Notes</span>
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedCandidate(candidate);
                             goToNav("telehealth");
                           }}
-                          className="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+                          className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <Video className="w-4 h-4" />
-                          <span>Start Telehealth Video &amp; Chat</span>
+                          <Video className="w-3.5 h-3.5" />
+                          <span>Video</span>
                         </button>
-
-                        <button
-                          onClick={() => {
-                            setScheduleCandidate(candidate);
-                            setScheduleForm({
-                              applicantName: candidate.name,
-                              applicantEmail: `${candidate.name.toLowerCase().replace(/\s+/g, ".")}@gmail.com`,
-                              applicantPhone: "+250 788 123 456",
-                              purpose: candidate.purpose,
-                              scheduledDate: new Date().toISOString().split("T")[0],
-                              scheduledTime: "15:00",
-                              durationMinutes: 15,
-                              notes: `Telehealth clinical review for ${candidate.purpose}. Flagged: ${candidate.flags}`,
-                            });
-                            setShowScheduleModal(true);
-                          }}
-                          className="w-full py-2 px-3 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <Calendar className="w-3.5 h-3.5 text-[#12B8B0]" />
-                          <span>Schedule Video Appointment</span>
-                        </button>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedCandidate(candidate);
-                              setShowSignModal(true);
-                            }}
-                            className="py-2.5 px-3 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center justify-center gap-1 transition-colors"
-                          >
-                            <FileSignature className="w-3.5 h-3.5" />
-                            <span>Evaluate & Sign</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setSelectedCandidate(candidate);
-                              setShowReferralModal(true);
-                            }}
-                            className="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1 transition-colors"
-                          >
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            <span>Refer Clinic</span>
-                          </button>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1185,6 +1200,22 @@ export default function DoctorDashboardPage() {
               </div>
             ) : (
             <div className="grid lg:grid-cols-12 gap-6">
+              {/* WebRTC Video Call */}
+              {isWebRTCCallActive && webRTCRoomId && (
+                <div className="lg:col-span-12">
+                  <WebRTCVideoCall
+                    roomId={webRTCRoomId}
+                    userName="Dr. Telesphore Uwabera"
+                    onCallEnd={() => {
+                      setIsWebRTCCallActive(false);
+                      setWebRTCRoomId("");
+                      setMeetingStatus("idle");
+                      localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Left Column: Live Video Feed & WebRTC Meeting Controls */}
               <div className="lg:col-span-8 bg-slate-950 rounded-3xl p-6 text-white space-y-4 shadow-2xl border border-slate-800">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -1733,7 +1764,7 @@ export default function DoctorDashboardPage() {
               <div className="text-amber-950 space-y-0.5">
                 <div className="font-bold">Permanent Practitioner Credentials (Immutable)</div>
                 <p className="text-[11px] text-amber-800">
-                  Doctor ID, MMC License, and Legal Practitioner Name are assigned permanently by the FitMed System Administrator during onboarding and cannot be altered by the doctor. To update clinical licenses, contact governance.
+                  Doctor ID, RMDC License, and Legal Practitioner Name are assigned permanently by the FitMed System Administrator during onboarding and cannot be altered by the doctor. To update clinical licenses, contact governance.
                 </p>
               </div>
             </div>
@@ -1747,16 +1778,9 @@ export default function DoctorDashboardPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-slate-400 font-bold uppercase mb-1">Doctor ID (Immutable)</label>
+                <label className="block text-slate-400 font-bold uppercase mb-1">RMDC License (Immutable)</label>
                 <div className="relative">
-                  <input type="text" defaultValue="DOC-RW-4091" disabled className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 font-mono font-bold text-slate-700 cursor-not-allowed" />
-                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3.5" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-slate-400 font-bold uppercase mb-1">Medical Council License (Immutable)</label>
-                <div className="relative">
-                  <input type="text" defaultValue="RW-MMC-4091 (Verified Active)" disabled className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 font-semibold text-emerald-700 cursor-not-allowed" />
+                  <input type="text" defaultValue="RW-RMDC-4091 (Verified Active)" disabled className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 font-semibold text-emerald-700 cursor-not-allowed" />
                   <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3.5" />
                 </div>
               </div>
@@ -1801,20 +1825,84 @@ export default function DoctorDashboardPage() {
         <DoctorAssessmentForm
           candidate={selectedCandidate || queue[0]}
           doctorName="Dr. Telesphore Uwabera, MD"
-          doctorLicense="RW-MMC-4091"
-          onDecision={({ decision, notes, restrictions }) => {
+          doctorLicense="RW-RMDC-4091"
+          onDecision={async ({ decision, notes, restrictions }) => {
             const candidate = selectedCandidate || queue[0];
             const candidateName = candidate?.name;
+            const certificateId = candidate?.id;
+
             if (decision === "FIT" || decision === "FIT_RESTRICTED") {
+              // Update certificate in database
+              try {
+                await fetch(`/api/certificates`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    certificateId,
+                    decision,
+                    restrictions: restrictions || "",
+                    decisionNotes: notes || "",
+                    status: "approved",
+                  }),
+                });
+              } catch (err) {
+                console.warn("Failed to update certificate in database:", err);
+              }
+
               success("Certificate Approved", `${candidateName} — Status set to APPROVED. An email was sent requesting 5,000 FRW payment to unlock.`);
               setQueue((prev) => prev.filter((c) => c.id !== candidate?.id));
             } else if (decision === "REJECTED") {
+              try {
+                await fetch(`/api/certificates`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    certificateId,
+                    decision: "NOT_FIT",
+                    decisionNotes: notes || "",
+                    status: "rejected",
+                  }),
+                });
+              } catch (err) {
+                console.warn("Failed to update certificate in database:", err);
+              }
+
               error("Application Rejected", `${candidateName} — Certification declined. Reason recorded: ${notes || "Clinical criteria not met"}.`);
               setQueue((prev) => prev.filter((c) => c.id !== candidate?.id));
             } else if (decision === "PHYSICAL_CONSULTATION") {
+              try {
+                await fetch(`/api/certificates`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    certificateId,
+                    decision: "FURTHER_ASSESSMENT",
+                    decisionNotes: notes || "",
+                    status: "under-review",
+                  }),
+                });
+              } catch (err) {
+                console.warn("Failed to update certificate in database:", err);
+              }
+
               warning("Physical Checkup Requested", `${candidateName} — Status updated to PHYSICAL CHECK UP REQUESTED at accredited clinic.`);
               setQueue((prev) => prev.filter((c) => c.id !== candidate?.id));
             } else if (decision === "INVESTIGATION_SPECIALIST") {
+              try {
+                await fetch(`/api/certificates`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    certificateId,
+                    decision: "FURTHER_ASSESSMENT",
+                    decisionNotes: notes || "",
+                    status: "under-review",
+                  }),
+                });
+              } catch (err) {
+                console.warn("Failed to update certificate in database:", err);
+              }
+
               warning("Specialist Referral Issued", `${candidateName} — Certification status set to UNDER-REVIEW pending lab diagnostics.`);
             } else {
               error("Urgent Referral Activated", `${candidateName} — Emergency escalation protocol triggered.`);
@@ -1900,7 +1988,7 @@ export default function DoctorDashboardPage() {
                 purpose: selectedCertForModal?.purpose || "Workplace & Office Fitness",
                 decision: (selectedCertForModal?.decision?.includes("RESTRICTIONS") ? "FIT_RESTRICTED" : "FIT") as any,
                 doctorName: "Dr. Telesphore Uwabera, MD",
-                doctorLicense: "RW-MMC-4091",
+                doctorLicense: "RW-RMDC-4091",
                 doctorId: "DOC-RW-4091",
                 issueDate: selectedCertForModal?.date || "18 Aug 2026",
               }}
@@ -1908,6 +1996,187 @@ export default function DoctorDashboardPage() {
             />
           </div>
         </div>
+      )}
+
+      {/* Doctor Notes & Documents Modal */}
+      {showDoctorNotesModal && selectedCandidate && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full space-y-6 shadow-2xl relative border border-slate-200 text-slate-800">
+            <button
+              onClick={() => setShowDoctorNotesModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+                Doctor Notes & Documents
+              </h3>
+              <p className="text-xs text-slate-500">
+                Add clinical notes and upload related documents for {selectedCandidate.name}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Clinical Notes</label>
+                <textarea
+                  value={doctorNotes}
+                  onChange={(e) => setDoctorNotes(e.target.value)}
+                  placeholder="Enter your clinical assessment notes..."
+                  rows={4}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Uploaded Documents</label>
+                <div className="space-y-2">
+                  {doctorDocuments.map((doc, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <div className="flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-[#12B8B0]" />
+                        <span className="text-xs font-medium text-slate-700">{doc.name}</span>
+                      </div>
+                      <button
+                        onClick={() => setDoctorDocuments(documents => documents.filter((_, i) => i !== idx))}
+                        className="text-red-600 hover:text-red-700 text-xs font-bold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  {doctorDocuments.length === 0 && (
+                    <div className="text-center py-4 text-xs text-slate-400">
+                      No documents uploaded
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Upload Document</label>
+                <input
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // In production, upload to Cloudinary or similar
+                      const newDoc = {
+                        name: file.name,
+                        url: URL.createObjectURL(file),
+                        type: file.type,
+                      };
+                      setDoctorDocuments([...doctorDocuments, newDoc]);
+                    }
+                  }}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowDoctorNotesModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const certificateId = selectedCandidate.id;
+                    await fetch(`/api/certificates`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        certificateId,
+                        doctorNotes,
+                        doctorDocuments: doctorDocuments.map(doc => ({
+                          ...doc,
+                          uploadedAt: new Date(),
+                        })),
+                      }),
+                    });
+                    success("Saved", "Notes and documents saved successfully");
+                    setShowDoctorNotesModal(false);
+                  } catch (err) {
+                    error("Error", "Failed to save notes and documents");
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] text-xs font-bold transition-colors"
+              >
+                Save Notes & Documents
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Evaluate & Sign Modal - View Applicant Questionnaire */}
+      {showEvaluateSignModal && selectedCandidate && (
+        <ApplicantQuestionnaireViewer
+          candidate={selectedCandidate}
+          onClose={() => setShowEvaluateSignModal(false)}
+        />
+      )}
+
+      {/* Structured Doctor Assessment Form Modal */}
+      {showStructuredAssessmentModal && selectedCandidate && (
+        <StructuredDoctorAssessmentForm
+          candidate={selectedCandidate}
+          doctorName="Dr. Telesphore Uwabera, MD"
+          doctorLicense="RW-RMDC-4091"
+          onComplete={async (assessmentData) => {
+            try {
+              const certificateId = selectedCandidate.id;
+              await fetch(`/api/certificates`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  certificateId,
+                  structuredAssessment: assessmentData,
+                  decision: assessmentData.decision,
+                  restrictions: assessmentData.restrictions,
+                  decisionNotes: assessmentData.decisionReason,
+                  status: assessmentData.decision === "FIT" ? "approved" : assessmentData.decision === "FIT_RESTRICTED" ? "approved" : "under-review",
+                }),
+              });
+              success("Assessment Saved", "Structured assessment saved successfully");
+              setShowStructuredAssessmentModal(false);
+              // Refresh queue
+              const res = await fetch("/api/certificates");
+              const data = await res.json();
+              if (data.success) {
+                const formattedQueue = data.certificates
+                  .filter((c: any) => c.status === "submitted" && c.assignedDoctorId === "DOC-RW-4091")
+                  .map((c: any) => ({
+                    id: c.certificateId,
+                    name: c.candidateName,
+                    nationalId: c.candidateIdNumber,
+                    age: c.age,
+                    gender: c.gender,
+                    purpose: c.purpose,
+                    jobType: c.jobType,
+                    vitals: c.vitals,
+                    flags: c.riskLevel || "No significant flags",
+                    history: c.additionalNotes || "No additional notes",
+                    riskLevel: c.riskLevel || "Low Risk",
+                    riskColor: c.riskColor || "bg-emerald-100 text-emerald-800 border-emerald-300",
+                    assignedDoctor: c.assignedDoctor || "Dr. Telesphore Uwabera",
+                    appliedDate: c.appliedDate,
+                    avatarUrl: c.avatarUrl,
+                    fullCertificate: c,
+                  }));
+                setQueue(formattedQueue);
+              }
+            } catch (err) {
+              error("Error", "Failed to save assessment");
+            }
+          }}
+          onClose={() => setShowStructuredAssessmentModal(false)}
+        />
       )}
 
       {/* National ID Document Verification & Inspection Modal */}

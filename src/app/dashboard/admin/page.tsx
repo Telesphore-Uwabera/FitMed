@@ -155,7 +155,7 @@ export default function AdminDashboardPage() {
       id: "DOC-REG-104",
       name: "Dr. Divine Umutesi, MD",
       specialty: "General Medicine & Telehealth",
-      license: "RW-MMC-2024-9912",
+      license: "RW-RMDC-2024-9912",
       applied: "Yesterday",
       status: "Pending License Verification",
     },
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
       id: "DOC-REG-105",
       name: "Dr. Innocent Manzi, MBBS",
       specialty: "Occupational Health",
-      license: "RW-MMC-2023-4108",
+      license: "RW-RMDC-2023-4108",
       applied: "2 days ago",
       status: "Pending License Verification",
     },
@@ -171,10 +171,10 @@ export default function AdminDashboardPage() {
 
   // Verified Doctors List
   const [verifiedDoctors, setVerifiedDoctors] = useState([
-    { id: "DOC-001", name: "Dr. Telesphore Uwabera, MD", role: "Chief Clinical Evaluator", license: "RW-MMC-4091", status: "Active" },
-    { id: "DOC-002", name: "Dr. Amina Nshimiyimana, MD", role: "Telehealth Director", license: "RW-MMC-3382", status: "Active" },
-    { id: "DOC-003", name: "Dr. Patrick Uwase, MBBS", role: "Risk Stratification Lead", license: "RW-MMC-2910", status: "Active" },
-    { id: "DOC-004", name: "Dr. Claire Akamanzi, MD", role: "Referral Coordinator", license: "RW-MMC-4890", status: "Active" },
+    { id: "DOC-001", name: "Dr. Telesphore Uwabera, MD", role: "Chief Clinical Evaluator", license: "RW-RMDC-4091", status: "Active" },
+    { id: "DOC-002", name: "Dr. Amina Nshimiyimana, MD", role: "Telehealth Director", license: "RW-RMDC-3382", status: "Active" },
+    { id: "DOC-003", name: "Dr. Patrick Uwase, MBBS", role: "Risk Stratification Lead", license: "RW-RMDC-2910", status: "Active" },
+    { id: "DOC-004", name: "Dr. Claire Akamanzi, MD", role: "Referral Coordinator", license: "RW-RMDC-4890", status: "Active" },
   ]);
 
   const [showAddClinic, setShowAddClinic] = useState(false);
@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
   const approveDoctor = (id: string, name: string) => {
     success("Doctor Approved", `${name}'s license verified & portal account activated.`);
     setPendingDoctors((prev) => prev.filter((d) => d.id !== id));
-    setVerifiedDoctors((prev) => [...prev, { id, name, role: "Clinical Evaluator", license: "RW-MMC-2026-VAL", status: "Active" }]);
+    setVerifiedDoctors((prev) => [...prev, { id, name, role: "Clinical Evaluator", license: "RW-RMDC-2026-VAL", status: "Active" }]);
   };
 
   // Pending Applicant Registrations (Awaiting Admin ID Verification)
@@ -464,7 +464,7 @@ export default function AdminDashboardPage() {
       email: "jeanpaul.h@gmail.com",
       phone: "+250 788 112 233",
       category: "Doctor Network Application",
-      subject: "Physician Onboarding & MMC Verification",
+      subject: "Physician Onboarding & RMDC Verification",
       message: "Hello FitMed team, I am a certified occupational health physician in Kigali and would like to apply to conduct telehealth evaluations on your platform.",
       date: "Today, 09:20 AM",
       status: "New",
@@ -751,7 +751,7 @@ export default function AdminDashboardPage() {
                   {[
                     { time: "Today, 11:45", event: "Irembo payment WAITING", detail: "Patrick Mugabo · FM-2026-55310" },
                     { time: "Today, 10:30", event: "Certificate paid & unlocked", detail: "Telesphore Uwabera · FM-2024-88421" },
-                    { time: "Today, 09:20", event: "New doctor application", detail: "Dr. Divine Umutesi · RW-MMC-2024-9912" },
+                    { time: "Today, 09:20", event: "New doctor application", detail: "Dr. Divine Umutesi · RW-RMDC-2024-9912" },
                     { time: "Yesterday", event: "Applicant ID pending review", detail: "Diane Mukeshimana · PAT-PENDING-102" },
                     { time: "Aug 18", event: "Clinic referral partnership note", detail: "Kigali Independent Polyclinic" },
                   ].map((row) => (
@@ -1031,11 +1031,11 @@ export default function AdminDashboardPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">MMC License Number</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">RMDC License Number</label>
                       <input
                         required
                         type="text"
-                        placeholder="RW-MMC-2024-XXXX"
+                        placeholder="RW-RMDC-2024-XXXX"
                         value={addDoctorForm.license}
                         onChange={(e) => setAddDoctorForm({ ...addDoctorForm, license: e.target.value })}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"

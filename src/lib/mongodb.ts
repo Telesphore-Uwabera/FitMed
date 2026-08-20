@@ -5,7 +5,9 @@ import mongoose from "mongoose";
  * when Atlas / local MongoDB is unreachable (dev or misconfigured env).
  */
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/fitmed";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/FitMed";
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || "FitMed";
+const isAtlas = MONGODB_URI.startsWith("mongodb+srv://");
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -30,11 +32,12 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
+      dbName: MONGODB_DB_NAME,
       bufferCommands: false,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 2500,
-      connectTimeoutMS: 2500,
-      socketTimeoutMS: 10000,
+      serverSelectionTimeoutMS: isAtlas ? 10000 : 2500,
+      connectTimeoutMS: isAtlas ? 10000 : 2500,
+      socketTimeoutMS: 15000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {

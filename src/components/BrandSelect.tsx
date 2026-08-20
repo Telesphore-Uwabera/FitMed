@@ -16,6 +16,7 @@ interface BrandSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  size?: "default" | "compact";
 }
 
 export default function BrandSelect({
@@ -25,7 +26,9 @@ export default function BrandSelect({
   onChange,
   placeholder = "Select an option...",
   className = "",
+  size = "default",
 }: BrandSelectProps) {
+  const compact = size === "compact";
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +61,11 @@ export default function BrandSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full p-3.5 rounded-2xl border bg-white text-left font-semibold text-sm flex items-center justify-between transition-all shadow-sm ${
+        className={`w-full border bg-white text-left flex items-center justify-between transition-all shadow-sm ${
+          compact
+            ? "px-3 py-1.5 rounded-lg text-[11px] font-bold"
+            : "p-3.5 rounded-2xl font-semibold text-sm"
+        } ${
           isOpen
             ? "border-[#12B8B0] ring-2 ring-[#12B8B0]/20 shadow-md"
             : "border-slate-200 hover:border-slate-300"
@@ -68,15 +75,15 @@ export default function BrandSelect({
           {selectedOption ? selectedOption.label || selectedOption.value : placeholder}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-[#12B8B0] transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`text-[#12B8B0] transition-transform duration-200 flex-shrink-0 ml-1 ${
+            compact ? "w-3.5 h-3.5" : "w-4 h-4"
+          } ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {/* Brand Styled Menu */}
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white rounded-2xl border-2 border-[#0B2D5C]/10 shadow-2xl overflow-hidden animate-in fade-in duration-150 max-h-64 overflow-y-auto">
+        <div className={`absolute z-50 left-0 right-0 mt-1.5 bg-white border-2 border-[#0B2D5C]/10 shadow-2xl overflow-hidden animate-in fade-in duration-150 max-h-64 overflow-y-auto ${compact ? "rounded-xl" : "rounded-2xl"}`}>
           <div className="p-1.5 space-y-1">
             {normalizedOptions.map((opt) => {
               const isSelected = opt.value === value;
@@ -88,7 +95,9 @@ export default function BrandSelect({
                     onChange(opt.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+                  className={`w-full text-left rounded-xl font-semibold flex items-center justify-between transition-colors ${
+                    compact ? "px-3 py-2 text-[11px]" : "px-3.5 py-2.5 text-xs"
+                  } ${
                     isSelected
                       ? "bg-[#0B2D5C] text-white font-extrabold shadow-sm"
                       : "text-slate-700 hover:bg-[#edf6f6] hover:text-[#0B2D5C]"
