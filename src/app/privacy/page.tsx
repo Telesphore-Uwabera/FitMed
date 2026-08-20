@@ -323,7 +323,7 @@ export default function PrivacyPage() {
           </p>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              { label: "Data Controller",   value: "FitMed (a MediConnect product)" },
+              { label: "Data Controller",   value: "FitMed" },
               { label: "Privacy Contact",   value: "privacy@fitmed.rw",  href: "mailto:privacy@fitmed.rw" },
               { label: "General Enquiries", value: "hello@fitmed.rw",    href: "mailto:hello@fitmed.rw" },
               { label: "Address",           value: "Kigali, Rwanda" },

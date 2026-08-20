@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +13,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Applicant email and name required" }, { status: 400 });
     }
 
-    const meetingLink = roomUrl || "https://fitmed.netlify.app/dashboard/user?tab=consultation";
+    const meetingLink = roomUrl?.startsWith("http")
+      ? roomUrl
+      : `${FITMED_APP_URL}${roomUrl || "/dashboard/user?tab=consultation"}`;
 
     // Send Brevo Email Invitation
     const emailResult = await sendBrevoEmail({

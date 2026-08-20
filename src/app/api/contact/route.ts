@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ContactMessage from "@/models/ContactMessage";
-import { sendBrevoEmail } from "@/lib/brevo";
+import { sendBrevoEmail, EmailTemplates, FITMED_ADMIN_EMAIL } from "@/lib/brevo";
 
 export async function GET() {
   try {
@@ -48,18 +48,21 @@ export async function POST(request: NextRequest) {
     await sendBrevoEmail({
       toEmail: email,
       toName: fullName,
-      subject: `Inquiry Received: ${subject} [FitMed Rwanda]`,
-      htmlContent: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #0B2D5C;">
-          <h2>Thank you for contacting FitMed Rwanda, ${fullName}!</h2>
-          <p>We have received your message regarding "<strong>${subject}</strong>".</p>
-          <p>Our clinical administrative team is reviewing your inquiry and will respond within 1-2 business hours.</p>
-          <blockquote style="border-left: 3px solid #12B8B0; padding-left: 10px; color: #475569;">
-            ${message}
-          </blockquote>
-          <p style="font-size: 12px; color: #94a3b8;">FitMed Support Team · info.teletech.rw@gmail.com</p>
-        </div>
-      `,
+      subject: `We received your inquiry: ${subject}`,
+      htmlContent: EmailTemplates.contactConfirmation(fullName, subject, message),
+    });
+    await sendBrevoEmail({
+      toEmail: FITMED_ADMIN_EMAIL,
+      toName: "FitMed Admin",
+      subject: `Contact form: ${subject} — ${fullName}`,
+      htmlContent: EmailTemplates.contactAdminCopy(
+        fullName,
+        email,
+        phone || "",
+        subject,
+        message,
+        category || "general"
+      ),
     });
 
     return NextResponse.json({

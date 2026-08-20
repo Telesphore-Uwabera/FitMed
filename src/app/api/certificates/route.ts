@@ -4,6 +4,13 @@ import Certificate from "@/models/Certificate";
 import { runClinicalEngine, WizardData } from "@/lib/clinicalEngine";
 import crypto from "crypto";
 import { listCertificates, patchCertificate, saveCertificate } from "@/lib/memoryStore";
+import {
+  sendBrevoEmail,
+  EmailTemplates,
+  FITMED_APP_URL,
+  FITMED_ADMIN_EMAIL,
+  FITMED_DOCTOR_EMAIL,
+} from "@/lib/brevo";
 
 export async function GET(request: NextRequest) {
   try {
@@ -170,6 +177,38 @@ export async function POST(request: NextRequest) {
       savedCertificate = saveCertificate(newCertificate);
     }
 
+    const doctorName = assignedDoctor.replace(/\s*\(You\)\s*$/, "") || "FitMed Physician";
+    void sendBrevoEmail({
+      toEmail: applicantEmail,
+      toName: candidateName,
+      subject: `FitMed received your application ${certificateId}`,
+      htmlContent: EmailTemplates.applicationReceived(candidateName, certificateId, purpose),
+    });
+    void sendBrevoEmail({
+      toEmail: FITMED_DOCTOR_EMAIL,
+      toName: doctorName,
+      subject: `New FitMed queue case ${certificateId}`,
+      htmlContent: EmailTemplates.doctorNewQueueApplication(
+        doctorName,
+        candidateName,
+        certificateId,
+        purpose,
+        riskLevel
+      ),
+    });
+    void sendBrevoEmail({
+      toEmail: FITMED_ADMIN_EMAIL,
+      toName: "FitMed Admin",
+      subject: `New application ${certificateId} — ${candidateName}`,
+      htmlContent: EmailTemplates.doctorNewQueueApplication(
+        "FitMed Admin",
+        candidateName,
+        certificateId,
+        purpose,
+        riskLevel
+      ),
+    });
+
     return NextResponse.json({
       success: true,
       certificate: savedCertificate,
@@ -209,6 +248,10 @@ export async function PATCH(request: NextRequest) {
         { new: true }
       );
 
+      if (updated) {
+        await notifyCertificateEmails(updated.toObject(), { status, paymentStatus, decision, decisionNotes });
+      }
+
       return NextResponse.json({ success: true, certificate: updated });
     } catch (dbErr) {
       console.warn("MongoDB patch certificate fallback:", dbErr);
@@ -222,9 +265,95 @@ export async function PATCH(request: NextRequest) {
         ...(doctorDocuments && { doctorDocuments }),
         ...(structuredAssessment && { structuredAssessment }),
       });
+      if (updated) {
+        await notifyCertificateEmails(updated, { status, paymentStatus, decision, decisionNotes });
+      }
       return NextResponse.json({ success: true, certificate: updated, source: "memory" });
     }
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+async function notifyCertificateEmails(
+  cert: Record<string, unknown>,
+  change: { status?: string; paymentStatus?: string; decision?: string; decisionNotes?: string }
+) {
+  const email = String(cert.applicantEmail || "");
+  const name = String(cert.candidateName || "Applicant");
+  const certId = String(cert.certificateId || "");
+  const purpose = String(cert.purpose || "Medical fitness");
+  const doctor = String(cert.assignedDoctor || "FitMed Physician").replace(/\s*\(You\)\s*$/, "");
+  const dash = `${FITMED_APP_URL}/dashboard/user`;
+  const payLink = `${FITMED_APP_URL}/dashboard/user?pay=${encodeURIComponent(certId)}`;
+  const paidNow = String(change.paymentStatus || "").toUpperCase() === "PAID";
+  const alreadyPaid = String(cert.paymentStatus || "").toUpperCase() === "PAID";
+
+  if (!email || !certId) return;
+
+  if (paidNow) {
+    const iremboRef = String(cert.iremboRef || cert.paymentReference || "");
+    await sendBrevoEmail({
+      toEmail: email,
+      toName: name,
+      subject: `Payment confirmed — certificate ${certId} is ready`,
+      htmlContent: EmailTemplates.certificatePaidDelivered(name, certId, purpose, iremboRef, dash),
+    });
+    await sendBrevoEmail({
+      toEmail: FITMED_ADMIN_EMAIL,
+      toName: "FitMed Admin",
+      subject: `Payment received for ${certId}`,
+      htmlContent: EmailTemplates.paymentReceivedAdmin(name, certId, "5,000 FRW", iremboRef),
+    });
+    await sendBrevoEmail({
+      toEmail: email,
+      toName: name,
+      subject: `Your FitMed certificate ${certId} has been issued`,
+      htmlContent: EmailTemplates.certificateIssued(name, certId, purpose, doctor),
+    });
+    return;
+  }
+
+  if (change.status === "approved" && !alreadyPaid) {
+    await sendBrevoEmail({
+      toEmail: email,
+      toName: name,
+      subject: `Certificate ${certId} approved — complete payment`,
+      htmlContent: EmailTemplates.certificateApprovedPayLink(name, certId, purpose, doctor, payLink),
+    });
+    return;
+  }
+
+  if (change.status && !["approved", "submitted", "pending"].includes(change.status)) {
+    await sendBrevoEmail({
+      toEmail: email,
+      toName: name,
+      subject: `Update on your FitMed application ${certId}`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        name,
+        certId,
+        purpose,
+        String(change.status || cert.status || "Updated"),
+        doctor,
+        String(change.decisionNotes || cert.decisionNotes || "Please review the decision in your dashboard."),
+        dash
+      ),
+    });
+  } else if (change.decision && !["FIT", "PENDING", ""].includes(String(change.decision).toUpperCase())) {
+    await sendBrevoEmail({
+      toEmail: email,
+      toName: name,
+      subject: `Clinical decision on ${certId}`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        name,
+        certId,
+        purpose,
+        String(change.decision),
+        doctor,
+        String(change.decisionNotes || "Your doctor has recorded a clinical decision. Open your dashboard for details."),
+        dash
+      ),
+    });
+  }
+}
+

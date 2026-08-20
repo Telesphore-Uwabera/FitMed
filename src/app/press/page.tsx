@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const pressItems = [
-  { date: "August 2026", headline: "FitMed Launches Digital Medical Fitness Certification Platform in Rwanda", source: "Press Release", summary: "FitMed, a MediConnect product, announces the launch of Rwanda's first digital medical fitness certification platform connecting applicants with licensed doctors through secure video consultations." },
+  { date: "August 2026", headline: "FitMed Launches Digital Medical Fitness Certification Platform in Rwanda", source: "Press Release", summary: "FitMed announces the launch of Rwanda's first digital medical fitness certification platform connecting applicants with licensed doctors through secure video consultations." },
   { date: "August 2026", headline: "FitMed Reaches 10,000 Medical Fitness Certificates Issued", source: "Milestone", summary: "FitMed celebrates issuing 10,000 digital medical fitness certificates, demonstrating rapid adoption across employment, education, and occupational health sectors." },
   { date: "August 2026", headline: "FitMed Partners with Rwandan Employers for Workforce Health Certification", source: "Partnership", summary: "FitMed announces partnerships with leading Rwandan organisations to streamline employee medical fitness certification through its employer portal." },
 ];

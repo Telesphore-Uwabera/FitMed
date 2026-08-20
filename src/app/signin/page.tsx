@@ -21,13 +21,6 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { X, Sparkles, Send } from "lucide-react";
 
-/* ── Registered accounts ──────────────────────────────────────────── */
-const ACCOUNTS: Record<string, { password: string; role: "admin" | "doctor" | "user"; name: string; isTemp?: boolean }> = {
-  "info.teletech.rw@gmail.com":    { password: "91073@Tecy", role: "admin",  name: "FitMed Admin" },
-  "uwaberatelesphore@gmail.com":   { password: "91073@Tecy", role: "doctor", name: "Dr. Telesphore Uwabera" },
-  "telesphore91073@gmail.com":     { password: "91073@Tecy", role: "user",   name: "Telesphore" },
-};
-
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,10 +47,6 @@ function SignInContent() {
   const [permanentPassword, setPermanentPassword] = useState("");
   const [pendingAccount, setPendingAccount] = useState<any | null>(null);
 
-  /* Derive detected role label from email for the tab highlight */
-  const detectedRole = ACCOUNTS[email.toLowerCase()]?.role ?? null;
-
-  /** Persist a session token with role-based expiry */
   const persistSession = (role: "admin" | "doctor" | "user", name: string, email: string) => {
     const ttlMs = role === "user" ? 30 * 24 * 60 * 60 * 1000 : 1 * 24 * 60 * 60 * 1000;
     const session = {
@@ -69,60 +58,50 @@ function SignInContent() {
     localStorage.setItem("fitmed_session", JSON.stringify(session));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     const cleanEmail = email.toLowerCase();
-    const account = ACCOUNTS[cleanEmail];
-    const storedAdminPassword = cleanEmail === "info.teletech.rw@gmail.com"
-      ? localStorage.getItem("fitmed_admin_password")
-      : null;
 
-    // Check temporary password e.g. FitMed#... or isTemp
-    const isTempPassword = password.startsWith("FitMed#") || account?.isTemp;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+      const data = await res.json();
 
-    if (!account) {
-      if (isTempPassword) {
-        // First-time login with temporary password issued by admin
-        setPendingAccount({ email: cleanEmail, name: cleanEmail.split("@")[0], role: "user" });
+      if (!data.success) {
+        setError(data.error || "Sign-in failed.");
+        setLoading(false);
+        return;
+      }
+
+      if (data.requiresPasswordReset) {
+        setPendingAccount(data.user);
         setShowTempResetModal(true);
         setLoading(false);
         return;
       }
-      setError("No account found with that email address. Please create an account.");
-      setLoading(false);
-      return;
-    }
 
-    const passwordMatches = account && (account.password === password || storedAdminPassword === password);
-    if (!passwordMatches && !isTempPassword) {
-      setError("Incorrect password. Please try again or use Forgot Password.");
+      persistSession(data.user.role, data.user.name, data.user.email);
+      success("Sign In Successful", `Welcome back, ${data.user.name}!`);
+      if (data.user.role === "doctor") {
+        router.push("/dashboard/doctor");
+      } else if (data.user.role === "admin") {
+        router.push("/dashboard/admin");
+      } else {
+        router.push("/dashboard/user");
+      }
+    } catch {
+      setError("Could not reach FitMed. Check your connection and try again.");
       setLoading(false);
-      return;
-    }
-
-    if (isTempPassword) {
-      setPendingAccount(account);
-      setShowTempResetModal(true);
-      setLoading(false);
-      return;
-    }
-
-    /* Valid — store session & redirect based on role */
-    persistSession(account.role === "user" ? "user" : account.role, account.name, cleanEmail);
-    success("Sign In Successful", `Welcome back, ${account.name}!`);
-    if (account.role === "doctor") {
-      router.push("/dashboard/doctor");
-    } else if (account.role === "admin") {
-      router.push("/dashboard/admin");
-    } else {
-      router.push("/dashboard/user");
     }
   };
 
-  const handleCompleteTempReset = (e: React.FormEvent) => {
+  const handleCompleteTempReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (permanentPassword.length < 6) {
       warning("Password Too Short", "Permanent password must be at least 6 characters.");
@@ -130,16 +109,31 @@ function SignInContent() {
     }
 
     if (pendingAccount) {
-      ACCOUNTS[pendingAccount.email.toLowerCase()] = {
-        password: permanentPassword,
-        role: pendingAccount.role || "user",
-        name: pendingAccount.name || "Applicant",
-        isTemp: false,
-      };
+      try {
+        const res = await fetch("/api/auth/password", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: pendingAccount.email,
+            currentPassword: password,
+            newPassword: permanentPassword,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          toastError("Password not saved", data.error || "Please try again.");
+          return;
+        }
+      } catch {
+        toastError("Password not saved", "Could not update your password.");
+        return;
+      }
       persistSession(pendingAccount.role || "user", pendingAccount.name || "Applicant", pendingAccount.email.toLowerCase());
       success("Password Activated", "Your permanent password has been set! Welcome to FitMed.");
       setShowTempResetModal(false);
-      router.push("/dashboard/user");
+      if (pendingAccount.role === "doctor") router.push("/dashboard/doctor");
+      else if (pendingAccount.role === "admin") router.push("/dashboard/admin");
+      else router.push("/dashboard/user");
     }
   };
 
@@ -193,9 +187,6 @@ function SignInContent() {
       const data = await res.json();
       if (data.success) {
         success("Password Reset!", "You may now sign in with your new password.");
-        if (ACCOUNTS[forgotEmail.toLowerCase()]) {
-          ACCOUNTS[forgotEmail.toLowerCase()].password = forgotNewPassword;
-        }
         setShowForgotModal(false);
         setForgotStep("request");
         setForgotOtp("");
@@ -279,10 +270,8 @@ function SignInContent() {
                     onChange={(e) => { setEmail(e.target.value); setError(""); }}
                     placeholder="your-email@gmail.com"
                     className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm focus:outline-none text-slate-800 transition-colors ${
-                      error && !ACCOUNTS[email.toLowerCase()]
+                      error
                         ? "border-rose-400 focus:border-rose-500 bg-rose-50"
-                        : detectedRole
-                        ? "border-[#12B8B0] bg-teal-50/30"
                         : "border-slate-200 focus:border-[#12B8B0]"
                     }`}
                   />
@@ -314,7 +303,7 @@ function SignInContent() {
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
                     placeholder="••••••••••••"
                     className={`w-full pl-10 pr-11 py-3 rounded-xl border text-sm focus:outline-none text-slate-800 transition-colors ${
-                      error && ACCOUNTS[email.toLowerCase()]
+                      error
                         ? "border-rose-400 focus:border-rose-500 bg-rose-50"
                         : "border-slate-200 focus:border-[#12B8B0]"
                     }`}

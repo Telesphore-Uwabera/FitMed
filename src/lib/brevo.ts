@@ -1,11 +1,15 @@
 /**
- * Brevo (formerly Sendinblue) Transactional Email Service
- * Handles clinical alerts, certificate delivery, applicant registration, and appointment invitations.
+ * Brevo transactional email — FitMed branded layout and clinical notifications.
  */
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "info.teletech.rw@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "FitMed Rwanda";
+export const FITMED_APP_URL = (
+  process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com"
+).replace(/\/$/, "");
+export const FITMED_ADMIN_EMAIL = BREVO_SENDER_EMAIL;
+export const FITMED_DOCTOR_EMAIL = "uwaberatelesphore@gmail.com";
 
 export interface SendEmailParams {
   toEmail: string;
@@ -17,6 +21,53 @@ export interface SendEmailParams {
   attachmentUrl?: string;
 }
 
+export function brandedEmail(title: string, bodyHtml: string): string {
+  const year = new Date().getFullYear();
+  return `
+  <div style="margin:0;padding:0;background:#f4f7fb;font-family:'Manrope',Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+            <tr>
+              <td style="background:#0B2D5C;padding:22px 28px;border-radius:16px 16px 0 0;">
+                <p style="margin:0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#12B8B0;font-weight:800;">FitMed Rwanda</p>
+                <h1 style="margin:8px 0 0;font-size:22px;line-height:1.25;color:#ffffff;font-weight:800;">${title}</h1>
+                <p style="margin:8px 0 0;font-size:13px;color:#8ff3e8;">Fit, Verified, and Ready.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#ffffff;padding:28px;border:1px solid #e2e8f0;border-top:0;color:#334155;font-size:14px;line-height:1.65;">
+                ${bodyHtml}
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#0B2D5C;padding:22px 28px;border-radius:0 0 16px 16px;color:#cbd5e1;font-size:12px;line-height:1.7;">
+                <p style="margin:0 0 8px;color:#12B8B0;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;font-size:11px;">FitMed</p>
+                <p style="margin:0 0 10px;color:#e2e8f0;">Secure digital medical fitness assessments, conducted by licensed doctors and verified online.</p>
+                <p style="margin:0;">
+                  <a href="${FITMED_APP_URL}" style="color:#12B8B0;text-decoration:none;font-weight:700;">${FITMED_APP_URL.replace(/^https?:\/\//, "")}</a>
+                  &nbsp;·&nbsp;
+                  <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;text-decoration:none;">hello@fitmed.rw</a>
+                </p>
+                <p style="margin:10px 0 0;color:#94a3b8;">Kigali, Rwanda · Telehealth &amp; medical certification</p>
+                <p style="margin:12px 0 0;color:#64748b;">© ${year} FitMed. All rights reserved.</p>
+                <p style="margin:8px 0 0;color:#64748b;font-size:11px;">This message may contain health-related information intended only for the named recipient. If you received it in error, please delete it and notify FitMed.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>`;
+}
+
+function button(href: string, label: string, invert = false): string {
+  const bg = invert ? "#0B2D5C" : "#12B8B0";
+  const color = invert ? "#ffffff" : "#0B2D5C";
+  return `<p style="text-align:center;margin:24px 0 8px;"><a href="${href}" style="background:${bg};color:${color};padding:14px 26px;font-weight:800;text-decoration:none;border-radius:12px;display:inline-block;font-size:14px;">${label}</a></p>`;
+}
+
 export async function sendBrevoEmail({
   toEmail,
   toName,
@@ -26,31 +77,11 @@ export async function sendBrevoEmail({
   tags,
 }: SendEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!BREVO_API_KEY) {
-    console.warn("⚠️ BREVO_API_KEY not configured. Simulating email dispatch to:", toEmail);
-    return {
-      success: true,
-      messageId: `simulated-brevo-${Date.now()}`,
-    };
+    console.warn("BREVO_API_KEY not configured. Simulating email dispatch to:", toEmail);
+    return { success: true, messageId: `simulated-brevo-${Date.now()}` };
   }
 
   try {
-    const payload = {
-      sender: {
-        name: BREVO_SENDER_NAME,
-        email: BREVO_SENDER_EMAIL,
-      },
-      to: [
-        {
-          email: toEmail,
-          name: toName,
-        },
-      ],
-      subject,
-      htmlContent,
-      textContent: textContent || subject,
-      tags: tags || ["fitmed-clinical"],
-    };
-
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -58,237 +89,180 @@ export async function sendBrevoEmail({
         "api-key": BREVO_API_KEY,
         Accept: "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+        to: [{ email: toEmail, name: toName }],
+        subject,
+        htmlContent,
+        textContent: textContent || subject,
+        tags: tags || ["fitmed"],
+      }),
     });
 
     const data = await response.json();
-
     if (!response.ok) {
       console.error("Brevo API Error:", data);
       return { success: false, error: data.message || "Failed to send email via Brevo" };
     }
-
     return { success: true, messageId: data.messageId };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Network error sending email via Brevo";
     console.error("Brevo Email Dispatch Exception:", error);
-    return { success: false, error: error.message || "Network error sending email via Brevo" };
+    return { success: false, error: message };
   }
 }
 
-/**
- * Pre-formatted Clinical Email Templates
- */
 export const EmailTemplates = {
-  welcomeApplicant: (name: string) => `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #f8fafc; border-radius: 16px;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0;">FitMed Rwanda</h1>
-        <p style="color: #12B8B0; font-weight: bold; font-size: 14px;">Digital Medical Fitness Certification</p>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C;">Welcome to FitMed, ${name}!</h2>
-        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your applicant portal account has been successfully created. You can now request fitness certificates, complete self-assessments, and consult licensed physicians via our secure telehealth video room.</p>
-        <div style="margin: 24px 0; text-align: center;">
-          <a href="https://fitmed.netlify.app/dashboard/user" style="background-color: #12B8B0; color: #0B2D5C; padding: 12px 24px; font-weight: bold; text-decoration: none; border-radius: 8px; display: inline-block;">Access Applicant Dashboard</a>
-        </div>
-      </div>
-      <p style="text-align: center; color: #94a3b8; font-size: 11px; margin-top: 20px;">FitMed Rwanda · Healthcare Digital Services · Kigali, Rwanda</p>
-    </div>
-  `,
+  welcomeApplicantPending: (name: string) =>
+    brandedEmail(
+      "Registration received",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>Thank you for creating a FitMed applicant account. Your registration is now with our administration team for National ID verification.</p>
+       <p>You will receive a second email with sign-in details once your identity has been confirmed. This usually takes one business day.</p>
+       ${button(`${FITMED_APP_URL}/signin`, "Go to FitMed Sign In")}`
+    ),
 
-  certificateIssued: (candidateName: string, certId: string, purpose: string, doctorName: string) => `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #f8fafc; border-radius: 16px;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0;">FitMed Rwanda</h1>
-        <span style="background-color: #10b981; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">CERTIFICATE ISSUED</span>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C;">Medical Fitness Certificate Approved</h2>
-        <p style="color: #475569; font-size: 14px;">Dear ${candidateName},</p>
-        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Your medical evaluation for <strong>${purpose}</strong> has been finalized and digitally signed by <strong>${doctorName}</strong>.</p>
-        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <p style="margin: 0; color: #166534; font-size: 13px;"><strong>Certificate ID:</strong> ${certId}</p>
-          <p style="margin: 4px 0 0 0; color: #166534; font-size: 13px;"><strong>Status:</strong> Fit for Activity (QR Verifiable)</p>
-        </div>
-        <div style="text-align: center; margin-top: 24px;">
-          <a href="https://fitmed.netlify.app/dashboard/user" style="background-color: #0B2D5C; color: #ffffff; padding: 12px 24px; font-weight: bold; text-decoration: none; border-radius: 8px; display: inline-block;">Download & View Certificate</a>
-        </div>
-      </div>
-    </div>
-  `,
+  welcomeApplicant: (name: string) =>
+    brandedEmail(
+      "Welcome to FitMed",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>Your applicant portal is ready. You can request fitness certificates, complete self-assessments, and consult licensed physicians in our secure telehealth room.</p>
+       ${button(`${FITMED_APP_URL}/dashboard/user`, "Open applicant dashboard")}`
+    ),
 
-  certificateApprovedPayLink: (
-    candidateName: string,
-    certId: string,
-    purpose: string,
-    doctorName: string,
-    payLink: string
-  ) => `
-    <div style="font-family: 'Manrope', Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <h1 style="color: #0B2D5C; margin: 0; font-size: 24px; font-weight: 800;">FitMed Rwanda</h1>
-        <div style="margin-top: 6px;">
-          <span style="background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase;">APPROVED — PAYMENT REQUIRED</span>
-        </div>
-      </div>
-      <div style="background-color: #ffffff; padding: 28px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <h2 style="color: #0B2D5C; margin-top: 0; font-size: 18px;">Medical Fitness Certificate Approved!</h2>
-        <p style="color: #475569; font-size: 14px;">Dear <strong>${candidateName}</strong>,</p>
-        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Good news! <strong>${doctorName}</strong> has clinically evaluated your questionnaire and approved your Medical Fitness Certificate for <strong>${purpose}</strong>.</p>
-        
-        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 18px; border-radius: 12px; margin: 20px 0;">
-          <table style="width: 100%; font-size: 13px; color: #334155;">
-            <tr>
-              <td style="padding: 4px 0; color: #64748b;">Certificate ID:</td>
-              <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #0B2D5C;">${certId}</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 0; color: #64748b;">Evaluated Purpose:</td>
-              <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #0B2D5C;">${purpose}</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 0; color: #64748b;">Government Fee:</td>
-              <td style="padding: 4px 0; font-weight: bold; text-align: right; color: #059669;">5,000 FRW</td>
-            </tr>
-          </table>
-        </div>
+  adminNewApplicantNotification: (name: string, email: string, nationalId: string) =>
+    brandedEmail(
+      "New applicant to review",
+      `<p>A new applicant has submitted registration documents and is waiting for National ID verification.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Name</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${name}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Email</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${email}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">National ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${nationalId}</td></tr>
+       </table>
+       ${button(`${FITMED_APP_URL}/dashboard/admin`, "Review in admin console", true)}`
+    ),
 
-        <p style="color: #475569; font-size: 13px; line-height: 1.5;">To unlock and download your digitally signed PDF certificate and verifiable QR code, please complete payment of <strong>5,000 FRW via IremboPay</strong> (MTN MoMo, Airtel Money, or Card).</p>
+  applicantAccountApprovedWithTempPassword: (name: string, email: string, tempPassword: string, loginLink: string) =>
+    brandedEmail(
+      "Account approved",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>Your National ID has been verified. Your FitMed account is active. Sign in with the temporary password below, then set a permanent password.</p>
+       <p style="margin:4px 0;color:#64748b;font-size:13px;">Email</p>
+       <p style="margin:0 0 12px;font-weight:800;color:#0B2D5C;">${email}</p>
+       <div style="background:#edf6f6;border:1px solid #12B8B0;border-radius:12px;padding:16px;text-align:center;">
+         <p style="margin:0;font-size:12px;font-weight:700;color:#0B2D5C;">Temporary password</p>
+         <p style="margin:8px 0 0;font-family:Consolas,monospace;font-size:20px;font-weight:800;letter-spacing:1px;color:#0B2D5C;">${tempPassword}</p>
+       </div>
+       ${button(loginLink, "Sign in and set your password")}`
+    ),
 
-        <div style="text-align: center; margin: 28px 0 10px 0;">
-          <a href="${payLink}" style="background-color: #12B8B0; color: #0B2D5C; padding: 14px 28px; font-weight: 900; text-decoration: none; border-radius: 12px; display: inline-block; font-size: 14px; box-shadow: 0 4px 12px rgba(18,184,176,0.3);">Pay 5,000 FRW via IremboPay to Unlock</a>
-        </div>
-      </div>
-      <p style="text-align: center; color: #94a3b8; font-size: 11px; margin-top: 20px;">FitMed Rwanda · Telehealth &amp; Medical Certification · Republic of Rwanda</p>
-    </div>
-  `,
+  staffAccountCreated: (name: string, email: string, role: string, password: string) =>
+    brandedEmail(
+      `Your FitMed ${role} account`,
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>A FitMed <strong>${role}</strong> account has been created for you. Use these credentials on the sign-in page. If a temporary password was issued, you may be asked to change it on first access.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Role</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;text-transform:capitalize;">${role}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Email</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${email}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Password</td><td style="padding:6px 0;text-align:right;font-weight:800;color:#0B2D5C;font-family:Consolas,monospace;">${password}</td></tr>
+       </table>
+       ${button(`${FITMED_APP_URL}/signin`, "Sign in to FitMed")}`
+    ),
 
-  certificatePaidDelivered: (
-    candidateName: string,
-    certId: string,
-    purpose: string,
-    iremboRef: string,
-    downloadLink: string
-  ) => `
-    <div style="font-family: 'Manrope', Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <h1 style="color: #0B2D5C; margin: 0; font-size: 24px; font-weight: 800;">FitMed Rwanda</h1>
-        <div style="margin-top: 6px;">
-          <span style="background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase;">✓ PAYMENT CONFIRMED &amp; ISSUED</span>
-        </div>
-      </div>
-      <div style="background-color: #ffffff; padding: 28px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <h2 style="color: #0B2D5C; margin-top: 0; font-size: 18px;">Official Certificate Unlocked &amp; Ready!</h2>
-        <p style="color: #475569; font-size: 14px;">Dear <strong>${candidateName}</strong>,</p>
-        <p style="color: #475569; font-size: 14px; line-height: 1.6;">Thank you for your payment of <strong>5,000 FRW</strong> via IremboPay (Transaction Reference: <strong style="color: #0B2D5C;">${iremboRef}</strong>). Your official Medical Fitness Certificate for <strong>${purpose}</strong> has been released and is active in your dashboard.</p>
-        
-        <div style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 18px; border-radius: 12px; margin: 20px 0;">
-          <table style="width: 100%; font-size: 13px; color: #166534;">
-            <tr>
-              <td style="padding: 4px 0; color: #15803d;">Certificate ID:</td>
-              <td style="padding: 4px 0; font-weight: bold; text-align: right;">${certId}</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 0; color: #15803d;">Irembo Transaction Ref:</td>
-              <td style="padding: 4px 0; font-weight: bold; text-align: right;">${iremboRef}</td>
-            </tr>
-            <tr>
-              <td style="padding: 4px 0; color: #15803d;">Security:</td>
-              <td style="padding: 4px 0; font-weight: bold; text-align: right;">Cryptographically Verified QR</td>
-            </tr>
-          </table>
-        </div>
+  forgotPasswordOTP: (name: string, otp: string) =>
+    brandedEmail(
+      "Password reset code",
+      `<p>Hello <strong>${name}</strong>,</p>
+       <p>Use this 6-digit code to reset your FitMed password. It expires in 15 minutes. Do not share it with anyone.</p>
+       <p style="text-align:center;margin:20px 0;font-family:Consolas,monospace;font-size:32px;font-weight:800;letter-spacing:8px;color:#0B2D5C;">${otp}</p>
+       <p style="font-size:13px;color:#64748b;">If you did not request this, you can ignore this email. Your password will stay the same.</p>`
+    ),
 
-        <div style="text-align: center; margin: 28px 0 10px 0;">
-          <a href="${downloadLink}" style="background-color: #0B2D5C; color: #ffffff; padding: 14px 28px; font-weight: 800; text-decoration: none; border-radius: 12px; display: inline-block; font-size: 14px;">Download Official PDF &amp; QR Code</a>
-        </div>
-      </div>
-      <p style="text-align: center; color: #94a3b8; font-size: 11px; margin-top: 20px;">FitMed Rwanda · Official Medical Certification Portal</p>
-    </div>
-  `,
+  applicationReceived: (name: string, certId: string, purpose: string) =>
+    brandedEmail(
+      "Application received",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>We have received your medical fitness application. A licensed doctor will review it and, where required, invite you to a video consultation.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Certificate ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Purpose</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${purpose}</td></tr>
+       </table>
+       ${button(`${FITMED_APP_URL}/dashboard/user`, "Track your application")}`
+    ),
 
-  telehealthInvite: (applicantName: string, doctorName: string, meetingLink: string, time: string) => `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #f8fafc; border-radius: 16px;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0;">FitMed Telehealth</h1>
-        <p style="color: #12B8B0; font-weight: bold; font-size: 14px;">Live Video Consultation Room</p>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C;">Live Consultation Invitation</h2>
-        <p style="color: #475569; font-size: 14px;">Hello ${applicantName},</p>
-        <p style="color: #475569; font-size: 14px; line-height: 1.6;"><strong>${doctorName}</strong> is inviting you to join a secure live video medical assessment.</p>
-        <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; padding: 16px; border-radius: 8px; margin: 16px 0;">
-          <p style="margin: 0; color: #0369a1; font-size: 13px;"><strong>Scheduled Time:</strong> ${time}</p>
-          <p style="margin: 4px 0 0 0; color: #0369a1; font-size: 13px;"><strong>Room Security:</strong> End-to-End Encrypted (HIPAA)</p>
-        </div>
-        <div style="text-align: center; margin-top: 24px;">
-          <a href="${meetingLink}" style="background-color: #12B8B0; color: #0B2D5C; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 8px; display: inline-block;">Join Video Telehealth Room</a>
-        </div>
-      </div>
-    </div>
-  `,
+  doctorNewQueueApplication: (doctorName: string, applicantName: string, certId: string, purpose: string, riskLevel: string) =>
+    brandedEmail(
+      "New case in your queue",
+      `<p>Dear <strong>${doctorName}</strong>,</p>
+       <p>A new fitness certificate application is waiting in your clinical queue.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Applicant</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${applicantName}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Certificate ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Purpose</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${purpose}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Screening risk</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${riskLevel}</td></tr>
+       </table>
+       ${button(`${FITMED_APP_URL}/dashboard/doctor`, "Open clinical workspace", true)}`
+    ),
 
-  adminNewApplicantNotification: (name: string, email: string, nationalId: string) => `
-    <div style="font-family: 'Manrope', Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0; font-size: 22px;">FitMed Admin Alert</h1>
-        <span style="background-color: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800;">NEW APPLICANT REGISTRATION</span>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C; font-size: 16px; margin-top: 0;">New Applicant Awaiting National ID Verification</h2>
-        <p style="color: #475569; font-size: 13px; line-height: 1.6;">A new user has submitted their registration with a Rwanda National ID/Passport document. Please verify their identity in the Admin Console to activate their account and issue temporary credentials.</p>
-        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 16px; border-radius: 12px; margin: 16px 0; font-size: 13px;">
-          <p style="margin: 4px 0;"><strong>Name:</strong> ${name}</p>
-          <p style="margin: 4px 0;"><strong>Email:</strong> ${email}</p>
-          <p style="margin: 4px 0;"><strong>National ID:</strong> ${nationalId}</p>
-        </div>
-        <div style="text-align: center; margin-top: 20px;">
-          <a href="https://fitmed.rw/dashboard/admin" style="background-color: #0B2D5C; color: #ffffff; padding: 12px 24px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block;">Review &amp; Approve in Admin Console</a>
-        </div>
-      </div>
-    </div>
-  `,
+  certificateIssued: (candidateName: string, certId: string, purpose: string, doctorName: string) =>
+    brandedEmail(
+      "Certificate issued",
+      `<p>Dear <strong>${candidateName}</strong>,</p>
+       <p>Your medical evaluation for <strong>${purpose}</strong> has been completed and digitally signed by <strong>${doctorName}</strong>.</p>
+       <p><strong>Certificate ID:</strong> ${certId}<br/><strong>Status:</strong> Fit for the stated purpose (QR verifiable)</p>
+       ${button(`${FITMED_APP_URL}/dashboard/user`, "View and download certificate", true)}`
+    ),
 
-  applicantAccountApprovedWithTempPassword: (name: string, email: string, tempPassword: string, loginLink: string) => `
-    <div style="font-family: 'Manrope', Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0; font-size: 22px;">FitMed Rwanda</h1>
-        <span style="background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800;">ACCOUNT VERIFIED &amp; APPROVED</span>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C; font-size: 16px; margin-top: 0;">Welcome to FitMed, ${name}!</h2>
-        <p style="color: #475569; font-size: 13px; line-height: 1.6;">Your National ID has been verified and your account has been approved by the platform administrator. You may now sign in using your temporary credentials below:</p>
-        
-        <div style="background-color: #f0fdf4; border: 1px solid #86efac; padding: 16px; border-radius: 12px; margin: 16px 0; font-size: 13px; text-align: center;">
-          <div style="color: #166534; font-size: 12px; font-weight: bold;">Your Temporary Sign-In Password:</div>
-          <div style="font-family: monospace; font-size: 20px; font-weight: 900; color: #0B2D5C; margin: 8px 0; letter-spacing: 1px;">${tempPassword}</div>
-          <div style="color: #b45309; font-size: 11px; font-weight: 600;">⚠️ You will be prompted to reset your password immediately upon first sign-in.</div>
-        </div>
+  certificateApprovedPayLink: (candidateName: string, certId: string, purpose: string, doctorName: string, payLink: string) =>
+    brandedEmail(
+      "Approved — payment required",
+      `<p>Dear <strong>${candidateName}</strong>,</p>
+       <p><strong>${doctorName}</strong> has approved your medical fitness certificate for <strong>${purpose}</strong>.</p>
+       <p>To unlock the digitally signed PDF and verifiable QR code, complete the government fee of <strong>5,000 FRW</strong> via IremboPay (MTN MoMo, Airtel Money, or card).</p>
+       <p><strong>Certificate ID:</strong> ${certId}</p>
+       ${button(payLink, "Pay 5,000 FRW via IremboPay")}`
+    ),
 
-        <div style="text-align: center; margin-top: 24px;">
-          <a href="${loginLink}" style="background-color: #12B8B0; color: #0B2D5C; padding: 14px 28px; font-weight: 900; text-decoration: none; border-radius: 12px; display: inline-block;">Sign In &amp; Set New Password</a>
-        </div>
-      </div>
-    </div>
-  `,
+  certificatePaidDelivered: (candidateName: string, certId: string, purpose: string, iremboRef: string, downloadLink: string) =>
+    brandedEmail(
+      "Payment confirmed",
+      `<p>Dear <strong>${candidateName}</strong>,</p>
+       <p>We have confirmed your payment of <strong>5,000 FRW</strong>${iremboRef ? ` (reference <strong>${iremboRef}</strong>)` : ""}. Your official medical fitness certificate for <strong>${purpose}</strong> is now available.</p>
+       <p><strong>Certificate ID:</strong> ${certId}</p>
+       ${button(downloadLink, "Download certificate", true)}`
+    ),
 
-  forgotPasswordOTP: (name: string, otp: string) => `
-    <div style="font-family: 'Manrope', Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0; font-size: 22px;">FitMed Security</h1>
-        <span style="background-color: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800;">PASSWORD RESET CODE</span>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C; font-size: 16px; margin-top: 0;">Password Reset Verification</h2>
-        <p style="color: #475569; font-size: 13px; line-height: 1.6;">Hello ${name}, we received a request to reset your FitMed account password. Use the 6-digit security code below to complete the reset:</p>
-        
-        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; border-radius: 12px; margin: 20px 0; text-align: center;">
-          <div style="font-family: monospace; font-size: 32px; font-weight: 900; color: #0B2D5C; letter-spacing: 6px;">${otp}</div>
-          <div style="color: #64748b; font-size: 11px; margin-top: 6px;">This code is valid for 15 minutes. Do not share it with anyone.</div>
-        </div>
-      </div>
-    </div>
-  `,
+  paymentReceivedAdmin: (applicantName: string, certId: string, amount: string, iremboRef: string) =>
+    brandedEmail(
+      "Payment received",
+      `<p>IremboPay settlement has been recorded for a FitMed certificate.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Applicant</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${applicantName}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Certificate ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${amount}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Reference</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${iremboRef || "—"}</td></tr>
+       </table>
+       ${button(`${FITMED_APP_URL}/dashboard/admin`, "Open admin dashboard", true)}`
+    ),
+
+  telehealthInvite: (applicantName: string, doctorName: string, meetingLink: string, time: string) =>
+    brandedEmail(
+      "Video consultation",
+      `<p>Hello <strong>${applicantName}</strong>,</p>
+       <p><strong>${doctorName}</strong> has scheduled a secure live video assessment.</p>
+       <p><strong>When:</strong> ${time}<br/><strong>Join:</strong> please enter the room 5 minutes early and use a quiet, well-lit space with a valid ID ready.</p>
+       ${button(meetingLink, "Join telehealth room")}`
+    ),
+
+  appointmentReminder: (applicantName: string, doctorName: string, meetingLink: string, time: string) =>
+    brandedEmail(
+      "Appointment reminder",
+      `<p>Dear <strong>${applicantName}</strong>,</p>
+       <p>This is a reminder of your FitMed video consultation with <strong>${doctorName}</strong>.</p>
+       <p><strong>Scheduled time:</strong> ${time}</p>
+       <p>Have your National ID with you. Join a few minutes early so the doctor can start on time.</p>
+       ${button(meetingLink, "Join consultation room")}`
+    ),
 
   certificateStatusNotification: (
     name: string,
@@ -298,26 +272,37 @@ export const EmailTemplates = {
     doctorName: string,
     details: string,
     actionLink: string
-  ) => `
-    <div style="font-family: 'Manrope', Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; background-color: #f8fafc; border-radius: 20px; border: 1px solid #e2e8f0;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0B2D5C; margin: 0; font-size: 22px;">FitMed Clinical Status</h1>
-        <span style="background-color: #f1f5f9; color: #0B2D5C; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase;">STATUS: ${status}</span>
-      </div>
-      <div style="background-color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0B2D5C; font-size: 16px; margin-top: 0;">Certificate Application Update</h2>
-        <p style="color: #475569; font-size: 13px;">Dear <strong>${name}</strong>,</p>
-        <p style="color: #475569; font-size: 13px; line-height: 1.6;">Your medical certificate application for <strong>${purpose}</strong> (ID: ${certId}) has been updated by <strong>${doctorName}</strong>.</p>
-        
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; margin: 16px 0; font-size: 13px;">
-          <p style="margin: 4px 0; color: #0B2D5C;"><strong>Current Status:</strong> ${status}</p>
-          <p style="margin: 4px 0; color: #475569;"><strong>Doctor Notes / Instructions:</strong> ${details}</p>
-        </div>
+  ) =>
+    brandedEmail(
+      "Application update",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>Your medical certificate application for <strong>${purpose}</strong> (${certId}) was updated by <strong>${doctorName}</strong>.</p>
+       <p><strong>Status:</strong> ${status}</p>
+       <p>${details || "Please open your dashboard for next steps."}</p>
+       ${button(actionLink, "View in dashboard", true)}`
+    ),
 
-        <div style="text-align: center; margin-top: 24px;">
-          <a href="${actionLink}" style="background-color: #0B2D5C; color: #ffffff; padding: 12px 24px; font-weight: bold; text-decoration: none; border-radius: 10px; display: inline-block;">View in Dashboard</a>
-        </div>
-      </div>
-    </div>
-  `,
+  contactConfirmation: (fullName: string, subject: string, message: string) =>
+    brandedEmail(
+      "We received your message",
+      `<p>Dear <strong>${fullName}</strong>,</p>
+       <p>Thank you for contacting FitMed. Our team will reply within 1–2 business hours regarding <strong>${subject}</strong>.</p>
+       <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #12B8B0;background:#f8fafc;color:#475569;">${message}</blockquote>
+       <p>If this is urgent, write to <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;">hello@fitmed.rw</a>.</p>`
+    ),
+
+  contactAdminCopy: (fullName: string, email: string, phone: string, subject: string, message: string, category: string) =>
+    brandedEmail(
+      "New contact inquiry",
+      `<p>A visitor submitted the FitMed contact form.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Name</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${fullName}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Email</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${email}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Phone</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${phone || "—"}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Category</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${category || "general"}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Subject</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${subject}</td></tr>
+       </table>
+       <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #12B8B0;background:#f8fafc;color:#475569;">${message}</blockquote>
+       ${button(`${FITMED_APP_URL}/dashboard/admin`, "Open admin console", true)}`
+    ),
 };

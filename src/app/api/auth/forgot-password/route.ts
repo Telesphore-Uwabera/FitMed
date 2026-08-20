@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { hashPassword } from "@/lib/password";
 import User from "@/models/User";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
 
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
         await connectToDatabase();
         await User.findOneAndUpdate(
           { email: cleanEmail },
-          { password: newPassword, requiresPasswordReset: false },
+          { password: hashPassword(newPassword), requiresPasswordReset: false, temporaryPassword: undefined },
           { new: true }
         );
       } catch (dbErr) {

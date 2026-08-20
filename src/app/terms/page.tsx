@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: "1. Acceptance of Terms",
-    body: "By accessing or using the FitMed platform, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree, you may not use FitMed. FitMed is operated by FitMed (a MediConnect product) and is subject to Rwandan law.",
+    body: "By accessing or using the FitMed platform, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree, you may not use FitMed. FitMed is operated by FitMed and is subject to Rwandan law.",
   },
   {
     title: "2. Description of Service",

@@ -255,11 +255,11 @@ export default function ContactPage() {
                 </div>
 
                 <h2 className="text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
-                  FitMed — MediConnect Technology Headquarters
+                  FitMed Technology Headquarters
                 </h2>
 
                 <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                  FitMed operates as a specialized digital medical fitness certification platform within MediConnect — Rwanda's virtual care and digital health ecosystem.
+                  FitMed is a digital medical fitness certification platform connecting applicants with licensed doctors through secure video consultations.
                 </p>
 
                 <div className="space-y-3 pt-2">

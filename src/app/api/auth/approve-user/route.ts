@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { hashPassword } from "@/lib/password";
 import User from "@/models/User";
-import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
         { email: email.toLowerCase() },
         {
           status: "active",
+          password: hashPassword(tempPassword),
           temporaryPassword: tempPassword,
           requiresPasswordReset: true,
         },
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
         name || "Applicant",
         email,
         tempPassword,
-        "https://fitmed.rw/signin"
+        `${FITMED_APP_URL}/signin`
       ),
     });
 

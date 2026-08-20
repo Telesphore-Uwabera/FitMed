@@ -32,10 +32,9 @@
 21. [Product Roadmap](#product-roadmap)
 22. [Privacy, Security & Regulatory](#privacy-security--regulatory)
 23. [Strategic Positioning](#strategic-positioning)
-24. [Relationship with MediConnect](#relationship-with-mediconnect)
-25. [Tech Stack](#tech-stack)
-26. [Getting Started](#getting-started)
-27. [Project Structure](#project-structure)
+24. [Tech Stack](#tech-stack)
+25. [Getting Started](#getting-started)
+26. [Project Structure](#project-structure)
 
 ---
 
@@ -404,17 +403,6 @@ Because the platform processes identity information and health information, priv
 
 ---
 
-## Relationship with MediConnect
-
-Because the product concept is closely related to telemedicine, FitMed could be launched as a specialised vertical or product under MediConnect:
-
-- **MediConnect** — broader telemedicine and virtual care platform
-- **FitMed** — specialised medical fitness assessment and certification product
-- Shared doctor network and clinical infrastructure where appropriate
-- Shared video consultation technology
-- Shared identity, payments, notifications, and security infrastructure
-- Separate branding and workflows for employers and certification use cases
-
 ---
 
 ## Tech Stack
@@ -501,7 +489,7 @@ src/
 
 ## Licence
 
-© 2026 FitMed. All rights reserved. A [MediConnect](https://mediconnect.rw) product.
+© 2026 FitMed. All rights reserved.
 
 Built with clinical safety and privacy in mind.
 

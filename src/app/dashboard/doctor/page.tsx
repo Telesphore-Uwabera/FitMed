@@ -403,7 +403,7 @@ export default function DoctorDashboardPage() {
           patientName: selectedCandidate?.name || "Telesphore",
           doctorName: "Dr. Telesphore Uwabera, MD",
           scheduledTime: "Live Now (Consultation Active)",
-          roomUrl: "https://fitmed.netlify.app/dashboard/user",
+          roomUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com"}/dashboard/user`,
         }),
       });
       const data = await res.json();

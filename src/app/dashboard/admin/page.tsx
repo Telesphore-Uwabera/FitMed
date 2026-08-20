@@ -99,13 +99,8 @@ export default function AdminDashboardPage() {
     success("Profile saved", "Your administrator profile is now updated.");
   };
 
-  const changeAdminPassword = (event: React.FormEvent) => {
+  const changeAdminPassword = async (event: React.FormEvent) => {
     event.preventDefault();
-    const storedPassword = localStorage.getItem("fitmed_admin_password") || "91073@Tecy";
-    if (currentPassword !== storedPassword) {
-      error("Password not changed", "The current password is incorrect.");
-      return;
-    }
     if (newPassword.length < 8) {
       warning("Password too short", "Use at least 8 characters.");
       return;
@@ -114,11 +109,28 @@ export default function AdminDashboardPage() {
       error("Password not changed", "The new passwords do not match.");
       return;
     }
-    localStorage.setItem("fitmed_admin_password", newPassword);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    success("Password updated", "Your next sign-in will use the new password.");
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: adminProfile.email,
+          currentPassword,
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Password not changed", data.error || "The current password is incorrect.");
+        return;
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      success("Password updated", "Your next sign-in will use the new password.");
+    } catch {
+      error("Password not changed", "Could not update the password.");
+    }
   };
 
   const saveGovernanceSettings = () => {
@@ -142,6 +154,32 @@ export default function AdminDashboardPage() {
     const params = new URLSearchParams(window.location.search);
     const nav = params.get("nav") || params.get("tab");
     if (nav) setActiveNav(nav);
+  }, []);
+
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        const res = await fetch("/api/admin/staff");
+        const data = await res.json();
+        if (!data.success) return;
+        if (Array.isArray(data.doctors) && data.doctors.length > 0) {
+          setVerifiedDoctors(data.doctors);
+        }
+        if (Array.isArray(data.admins)) {
+          setAdminAccounts(
+            data.admins.map((a: { fullName?: string; name?: string; email: string; role: string; status?: string }) => ({
+              name: a.fullName || a.name || "Admin",
+              email: a.email,
+              role: a.role,
+              status: a.status,
+            }))
+          );
+        }
+      } catch {
+        /* keep local fallback lists */
+      }
+    };
+    loadStaff();
   }, []);
 
   const [auditDate, setAuditDate] = useState("—");
@@ -295,16 +333,20 @@ export default function AdminDashboardPage() {
 
   const [userSearch, setUserSearch] = useState("");
   const [addDoctorForm, setAddDoctorForm] = useState({
+    role: "doctor" as "admin" | "doctor",
     name: "",
     email: "",
     license: "",
     specialty: "",
     phone: "",
+    password: "",
     avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
   });
   const [doctorWebpResult, setDoctorWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingDoctorImg, setIsConvertingDoctorImg] = useState(false);
   const [showAddDoctor, setShowAddDoctor] = useState(false);
+  const [creatingStaff, setCreatingStaff] = useState(false);
+  const [adminAccounts, setAdminAccounts] = useState<{ name: string; email: string; role: string; status?: string }[]>([]);
 
   // Payment Transactions State, Filters & Sorting
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<"ALL" | "PAID" | "WAITING" | "EXPIRED">("ALL");
@@ -929,10 +971,10 @@ export default function AdminDashboardPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Shield className="w-4 h-4 text-[#12B8B0]" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#12B8B0]">Admin Action: Doctor Onboarding</span>
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#12B8B0]">Admin Action: Staff Onboarding</span>
                   </div>
-                  <h3 className="text-base font-extrabold text-white">Create New Doctor Account</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Doctor accounts can only be created by the system administrator after Rwanda Medical Council license verification.</p>
+                  <h3 className="text-base font-extrabold text-white">Create Admin or Doctor Account</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">New accounts are saved in MongoDB and can sign in immediately.</p>
                 </div>
                 <button
                   type="button"
@@ -940,41 +982,88 @@ export default function AdminDashboardPage() {
                   className="px-4 py-2 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center gap-1.5 transition-colors"
                 >
                   <UserPlus className="w-4 h-4" />
-                  {showAddDoctor ? "Cancel" : "Add Doctor"}
+                  {showAddDoctor ? "Cancel" : "Add Staff"}
                 </button>
               </div>
+
+              {adminAccounts.length > 0 && (
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#12B8B0]">Administrators ({adminAccounts.length})</div>
+                  {adminAccounts.map((admin) => (
+                    <div key={admin.email} className="flex items-center justify-between text-xs gap-3">
+                      <span className="font-bold text-white">{admin.name}</span>
+                      <span className="text-slate-300 truncate">{admin.email}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {showAddDoctor && (
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    let finalAvatar = addDoctorForm.avatarUrl;
-                    if (doctorWebpResult) {
-                      const res = await uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors");
-                      if (res.url) finalAvatar = res.url;
+                    setCreatingStaff(true);
+                    try {
+                      let finalAvatar = addDoctorForm.avatarUrl;
+                      if (doctorWebpResult) {
+                        const upload = await uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors");
+                        if (upload.url) finalAvatar = upload.url;
+                      }
+                      const res = await fetch("/api/admin/staff", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          role: addDoctorForm.role,
+                          name: addDoctorForm.name,
+                          email: addDoctorForm.email,
+                          license: addDoctorForm.license,
+                          specialty: addDoctorForm.specialty,
+                          phone: addDoctorForm.phone,
+                          password: addDoctorForm.password || undefined,
+                          avatarUrl: finalAvatar,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!data.success) {
+                        error("Account not created", data.error || "Please try again.");
+                        return;
+                      }
+                      if (addDoctorForm.role === "doctor") {
+                        setVerifiedDoctors((prev) => [
+                          ...prev,
+                          {
+                            id: data.user.id,
+                            name: addDoctorForm.name,
+                            role: addDoctorForm.specialty || "Clinical Evaluator",
+                            license: addDoctorForm.license,
+                            status: "Active",
+                          },
+                        ]);
+                      } else {
+                        setAdminAccounts((prev) => [
+                          ...prev,
+                          { name: addDoctorForm.name, email: addDoctorForm.email.toLowerCase(), role: "admin", status: "active" },
+                        ]);
+                      }
+                      const extra = data.temporaryPassword ? ` Temporary password: ${data.temporaryPassword}` : "";
+                      success("Account created", `${addDoctorForm.name} can now sign in.${extra}`);
+                      setShowAddDoctor(false);
+                      setAddDoctorForm({
+                        role: "doctor",
+                        name: "",
+                        email: "",
+                        license: "",
+                        specialty: "",
+                        phone: "",
+                        password: "",
+                        avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
+                      });
+                      setDoctorWebpResult(null);
+                    } catch {
+                      error("Account not created", "Could not reach the server.");
+                    } finally {
+                      setCreatingStaff(false);
                     }
-                    const newDocId = `DOC-${Math.floor(100 + Math.random() * 900)}`;
-                    setVerifiedDoctors((prev) => [
-                      ...prev,
-                      {
-                        id: newDocId,
-                        name: addDoctorForm.name,
-                        role: addDoctorForm.specialty || "Clinical Evaluator",
-                        license: addDoctorForm.license,
-                        status: "Active",
-                      },
-                    ]);
-                    success("Doctor Account Created", `${addDoctorForm.name} (License: ${addDoctorForm.license}) added. WebP avatar synced to Cloudinary.`);
-                    setShowAddDoctor(false);
-                    setAddDoctorForm({
-                      name: "",
-                      email: "",
-                      license: "",
-                      specialty: "",
-                      phone: "",
-                      avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
-                    });
-                    setDoctorWebpResult(null);
                   }}
                   className="bg-white/10 rounded-2xl p-6 border border-white/10 space-y-4"
                 >
@@ -1009,11 +1098,22 @@ export default function AdminDashboardPage() {
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Account Type</label>
+                      <select
+                        value={addDoctorForm.role}
+                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, role: e.target.value as "admin" | "doctor" })}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-[#12B8B0]"
+                      >
+                        <option value="doctor" className="text-slate-900">Doctor</option>
+                        <option value="admin" className="text-slate-900">Admin</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Full Name</label>
                       <input
                         required
                         type="text"
-                        placeholder="Dr. Full Name, MD"
+                        placeholder={addDoctorForm.role === "admin" ? "Admin full name" : "Dr. Full Name, MD"}
                         value={addDoctorForm.name}
                         onChange={(e) => setAddDoctorForm({ ...addDoctorForm, name: e.target.value })}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
@@ -1024,12 +1124,24 @@ export default function AdminDashboardPage() {
                       <input
                         required
                         type="email"
-                        placeholder="doctor@hospital.rw"
+                        placeholder="name@fitmed.rw"
                         value={addDoctorForm.email}
                         onChange={(e) => setAddDoctorForm({ ...addDoctorForm, email: e.target.value })}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Password (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="Leave blank to auto-generate"
+                        value={addDoctorForm.password}
+                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, password: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+                    {addDoctorForm.role === "doctor" && (
+                      <>
                     <div>
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">RMDC License Number</label>
                       <input
@@ -1052,14 +1164,17 @@ export default function AdminDashboardPage() {
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
+                      </>
+                    )}
                   </div>
                   <div className="flex justify-end pt-2">
                     <button
                       type="submit"
-                      className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs transition-colors flex items-center gap-2"
+                      disabled={creatingStaff}
+                      className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs transition-colors flex items-center gap-2 disabled:opacity-60"
                     >
                       <UserPlus className="w-4 h-4" />
-                      Create Doctor Account & Sync to MongoDB
+                      {creatingStaff ? "Saving…" : addDoctorForm.role === "admin" ? "Create Admin Account" : "Create Doctor Account"}
                     </button>
                   </div>
                 </form>

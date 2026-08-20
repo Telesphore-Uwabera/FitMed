@@ -97,7 +97,7 @@ export default function OfficialMedicalCertificate({
     doctorLicense: data?.doctorLicense || "RW-RMDC-4091",
     doctorId: data?.doctorId || "DOC-RW-4091",
     doctorSpecialty: data?.doctorSpecialty || "Occupational Medicine & Telemedicine Evaluator",
-    hospitalPartner: data?.hospitalPartner || "King Faisal Hospital Rwanda / MediConnect Alliance",
+    hospitalPartner: data?.hospitalPartner || "King Faisal Hospital Rwanda",
     issueDate: data?.issueDate || "18 August 2026",
     expiryDate: data?.expiryDate || "18 February 2027",
     sha256Hash: data?.sha256Hash || "e9b4c27f9011a684b3d7c2e55198df44a1087cb1a29938e744b1c8f331902f82",

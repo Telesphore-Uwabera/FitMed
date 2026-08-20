@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { hashPassword } from "@/lib/password";
 import User from "@/models/User";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
 
@@ -21,10 +22,11 @@ export async function POST(request: NextRequest) {
 
       await User.create({
         name,
+        fullName: name,
         email: email.toLowerCase(),
         phone: phone || "+250 788 123 456",
         nationalId,
-        password,
+        password: password ? hashPassword(password) : undefined,
         avatarUrl,
         nationalIdImageUrl: idDocUrl,
         role: "user",
@@ -41,6 +43,12 @@ export async function POST(request: NextRequest) {
       toName: "FitMed Admin",
       subject: `New Applicant Registration Pending Approval: ${name}`,
       htmlContent: EmailTemplates.adminNewApplicantNotification(name, email, nationalId),
+    });
+    await sendBrevoEmail({
+      toEmail: email,
+      toName: name,
+      subject: "FitMed received your registration",
+      htmlContent: EmailTemplates.welcomeApplicantPending(name),
     });
 
     return NextResponse.json({

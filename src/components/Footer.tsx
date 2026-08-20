@@ -16,7 +16,6 @@ const footerLinks = {
     { label: "Our Doctors",   href: "/doctors",  ext: false },
     { label: "Careers",       href: "/careers",  ext: false },
     { label: "Press",         href: "/press",    ext: false },
-    { label: "MediConnect",   href: "https://mediconnect.rw", ext: true },
   ],
   Legal: [
     { label: "Privacy Policy",   href: "/privacy",    ext: false },
@@ -133,16 +132,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-5">
 
           <p className="text-xs text-white/30 order-2 md:order-1">
-            © {year} FitMed. All rights reserved. A{" "}
-            <a
-              href="https://mediconnect.rw"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sky-500/60 hover:text-sky-400 transition-colors"
-            >
-              MediConnect
-            </a>{" "}
-            product.
+            © {year} FitMed. All rights reserved.
           </p>
 
           {/* Social icons */}

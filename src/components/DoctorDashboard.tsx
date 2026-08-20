@@ -72,7 +72,7 @@ export default function DoctorDashboard() {
                   <Image src={doctors[currentDoctor].image} alt={doctors[currentDoctor].name} fill className="object-cover object-top" sizes="(max-width:1024px) 100vw, 50vw" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
                   <div className="absolute bottom-0 inset-x-0 p-6 text-white bg-[#0B2D5C]/65 backdrop-blur-md border-t border-[#12B8B0]/40">
-                    <h3 className="text-2xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>{doctors[currentDoctor].name}</h3>
+                    <h3 className="text-2xl font-extrabold" style={{ fontFamily: "var(--font-primary)", color: "#FFFFFF" }}>{doctors[currentDoctor].name}</h3>
                     <p className="mt-1 text-sm text-[#8ff3e8]">{doctors[currentDoctor].specialty}</p>
                   </div>
                 </motion.div>

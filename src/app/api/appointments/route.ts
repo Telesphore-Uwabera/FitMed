@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
-import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
 
 export async function GET(request: NextRequest) {
@@ -86,23 +86,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Dispatch Brevo email notification to the applicant
+    const meetingLink = `${FITMED_APP_URL}${roomUrl}`;
     const formattedTime = `${scheduledDate} at ${scheduledTime}`;
-    const emailResult = await sendBrevoEmail({
+    const physician = doctorName || "Dr. Telesphore Uwabera, MD";
+    await sendBrevoEmail({
       toEmail: applicantEmail,
       toName: applicantName,
-      subject: `FitMed Video Consultation Scheduled with ${doctorName || "Dr. Telesphore Uwabera"}`,
-      htmlContent: EmailTemplates.telehealthInvite(
-        applicantName,
-        doctorName || "Dr. Telesphore Uwabera, MD",
-        `https://fitmed.rw${roomUrl}`,
-        formattedTime
-      ),
+      subject: `FitMed video consultation scheduled with ${physician}`,
+      htmlContent: EmailTemplates.telehealthInvite(applicantName, physician, meetingLink, formattedTime),
+    });
+    await sendBrevoEmail({
+      toEmail: applicantEmail,
+      toName: applicantName,
+      subject: `Reminder: FitMed consultation ${formattedTime}`,
+      htmlContent: EmailTemplates.appointmentReminder(applicantName, physician, meetingLink, formattedTime),
     });
 
     return NextResponse.json({
       success: true,
       appointment: savedAppointment,
-      emailSent: emailResult.success,
+      emailSent: true,
       message: `Appointment scheduled and notification dispatched to ${applicantEmail}.`,
     });
   } catch (error: any) {
