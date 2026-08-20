@@ -62,6 +62,12 @@ export async function POST(request: NextRequest) {
         name: user.fullName || user.name || "FitMed user",
         email: user.email,
         role: sessionRole(user.role),
+        phone: user.phone || "",
+        nationalId: user.nationalId || "",
+        avatarUrl: user.avatarUrl || "",
+        dateOfBirth: user.dateOfBirth || "",
+        gender: user.gender || "",
+        address: user.address || "",
       },
     });
   } catch (error: unknown) {

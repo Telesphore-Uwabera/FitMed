@@ -6,8 +6,9 @@ import Image from "next/image";
 import DashboardShell from "@/components/DashboardShell";
 import BrandDatePicker from "@/components/BrandDatePicker";
 import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
-import VideoCallOverlay from "@/components/VideoCallOverlay";
-import WebRTCVideoCall from "@/components/WebRTCVideoCall";
+import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
+import { useSession } from "@/lib/useSession";
+import { consultationRoomId, formatCertificateCard, formatChatMessages } from "@/lib/consultation";
 import { useToast } from "@/components/ToastProvider";
 import {
   FileCheck2,
@@ -61,6 +62,7 @@ import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate"
 
 export default function UserDashboard() {
   const { success, error, warning, info } = useToast();
+  const { session, loading: sessionLoading } = useSession("user");
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const goToTab = (id: string) => {
@@ -107,16 +109,16 @@ export default function UserDashboard() {
 
   // Profile data
   const [profileData, setProfileData] = useState({
-    name: "Telesphore Uwabera",
-    email: "telesphore91073@gmail.com",
-    phone: "+250 788 123 456",
-    nationalId: "1199580048123049",
-    dob: "1995-08-14",
-    address: "KG 549 St, Nyarutarama, Kigali",
-    emergencyName: "Claudine Uwabera",
-    emergencyPhone: "+250 788 654 321",
-    employerCode: "CORP-MTN-RW",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
+    name: "",
+    email: "",
+    phone: "",
+    nationalId: "",
+    dob: "",
+    address: "",
+    emergencyName: "",
+    emergencyPhone: "",
+    employerCode: "",
+    avatarUrl: "",
   });
 
   const [avatarWebpResult, setAvatarWebpResult] = useState<WebPConversionResult | null>(null);
@@ -146,41 +148,53 @@ export default function UserDashboard() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [activeCallAppointment, setActiveCallAppointment] = useState<any>(null);
   const [videoCallRoomId, setVideoCallRoomId] = useState<string>("");
-  const [chatMessages, setChatMessages] = useState([
-    {
-      sender: "doctor" as const,
-      name: "Dr. Telesphore Uwabera, MD",
-      text: "Hello Telesphore! I'm reviewing your questionnaire for the workplace fitness certificate. How are you feeling today?",
-      time: "10:15 AM",
-    },
-    {
-      sender: "applicant" as const,
-      name: "Telesphore",
-      text: "Good morning Doctor. Feeling great, ready for the assessment.",
-      time: "10:16 AM",
-    },
-    {
-      sender: "doctor" as const,
-      name: "Dr. Telesphore Uwabera, MD",
-      text: "Excellent. Your blood pressure (120/80) and SpO2 (98%) are well within standard ranges. Let's do a quick visual check.",
-      time: "10:16 AM",
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<{ sender: "doctor" | "applicant"; name: string; text: string; time: string }[]>([]);
 
-  const handleStartCall = (apt?: any) => {
-    const appointment = apt || appointments[0] || null;
-    setActiveCallAppointment(appointment);
-    const roomId = appointment?.appointmentId || `ROOM-${Date.now()}`;
-    setVideoCallRoomId(roomId);
-    if (appointment?.appointmentId) {
-      localStorage.setItem(`fitmed_meeting:${appointment.appointmentId}`, "connected");
+  const persistAppointmentStatus = async (appointmentId: string, status: string) => {
+    if (!appointmentId) return;
+    try {
+      await fetch("/api/appointments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId, status }),
+      });
+      setAppointments((prev) => prev.map((a) => (a.appointmentId === appointmentId ? { ...a, status } : a)));
+    } catch {
+      /* local status still updates */
     }
+  };
+
+  const handleStartCall = async (apt?: any) => {
+    const appointment = apt || appointments[0] || null;
+    if (!appointment?.appointmentId) {
+      warning("No appointment", "Wait for your doctor to schedule a consultation, then join from this tab.");
+      return;
+    }
+    const roomId = consultationRoomId(appointment) || FITMED_LIVE_ROOM;
+    setActiveCallAppointment(appointment);
+    setVideoCallRoomId(roomId);
+    try {
+      const chatRes = await fetch(`/api/chat?consultationId=${encodeURIComponent(roomId)}`);
+      const chatData = await chatRes.json();
+      if (chatData.success && chatData.messages?.length) {
+        setChatMessages(formatChatMessages(chatData.messages));
+      } else {
+        setChatMessages([]);
+      }
+    } catch {
+      setChatMessages([]);
+    }
+    await persistAppointmentStatus(appointment.appointmentId, "in-progress");
+    localStorage.setItem(`fitmed_meeting:${roomId}`, "connected");
     setIsCallActive(true);
   };
 
   const handleEndCall = () => {
+    if (videoCallRoomId) {
+      localStorage.removeItem(`fitmed_meeting:${videoCallRoomId}`);
+    }
     if (activeCallAppointment?.appointmentId) {
-      localStorage.removeItem(`fitmed_meeting:${activeCallAppointment.appointmentId}`);
+      void persistAppointmentStatus(activeCallAppointment.appointmentId, "completed");
     }
     setIsCallActive(false);
     setActiveCallAppointment(null);
@@ -194,191 +208,80 @@ export default function UserDashboard() {
   const [isPayingIrembo, setIsPayingIrembo] = useState(false);
   const [paymentSuccessAlert, setPaymentSuccessAlert] = useState<string | null>(null);
 
-  const [activeCerts, setActiveCerts] = useState([
-    {
-      id: "FM-2024-88421",
-      purpose: "Workplace & Office Fitness",
-      doctor: "Dr. Telesphore Uwabera, MD",
-      license: "RW-RMDC-4091",
-      issueDate: "18 Aug 2026",
-      expiryDate: "18 Aug 2027",
-      status: "approved",
-      statusLabel: "VERIFIED FIT (PAID)",
-      paymentStatus: "PAID",
-      iremboRef: "IREMBO-RW-2024-9104",
-      fee: "5,000 FRW",
-      notes: "Clearance approved following clinical examination.",
-      qrUrl: "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/FM-2024-88421",
-    },
-    {
-      id: "FM-2026-99412",
-      purpose: "Transport & Commercial Driver",
-      doctor: "Dr. Amina Nshimiyimana, MD",
-      license: "RW-RMDC-3382",
-      issueDate: "Today, 11:30 AM",
-      expiryDate: "20 Aug 2027",
-      status: "approved",
-      statusLabel: "APPROVED - AWAITING PAYMENT",
-      paymentStatus: "UNPAID",
-      iremboRef: null,
-      fee: "5,000 FRW",
-      notes: "Approved by physician. Complete 5,000 FRW Irembo payment to unlock certificate & QR.",
-      qrUrl: "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/FM-2026-99412",
-    },
-    {
-      id: "FM-2026-77301",
-      purpose: "Construction & Heights Fitness",
-      doctor: "Dr. Patrick Uwase, MBBS",
-      license: "RW-RMDC-2910",
-      issueDate: "Today, 09:15 AM",
-      expiryDate: "—",
-      status: "video appointment requested",
-      statusLabel: "VIDEO APPOINTMENT REQUESTED",
-      paymentStatus: "UNPAID",
-      iremboRef: null,
-      fee: "5,000 FRW",
-      notes: "Doctor requested a live video consultation to review vertigo and balance screening.",
-      qrUrl: "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/FM-2026-77301",
-    },
-    {
-      id: "FM-2026-88102",
-      purpose: "Food Handler & Hygiene Clearance",
-      doctor: "Dr. Claire Akamanzi, MD",
-      license: "RW-RMDC-4890",
-      issueDate: "Yesterday",
-      expiryDate: "—",
-      status: "physical check up requested",
-      statusLabel: "PHYSICAL CHECK UP REQUESTED",
-      paymentStatus: "UNPAID",
-      iremboRef: null,
-      fee: "5,000 FRW",
-      notes: "In-person stool exam and lab diagnostics required at CHUK partner clinic before issuance.",
-      qrUrl: "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/FM-2026-88102",
-    },
-    {
-      id: "FM-2026-66419",
-      purpose: "Sports, Gym & Athletic Fitness",
-      doctor: "Dr. Telesphore Uwabera, MD",
-      license: "RW-RMDC-4091",
-      issueDate: "17 Aug 2026",
-      expiryDate: "—",
-      status: "rejected",
-      statusLabel: "REJECTED (DECLINED)",
-      paymentStatus: "UNPAID",
-      iremboRef: null,
-      fee: "5,000 FRW",
-      notes: "Declined: Stage 2 severe hypertension (BP 185/112) detected. Immediate cardiology referral required.",
-      qrUrl: "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/FM-2026-66419",
-    },
-  ]);
+  const [activeCerts, setActiveCerts] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
 
-  const [history, setHistory] = useState([
-    {
-      id: "FM-2024-88421",
-      purpose: "Workplace & Office Fitness",
-      date: "18 Aug 2026",
-      doctor: "Dr. Telesphore Uwabera, MD",
-      outcome: "Fit for Activity",
-      status: "Active",
-    },
-    {
-      id: "FM-2025-11048",
-      purpose: "Sports & Gym Clearance",
-      date: "10 Feb 2025",
-      doctor: "Dr. Amina Nshimiyimana, MD",
-      outcome: "Fit for Activity",
-      status: "Expired",
-    },
-  ]);
-
-  // Scheduled Appointments State
-  const [appointments, setAppointments] = useState<any[]>([
-    {
-      appointmentId: "APT-2026-891",
-      doctorName: "Dr. Telesphore Uwabera, MD",
-      doctorSpecialty: "Licensed Telehealth & Occupational Physician",
-      doctorLicense: "RW-RMDC-4091",
-      purpose: "Workplace & Office Fitness Certification",
-      scheduledDate: "Today",
-      scheduledTime: "14:30",
-      durationMinutes: 15,
-      status: "scheduled",
-      roomUrl: "/dashboard/user?tab=consultation",
-      notes: "Routine medical clearance, identity cross-check & vital symptom review.",
-    },
-    {
-      appointmentId: "APT-2026-904",
-      doctorName: "Dr. Amina Nshimiyimana, MD",
-      doctorSpecialty: "High-Risk & Transport Clearance Lead",
-      doctorLicense: "RW-RMDC-3382",
-      purpose: "Commercial Driver & Transport License",
-      scheduledDate: "22 Aug 2026",
-      scheduledTime: "10:00",
-      durationMinutes: 20,
-      status: "scheduled",
-      roomUrl: "/dashboard/user?tab=consultation",
-      notes: "Vision, reflex, and blood pressure screening review.",
-    },
-  ]);
-
-  // Fetch live chat messages and appointments from MongoDB
+  // Load profile, appointments, and certificates from MongoDB
   useEffect(() => {
+    if (!session?.email) return;
+    const email = session.email;
+    setProfileData((prev) => ({
+      ...prev,
+      name: session.name || prev.name,
+      email,
+    }));
+
     async function loadData() {
       try {
-        const chatRes = await fetch("/api/chat?consultationId=ROOM-FM-9941", { signal: AbortSignal.timeout(8000) });
-        const chatData = await chatRes.json();
-        if (chatData.success && chatData.messages?.length > 0) {
-          const formatted = chatData.messages.map((m: any) => ({
-            sender: m.senderRole === "doctor" ? "doctor" : "applicant",
-            name: m.senderName,
-            text: m.messageText,
-            time: new Date(m.timestamp || m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        const meRes = await fetch(`/api/auth/me?email=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+        const meData = await meRes.json();
+        if (meData.success && meData.user) {
+          const u = meData.user;
+          setProfileData((prev) => ({
+            ...prev,
+            name: u.name || prev.name,
+            email: u.email || email,
+            phone: u.phone || prev.phone,
+            nationalId: u.nationalId || prev.nationalId,
+            dob: u.dateOfBirth || prev.dob,
+            address: u.address || prev.address,
+            avatarUrl: u.avatarUrl || prev.avatarUrl,
           }));
-          setChatMessages(formatted);
         }
       } catch (err) {
-        console.warn("Could not load initial chat history:", err);
+        console.warn("Could not load profile:", err);
       }
 
       try {
-        const aptRes = await fetch("/api/appointments?applicantEmail=telesphore91073@gmail.com", { signal: AbortSignal.timeout(8000) });
+        const aptRes = await fetch(`/api/appointments?applicantEmail=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
         const aptData = await aptRes.json();
-        if (aptData.success && aptData.appointments?.length > 0) {
-          setAppointments(aptData.appointments);
+        if (aptData.success) {
+          setAppointments(aptData.appointments || []);
+          const params = new URLSearchParams(window.location.search);
+          const room = params.get("room");
+          if (room) {
+            const match = (aptData.appointments || []).find(
+              (a: any) => a.appointmentId === room || a.roomId === room
+            );
+            if (match) {
+              goToTab("consultation");
+              setTimeout(() => {
+                void handleStartCall(match);
+              }, 300);
+            }
+          }
         }
       } catch (err) {
         console.warn("Could not load appointments:", err);
       }
 
       try {
-        const certRes = await fetch("/api/certificates?applicantEmail=telesphore91073@gmail.com", { signal: AbortSignal.timeout(8000) });
+        const certRes = await fetch(`/api/certificates?applicantEmail=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
         const certData = await certRes.json();
-        if (certData.success && certData.certificates?.length > 0) {
-          setActiveCerts((prev) => {
-            const byId = new Map(prev.map((c) => [c.id, c]));
-            for (const cert of certData.certificates) {
-              const id = cert.certificateId;
-              const existing = byId.get(id) || {};
-              byId.set(id, {
-                ...existing,
-                id,
-                purpose: cert.purpose || existing.purpose,
-                doctor: cert.assignedDoctor || existing.doctor || "Dr. Telesphore Uwabera",
-                license: existing.license || "RW-RMDC-4091",
-                issueDate: existing.issueDate || "Today",
-                expiryDate: existing.expiryDate || "—",
-                status: cert.status || existing.status,
-                statusLabel: cert.status === "approved"
-                  ? (cert.paymentStatus === "PAID" ? "VERIFIED FIT" : "APPROVED — PAYMENT DUE")
-                  : existing.statusLabel || "SUBMITTED - AWAITING DOCTOR REVIEW",
-                paymentStatus: cert.paymentStatus || existing.paymentStatus || "UNPAID",
-                fee: existing.fee || "5,000 FRW",
-                notes: existing.notes || cert.additionalNotes || "",
-                qrUrl: cert.qrCodeUrl || existing.qrUrl,
-              });
-            }
-            return Array.from(byId.values());
-          });
+        if (certData.success) {
+          const cards = (certData.certificates || []).map((cert: any) => formatCertificateCard(cert));
+          setActiveCerts(cards);
+          setHistory(
+            cards.map((cert: any) => ({
+              id: cert.id,
+              purpose: cert.purpose,
+              date: cert.issueDate,
+              doctor: cert.doctor,
+              outcome: cert.statusLabel,
+              status: cert.status,
+            }))
+          );
         }
       } catch (err) {
         console.warn("Could not load applicant certificates:", err);
@@ -386,10 +289,7 @@ export default function UserDashboard() {
     }
 
     loadData();
-  }, []);
-
-
-
+  }, [session?.email]);
 
   const handleWizardComplete = async (data: any) => {
     try {
@@ -481,6 +381,7 @@ export default function UserDashboard() {
           body: JSON.stringify({
             certificateId: certToPay.id,
             paymentStatus: "PAID",
+            iremboRef: txRef,
             status: certToPay.status === "submitted" ? "approved" : certToPay.status,
           }),
         });
@@ -510,11 +411,42 @@ export default function UserDashboard() {
     }, 1500);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSettingsAlert(true);
-    setTimeout(() => setSavedSettingsAlert(false), 3000);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: profileData.email || session?.email,
+          name: profileData.name,
+          phone: profileData.phone,
+          nationalId: profileData.nationalId,
+          dateOfBirth: profileData.dob,
+          address: profileData.address,
+          avatarUrl: profileData.avatarUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Profile not saved", data.error || "Could not update your record.");
+        return;
+      }
+      setSavedSettingsAlert(true);
+      setTimeout(() => setSavedSettingsAlert(false), 3000);
+      success("Profile saved", "Your details were stored in FitMed.");
+    } catch {
+      error("Profile not saved", "Network error while saving your profile.");
+    }
   };
+
+  if (sessionLoading || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Loading your FitMed records…
+      </div>
+    );
+  }
 
   return (
     <DashboardShell
@@ -522,8 +454,8 @@ export default function UserDashboard() {
       activeNav={activeTab}
       onNavChange={goToTab}
       userProfile={{
-        name: profileData.name,
-        email: profileData.email,
+        name: profileData.name || session?.name || "Applicant",
+        email: profileData.email || session?.email || "",
         avatarUrl: profileData.avatarUrl,
         badgeLabel: "Identity Verified",
       }}
@@ -1095,18 +1027,14 @@ export default function UserDashboard() {
               </p>
             </div>
 
-            {/* Active WebRTC call */}
-            {isCallActive && videoCallRoomId && (
-              <WebRTCVideoCall
-                roomId={videoCallRoomId}
-                userName={profileData.name}
-                onCallEnd={handleEndCall}
-              />
-            )}
-
             {/* Scheduled appointments waiting room */}
             <div className="space-y-4">
               <h3 className="text-sm font-extrabold text-[#0B2D5C] uppercase tracking-wider">Your Scheduled Consultations</h3>
+              {appointments.length === 0 && (
+                <div className="p-6 rounded-3xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
+                  No consultations in the database yet. After your doctor schedules a visit, it will appear here and you can join the same room they opened.
+                </div>
+              )}
               {appointments.map((apt) => (
                 <div
                   key={apt.appointmentId}
@@ -1165,9 +1093,9 @@ export default function UserDashboard() {
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
                 {[
-                  { step: "1", title: "Join the room", desc: "Click 'Start Consultation' to launch your encrypted video session." },
-                  { step: "2", title: "Navigate freely", desc: "Minimise to a floating window and continue browsing the dashboard while in call." },
-                  { step: "3", title: "Doctor reviews", desc: "The doctor verifies your ID, reviews vitals, and issues their clinical decision." },
+                  { step: "1", title: "Doctor opens the room", desc: "Your physician starts the live room. You both join the same encrypted session." },
+                  { step: "2", title: "Start consultation", desc: "Click Start Consultation. Your camera appears as a small self-view; the doctor fills the main frame." },
+                  { step: "3", title: "Talk and chat", desc: "Audio/video are peer-to-peer. Use in-call chat for vitals notes. Leave when the review is done." },
                 ].map((s) => (
                   <div key={s.step} className="flex items-start gap-3">
                     <div className="w-7 h-7 rounded-xl bg-[#12B8B0]/15 border border-[#12B8B0]/30 text-[#12B8B0] flex items-center justify-center font-extrabold text-xs flex-shrink-0">{s.step}</div>
@@ -1487,10 +1415,26 @@ export default function UserDashboard() {
                   const res = await uploadToCloudinary(avatarWebpResult.file, "fitmed/applicants");
                   if (res.url) {
                     setProfileData((prev) => ({ ...prev, avatarUrl: res.url }));
+                    await fetch("/api/auth/me", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        email: profileData.email || session?.email,
+                        name: profileData.name,
+                        phone: profileData.phone,
+                        nationalId: profileData.nationalId,
+                        dateOfBirth: profileData.dob,
+                        address: profileData.address,
+                        avatarUrl: res.url,
+                      }),
+                    });
+                    setSavedSettingsAlert(true);
+                    setTimeout(() => setSavedSettingsAlert(false), 3000);
+                    success("Profile saved", "Your details were stored in FitMed.");
+                    return;
                   }
                 }
-                setSavedSettingsAlert(true);
-                setTimeout(() => setSavedSettingsAlert(false), 3000);
+                await handleSaveProfile(e);
               }} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <div>
@@ -1977,39 +1921,19 @@ export default function UserDashboard() {
           </div>
         </div>
       )}
-      {/* ── Google Meet-style Video Call Overlay ── */}
-      <VideoCallOverlay
-        isOpen={isCallActive}
-        onEnd={handleEndCall}
-        appointmentId={activeCallAppointment?.appointmentId}
-        purpose={activeCallAppointment?.purpose || "Medical Fitness Consultation"}
-        initialMessages={chatMessages}
-        onSendMessage={async (text) => {
-          try {
-            await fetch("/api/chat", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                senderName: profileData.name,
-                senderRole: "applicant",
-                messageText: text,
-                consultationId: activeCallAppointment?.appointmentId || "ROOM-FM-9941",
-              }),
-            });
-          } catch (_) {}
-        }}
-        doctor={{
-          name: activeCallAppointment?.doctorName || "Dr. Telesphore Uwabera, MD",
-          role: activeCallAppointment?.doctorSpecialty || "Licensed Telehealth Physician",
-          avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=1000&q=80&auto=format&fit=crop",
-          isOnline: true,
-        }}
-        applicant={{
-          name: profileData.name,
-          role: "Applicant",
-          avatarUrl: profileData.avatarUrl,
-        }}
-      />
+      {isCallActive && videoCallRoomId && (
+        <WebRTCVideoCall
+          roomId={videoCallRoomId}
+          userName={profileData.name}
+          role="applicant"
+          remoteName={activeCallAppointment?.doctorName || "Dr. Telesphore Uwabera, MD"}
+          purpose={activeCallAppointment?.purpose || "Medical Fitness Consultation"}
+          appointmentId={activeCallAppointment?.appointmentId || videoCallRoomId}
+          variant="overlay"
+          initialMessages={chatMessages}
+          onCallEnd={handleEndCall}
+        />
+      )}
     </DashboardShell>
   );
 }

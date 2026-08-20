@@ -70,7 +70,7 @@ const DoctorSchema = new Schema<IDoctor>(
     totalCertificatesIssued: { type: Number, default: 0 },
     rating: { type: Number, default: 4.9 },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "doctors" }
 );
 
 export const Doctor: Model<IDoctor> =

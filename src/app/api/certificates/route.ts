@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       await connectToDatabase();
       const query: any = {};
       if (status) query.status = status;
-      if (applicantEmail) query.applicantEmail = applicantEmail;
+      if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
       if (assignedDoctorId) query.assignedDoctorId = assignedDoctorId;
 
       const certificates = await Certificate.find(query)
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 
     const newCertificate = {
       certificateId,
-      applicantEmail,
+      applicantEmail: String(applicantEmail).toLowerCase(),
       applicantPhone: applicantPhone || "",
       candidateName,
       candidateIdNumber,
@@ -224,11 +224,13 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { certificateId, decision, restrictions, decisionNotes, status, paymentStatus, doctorNotes, doctorDocuments, structuredAssessment } = body;
+    const { certificateId, decision, restrictions, decisionNotes, status, paymentStatus, doctorNotes, doctorDocuments, structuredAssessment, iremboRef } = body;
 
     if (!certificateId) {
       return NextResponse.json({ error: "certificateId required" }, { status: 400 });
     }
+
+    const certKey = String(certificateId).toUpperCase();
 
     try {
       await connectToDatabase();
@@ -238,12 +240,13 @@ export async function PATCH(request: NextRequest) {
       if (decisionNotes !== undefined) updateData.decisionNotes = decisionNotes;
       if (status) updateData.status = status;
       if (paymentStatus) updateData.paymentStatus = paymentStatus;
+      if (iremboRef) updateData.iremboRef = iremboRef;
       if (doctorNotes !== undefined) updateData.doctorNotes = doctorNotes;
       if (doctorDocuments) updateData.doctorDocuments = doctorDocuments;
       if (structuredAssessment) updateData.structuredAssessment = structuredAssessment;
 
       const updated = await Certificate.findOneAndUpdate(
-        { certificateId },
+        { certificateId: certKey },
         updateData,
         { new: true }
       );
@@ -261,6 +264,7 @@ export async function PATCH(request: NextRequest) {
         ...(decisionNotes !== undefined && { decisionNotes }),
         ...(status && { status }),
         ...(paymentStatus && { paymentStatus }),
+        ...(iremboRef && { iremboRef }),
         ...(doctorNotes !== undefined && { doctorNotes }),
         ...(doctorDocuments && { doctorDocuments }),
         ...(structuredAssessment && { structuredAssessment }),

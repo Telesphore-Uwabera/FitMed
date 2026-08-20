@@ -49,7 +49,9 @@ import {
 import { convertToWebP, uploadToCloudinary, formatBytes, WebPConversionResult } from "@/lib/imageUtils";
 import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
 import DoctorAssessmentForm, { DoctorDecision } from "@/components/DoctorAssessmentForm";
-import WebRTCVideoCall from "@/components/WebRTCVideoCall";
+import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
+import { useSession } from "@/lib/useSession";
+import { consultationRoomId, formatChatMessages } from "@/lib/consultation";
 import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessmentForm";
 import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
 import { useToast } from "@/components/ToastProvider";
@@ -59,6 +61,7 @@ import { FALLBACK_QUEUE } from "@/lib/demoQueue";
 export default function DoctorDashboardPage() {
   const { success, error, warning, info } = useToast();
   const { confirm } = useDialog();
+  const { session, loading: sessionLoading } = useSession("doctor");
   const [activeNav, setActiveNav] = useState("queue");
 
   const goToNav = (id: string) => {
@@ -101,34 +104,7 @@ export default function DoctorDashboardPage() {
       prev.scheduledDate ? prev : { ...prev, scheduledDate: new Date().toISOString().split("T")[0] }
     );
   }, []);
-  const [doctorAppointments, setDoctorAppointments] = useState<any[]>([
-    {
-      appointmentId: "APT-2026-891",
-      applicantName: "Telesphore Uwabera",
-      applicantEmail: "telesphore91073@gmail.com",
-      applicantPhone: "+250 788 123 456",
-      purpose: "Workplace & Office Fitness Certification",
-      scheduledDate: "Today",
-      scheduledTime: "14:30",
-      durationMinutes: 15,
-      status: "scheduled",
-      roomUrl: "/dashboard/doctor?nav=telehealth",
-      notes: "Routine medical clearance and identity verification.",
-    },
-    {
-      appointmentId: "APT-2026-904",
-      applicantName: "Jean-Paul Habimana",
-      applicantEmail: "jp.habimana@gmail.com",
-      applicantPhone: "+250 788 456 789",
-      purpose: "Commercial Driver & Transport License",
-      scheduledDate: "Tomorrow",
-      scheduledTime: "10:00",
-      durationMinutes: 20,
-      status: "scheduled",
-      roomUrl: "/dashboard/doctor?nav=telehealth",
-      notes: "Vision, reflex, and blood pressure screening review.",
-    },
-  ]);
+  const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
 
   // Doctor Availability & Weekly Schedule State
   const [doctorStatus, setDoctorStatus] = useState<"ONLINE" | "BUSY" | "OFF">("ONLINE");
@@ -189,7 +165,7 @@ export default function DoctorDashboardPage() {
   const [cameraOff, setCameraOff] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [meetingStatus, setMeetingStatus] = useState<"idle" | "waiting" | "connected">("idle");
-  const [meetingRoomId, setMeetingRoomId] = useState("ROOM-FM-9941");
+  const [meetingRoomId, setMeetingRoomId] = useState(FITMED_LIVE_ROOM);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("telesphore91073@gmail.com");
   const [inviteSentAlert, setInviteSentAlert] = useState<string | null>(null);
@@ -209,12 +185,64 @@ export default function DoctorDashboardPage() {
   // Evaluate & Sign modal state (to view applicant's questionnaire)
   const [showEvaluateSignModal, setShowEvaluateSignModal] = useState(false);
 
-  const startMeeting = (roomId = meetingRoomId) => {
-    setMeetingRoomId(roomId);
-    setWebRTCRoomId(roomId);
+  const startMeeting = async (roomId = meetingRoomId) => {
+    let id = consultationRoomId({ appointmentId: roomId, roomId }) || roomId;
+    if (!id || id === FITMED_LIVE_ROOM) {
+      const open = doctorAppointments.find((a) => ["scheduled", "in-progress"].includes(a.status));
+      id = consultationRoomId(open) || "";
+    }
+    if (!id && selectedCandidate?.applicantEmail) {
+      try {
+        const res = await fetch("/api/appointments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            applicantName: selectedCandidate.name,
+            applicantEmail: selectedCandidate.applicantEmail,
+            applicantPhone: selectedCandidate.phone || "",
+            doctorId: "DOC-RW-4091",
+            doctorName: session?.name || "Dr. Telesphore Uwabera, MD",
+            purpose: selectedCandidate.purpose || "Medical fitness review",
+            scheduledDate: new Date().toISOString().split("T")[0],
+            scheduledTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            notes: "Live telehealth room opened from doctor workstation.",
+            certificateDraftId: selectedCandidate.id || "",
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.appointment) {
+          setDoctorAppointments((prev) => [data.appointment, ...prev]);
+          id = consultationRoomId(data.appointment);
+        }
+      } catch {
+        /* handled below */
+      }
+    }
+    if (!id) {
+      warning("Schedule a visit first", "Create an appointment or open a queue case so both sides share a database room.");
+      return;
+    }
+    setMeetingRoomId(id);
+    setWebRTCRoomId(id);
     setMeetingStatus("waiting");
     setIsWebRTCCallActive(true);
-    localStorage.setItem(`fitmed_meeting:${roomId}`, "waiting");
+    localStorage.setItem(`fitmed_meeting:${id}`, "waiting");
+    try {
+      await fetch("/api/appointments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId: id, status: "in-progress" }),
+      });
+      const chatRes = await fetch(`/api/chat?consultationId=${encodeURIComponent(id)}`);
+      const chatData = await chatRes.json();
+      if (chatData.success && chatData.messages?.length) {
+        setMessages(formatChatMessages(chatData.messages));
+      } else {
+        setMessages([]);
+      }
+    } catch {
+      setMessages([]);
+    }
   };
 
   useEffect(() => {
@@ -271,10 +299,10 @@ export default function DoctorDashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          senderName: "Dr. Telesphore Uwabera, MD",
+          senderName: session?.name || "Dr. Telesphore Uwabera, MD",
           senderRole: "doctor",
           messageText: textToSend,
-          consultationId: "ROOM-FM-9941",
+          consultationId: meetingRoomId,
         }),
       });
     } catch (err) {
@@ -286,26 +314,10 @@ export default function DoctorDashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const chatRes = await fetch("/api/chat?consultationId=ROOM-FM-9941", { signal: AbortSignal.timeout(8000) });
-        const chatData = await chatRes.json();
-        if (chatData.success && chatData.messages?.length > 0) {
-          const formatted = chatData.messages.map((m: any) => ({
-            sender: m.senderRole === "doctor" ? "doctor" : "applicant",
-            name: m.senderName,
-            text: m.messageText,
-            time: new Date(m.timestamp || m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          }));
-          setMessages(formatted);
-        }
-      } catch (err) {
-        console.warn("Could not load initial doctor chat:", err);
-      }
-
-      try {
         const aptRes = await fetch("/api/appointments?doctorId=DOC-RW-4091", { signal: AbortSignal.timeout(8000) });
         const aptData = await aptRes.json();
-        if (aptData.success && aptData.appointments?.length > 0) {
-          setDoctorAppointments(aptData.appointments);
+        if (aptData.success) {
+          setDoctorAppointments(aptData.appointments || []);
         }
       } catch (err) {
         console.warn("Could not load doctor appointments:", err);
@@ -318,6 +330,8 @@ export default function DoctorDashboardPage() {
           const formattedQueue = certData.certificates.map((cert: any) => ({
             id: cert.certificateId,
             name: cert.candidateName,
+            applicantEmail: cert.applicantEmail,
+            phone: cert.applicantPhone,
             age: cert.age || 30,
             gender: cert.gender || "Male",
             nationalId: cert.candidateIdNumber,
@@ -337,10 +351,11 @@ export default function DoctorDashboardPage() {
             history: cert.additionalNotes || "No additional notes provided.",
             assignedDoctor: cert.assignedDoctor || "Dr. Telesphore Uwabera (You)",
             assignedDoctorId: cert.assignedDoctorId || "DOC-RW-4091",
-            // Store full certificate data for assessment
             fullCertificate: cert,
           }));
           setQueue(formattedQueue);
+        } else if (certData.success) {
+          setQueue([]);
         } else {
           setQueue(FALLBACK_QUEUE);
         }
@@ -376,15 +391,7 @@ export default function DoctorDashboardPage() {
         error("Scheduling Error", data.error || "Failed to schedule appointment.");
       }
     } catch (err: any) {
-      const newApt = {
-        appointmentId: `APT-${Date.now().toString().slice(-6)}`,
-        ...scheduleForm,
-        status: "scheduled",
-        roomUrl: "/dashboard/doctor?nav=telehealth",
-      };
-      setDoctorAppointments((prev) => [newApt, ...prev]);
-      success("Appointment Scheduled", `Consultation confirmed for ${scheduleForm.applicantName}.`);
-      setShowScheduleModal(false);
+      error("Scheduling Error", err?.message || "Could not save the appointment to the database.");
     } finally {
       setIsScheduling(false);
     }
@@ -403,7 +410,7 @@ export default function DoctorDashboardPage() {
           patientName: selectedCandidate?.name || "Telesphore",
           doctorName: "Dr. Telesphore Uwabera, MD",
           scheduledTime: "Live Now (Consultation Active)",
-          roomUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com"}/dashboard/user`,
+          roomUrl: `/dashboard/user?tab=consultation&room=${meetingRoomId}`,
         }),
       });
       const data = await res.json();
@@ -415,7 +422,7 @@ export default function DoctorDashboardPage() {
       setTimeout(() => setInviteSentAlert(null), 4000);
       setShowInviteModal(false);
     }
-  };  const [queue, setQueue] = useState<any[]>(FALLBACK_QUEUE);
+  };  const [queue, setQueue] = useState<any[]>([]);
 
   const [activeDoctorsOnDuty] = useState([
     { id: "DOC-RW-4091", name: "Dr. Telesphore Uwabera (You)", specialty: "Occupational Health", status: "Online" },
@@ -436,14 +443,22 @@ export default function DoctorDashboardPage() {
     setTimeout(() => setSavedScheduleAlert(false), 3000);
   };
 
+  if (sessionLoading || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Loading doctor workstation…
+      </div>
+    );
+  }
+
   return (
     <DashboardShell
       role="doctor"
       activeNav={activeNav}
       onNavChange={goToNav}
       userProfile={{
-        name: "Dr. Telesphore Uwabera",
-        email: "uwaberatelesphore@gmail.com",
+        name: session?.name || "FitMed Physician",
+        email: session?.email || "",
         avatarUrl: doctorAvatar,
         badgeLabel: "Licensed Physician",
       }}
@@ -800,6 +815,11 @@ export default function DoctorDashboardPage() {
 
             {/* Appointments Grid */}
             <div className="grid gap-4">
+              {doctorAppointments.length === 0 && (
+                <div className="p-8 rounded-3xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
+                  No appointments in the database. Schedule a consultation to create a shared video room the applicant can join.
+                </div>
+              )}
               {doctorAppointments.map((apt) => (
                 <div
                   key={apt.appointmentId}
@@ -1172,7 +1192,7 @@ export default function DoctorDashboardPage() {
                 </div>
                 <h3 className="mt-5 text-xl font-extrabold text-[#0B2D5C]">Meeting not started</h3>
                 <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
-                  Confirm the applicant and start the meeting when you are ready. The video feeds and meeting controls will appear after the session begins.
+                  Open the live room when you are ready. Schedule or launch an appointment first so the applicant joins that same database room.
                 </p>
                 <button
                   onClick={() => startMeeting()}
@@ -1181,244 +1201,34 @@ export default function DoctorDashboardPage() {
                   Start Meeting
                 </button>
               </div>
-            ) : meetingStatus === "waiting" ? (
-              <div className="rounded-3xl border border-amber-200 bg-white p-10 sm:p-16 text-center shadow-sm relative overflow-hidden">
-                <div className="mx-auto w-24 h-24 relative flex items-center justify-center" aria-label="Signaling for applicant">
-                  <span className="absolute inset-1 rounded-full border border-amber-300/70 animate-ping" />
-                  <span className="absolute inset-4 rounded-full border-2 border-amber-300/80 animate-[ping_2s_ease-out_infinite]" />
-                  <span className="absolute inset-7 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center">
-                    <span className="w-3.5 h-3.5 rounded-full bg-amber-500 animate-pulse" />
-                  </span>
-                </div>
-                <h3 className="mt-5 text-xl font-extrabold text-[#0B2D5C]">Waiting for the applicant to join</h3>
-                <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
-                  The meeting is open and signaling. Keep this room available while {selectedCandidate?.name || "the applicant"} joins from their appointment.
-                </p>
-                <div className="mt-5 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
-                  Room: {meetingRoomId}
-                </div>
-              </div>
             ) : (
-            <div className="grid lg:grid-cols-12 gap-6">
-              {/* WebRTC Video Call */}
-              {isWebRTCCallActive && webRTCRoomId && (
-                <div className="lg:col-span-12">
-                  <WebRTCVideoCall
-                    roomId={webRTCRoomId}
-                    userName="Dr. Telesphore Uwabera"
-                    onCallEnd={() => {
-                      setIsWebRTCCallActive(false);
-                      setWebRTCRoomId("");
-                      setMeetingStatus("idle");
-                      localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Left Column: Live Video Feed & WebRTC Meeting Controls */}
-              <div className="lg:col-span-8 bg-slate-950 rounded-3xl p-6 text-white space-y-4 shadow-2xl border border-slate-800">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-bold text-slate-200">HIPAA Encrypted Stream (1080p WebRTC)</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[#12B8B0] font-bold">
-                    <span>Room: ROOM-FM-9941</span>
-                    <span className="text-slate-500">|</span>
-                    <span className="text-emerald-400">00:04:18</span>
-                  </div>
-                </div>
-
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
-                  {!cameraOff ? (
-                    <Image
-                      src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1000&q=80&auto=format&fit=crop"
-                      alt="Applicant Video Feed"
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center space-y-2 text-slate-400">
-                      <VideoOff className="w-12 h-12 text-slate-600" />
-                      <span className="text-xs font-bold">Doctor Camera Paused</span>
-                    </div>
-                  )}
-
-                  <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-2 shadow-lg">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>Candidate: Telesphore</span>
-                    <span className="text-[10px] text-slate-400 font-mono">(ID: 1199580048123049)</span>
-                  </div>
-
-                  {/* Vitals HUD on Video */}
-                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl text-[11px] font-bold border border-white/10 flex items-center gap-3">
-                    <span className="text-sky-400">BP: 118/78</span>
-                    <span className="text-teal-400">HR: 72 bpm</span>
-                    <span className="text-emerald-400">SpO₂: 98%</span>
-                  </div>
-
-                  {/* Doctor PiP Feed */}
-                  <div className="absolute bottom-4 right-4 w-40 aspect-video rounded-2xl overflow-hidden border-2 border-[#12B8B0] shadow-2xl bg-slate-900">
-                    <Image
-                      src={doctorAvatar}
-                      alt="Dr. Telesphore Uwabera"
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute bottom-1.5 left-2 text-[9px] bg-black/70 px-2 py-0.5 rounded text-white font-bold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      <span>Dr. Telesphore (Host)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Meeting Interactive Controls Bar */}
-                <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setMicMuted(!micMuted)}
-                      className={`p-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
-                        micMuted ? "bg-rose-600 text-white" : "bg-slate-800 text-white hover:bg-slate-700"
-                      }`}
-                      title={micMuted ? "Unmute Microphone" : "Mute Microphone"}
-                    >
-                      {micMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4 text-emerald-400" />}
-                      <span className="hidden sm:inline">{micMuted ? "Muted" : "Mute"}</span>
-                    </button>
-
-                    <button
-                      onClick={() => setCameraOff(!cameraOff)}
-                      className={`p-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
-                        cameraOff ? "bg-rose-600 text-white" : "bg-slate-800 text-white hover:bg-slate-700"
-                      }`}
-                      title={cameraOff ? "Turn Video On" : "Turn Video Off"}
-                    >
-                      {cameraOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4 text-sky-400" />}
-                      <span className="hidden sm:inline">{cameraOff ? "Camera Off" : "Video"}</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setScreenSharing(!screenSharing);
-                        if (!screenSharing) info("Screen Sharing", "Presenting clinical guidelines to applicant.");
-                        else info("Screen Share Ended", "Screen sharing session ended.");
-                      }}
-                      className={`p-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all ${
-                        screenSharing ? "bg-indigo-600 text-white" : "bg-slate-800 text-white hover:bg-slate-700"
-                      }`}
-                    >
-                      <Sparkles className="w-4 h-4 text-indigo-300" />
-                      <span className="hidden sm:inline">{screenSharing ? "Sharing Screen" : "Share"}</span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: "End consultation",
-                          message: "End this telehealth session and return to the intake queue?",
-                          confirmLabel: "End session",
-                          cancelLabel: "Stay in room",
-                          variant: "danger",
-                        });
-                        if (ok) {
-                          localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
-                          setMeetingStatus("idle");
-                          goToNav("queue");
-                        }
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600 hover:text-white font-bold text-xs transition-all flex items-center gap-1.5"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5 rotate-135" />
-                      <span>End Consultation</span>
-                    </button>
-
-                    <button
-                      onClick={() => setShowSignModal(true)}
-                      className="px-5 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs transition-colors flex items-center gap-1.5 shadow-md"
-                    >
-                      <FileSignature className="w-4 h-4" />
-                      <span>Sign Certificate</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Live Doctor-Applicant Chat (MongoDB Synced) */}
-              <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex flex-col justify-between h-[560px]">
-                <div className="space-y-3 flex-1 flex flex-col overflow-hidden">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-[#12B8B0]" />
-                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#0B2D5C]">
-                        Doctor-Applicant Chat (Saved to MongoDB)
-                      </h4>
-                    </div>
-                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Live
-                    </span>
-                  </div>
-
-                  {/* Quick Medical Prompts */}
-                  <div className="flex gap-1.5 overflow-x-auto pb-1">
-                    {[
-                      "Please confirm you have no chest pain.",
-                      "Can you perform a full neck rotation?",
-                      "Vitals look optimal. Ready to sign.",
-                    ].map((prompt, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setChatInput(prompt)}
-                        className="text-[10px] font-semibold bg-slate-50 hover:bg-teal-50 hover:text-teal-900 border border-slate-200 px-2.5 py-1 rounded-lg flex-shrink-0 transition-colors"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                    {messages.map((msg, i) => (
-                      <div
-                        key={i}
-                        className={`flex flex-col ${
-                          msg.sender === "doctor" ? "items-end" : "items-start"
-                        }`}
-                      >
-                        <span className="text-[10px] text-slate-400 mb-0.5">{msg.name} · {msg.time}</span>
-                        <div
-                          className={`p-3 rounded-2xl text-xs max-w-[88%] leading-relaxed ${
-                            msg.sender === "doctor"
-                              ? "bg-[#0B2D5C] text-white rounded-br-none shadow-sm"
-                              : "bg-teal-50 text-teal-950 font-semibold rounded-bl-none border border-teal-200"
-                          }`}
-                        >
-                          {msg.text}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <form onSubmit={handleSendChat} className="pt-3 border-t border-slate-100 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Type clinical instruction..."
-                    className="flex-1 p-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0]"
-                  />
-                  <button
-                    type="submit"
-                    className="p-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold transition-colors"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
-            </div>
+              <WebRTCVideoCall
+                roomId={webRTCRoomId || meetingRoomId}
+                userName={session?.name || "Dr. Telesphore Uwabera, MD"}
+                role="doctor"
+                remoteName={selectedCandidate?.name || "Applicant"}
+                purpose={selectedCandidate?.purpose || "Medical fitness consultation"}
+                appointmentId={meetingRoomId}
+                variant="embedded"
+                initialMessages={messages.map((m) => ({
+                  sender: m.sender as "doctor" | "applicant",
+                  name: m.name,
+                  text: m.text,
+                  time: m.time,
+                }))}
+                onRemoteJoined={() => setMeetingStatus("connected")}
+                onCallEnd={() => {
+                  setIsWebRTCCallActive(false);
+                  setWebRTCRoomId("");
+                  setMeetingStatus("idle");
+                  localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
+                  void fetch("/api/appointments", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ appointmentId: meetingRoomId, status: "completed" }),
+                  });
+                }}
+              />
             )}
           </div>
         )}
@@ -1457,7 +1267,7 @@ export default function DoctorDashboardPage() {
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 space-y-1">
-                  <div><strong>Meeting Room:</strong> ROOM-FM-9941</div>
+                  <div><strong>Meeting Room:</strong> {meetingRoomId}</div>
                   <div><strong>Host:</strong> Dr. Telesphore Uwabera, MD</div>
                   <div><strong>Security:</strong> HIPAA Compliant WebRTC</div>
                 </div>

@@ -1,353 +1,594 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import {
+  BadgeCheck,
+  MessageSquare,
+  Mic,
+  MicOff,
+  MonitorOff,
+  MonitorUp,
+  PhoneOff,
+  Send,
+  Shield,
+  Video,
+  VideoOff,
+  Wifi,
+  X,
+} from "lucide-react";
+
+export const FITMED_LIVE_ROOM = "ROOM-FM-9941";
+
+export interface CallChatMessage {
+  id?: string;
+  sender: "doctor" | "applicant";
+  name: string;
+  text: string;
+  time: string;
+}
 
 interface WebRTCVideoCallProps {
   roomId: string;
   userName: string;
+  role?: "doctor" | "applicant";
+  remoteName?: string;
+  purpose?: string;
+  appointmentId?: string;
+  variant?: "overlay" | "embedded";
+  initialMessages?: CallChatMessage[];
   onCallEnd?: () => void;
+  onRemoteJoined?: () => void;
 }
 
-export default function WebRTCVideoCall({ roomId, userName, onCallEnd }: WebRTCVideoCallProps) {
-  const [socket, setSocket] = useState<Socket | null>(null);
+function socketUrl() {
+  return process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+}
+
+export default function WebRTCVideoCall({
+  roomId,
+  userName,
+  role = "applicant",
+  remoteName = "Remote participant",
+  purpose = "Medical fitness consultation",
+  appointmentId,
+  variant = "overlay",
+  initialMessages = [],
+  onCallEnd,
+  onRemoteJoined,
+}: WebRTCVideoCallProps) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
   const [callStatus, setCallStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
-  
+  const [chatOpen, setChatOpen] = useState(true);
+  const [chatMessage, setChatMessage] = useState("");
+  const [messages, setMessages] = useState<CallChatMessage[]>(initialMessages);
+  const [callDuration, setCallDuration] = useState(0);
+  const [mediaError, setMediaError] = useState("");
+  const [remoteMuted, setRemoteMuted] = useState(false);
+
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
+  const makingOfferRef = useRef(false);
+  const sharingRef = useRef(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const ICE_SERVERS = {
+  const ICE_SERVERS: RTCConfiguration = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
     ],
   };
 
-  useEffect(() => {
-    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000", {
-      transports: ["websocket", "polling"],
+  const formatDuration = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const attachLocalTracks = (pc: RTCPeerConnection, stream: MediaStream) => {
+    const existing = new Set(pc.getSenders().map((s) => s.track?.id));
+    stream.getTracks().forEach((track) => {
+      if (!existing.has(track.id)) pc.addTrack(track, stream);
     });
+  };
 
-    setSocket(socketInstance);
-
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("connect", () => {
-      console.log("Connected to socket server");
-      socket.emit("join-room", roomId);
-    });
-
-    socket.on("room-full", () => {
-      alert("Room is full. Please try a different room.");
-      onCallEnd?.();
-    });
-
-    socket.on("user-connected", async (userId: string) => {
-      console.log("User connected:", userId);
-      await startCall(userId);
-    });
-
-    socket.on("offer", async ({ offer, callerId }: { offer: RTCSessionDescriptionInit; callerId: string }) => {
-      console.log("Received offer from:", callerId);
-      await handleOffer(offer, callerId);
-    });
-
-    socket.on("answer", async ({ answer, calleeId }: { answer: RTCSessionDescriptionInit; calleeId: string }) => {
-      console.log("Received answer from:", calleeId);
-      await handleAnswer(answer);
-    });
-
-    socket.on("ice-candidate", async ({ candidate, senderId }: { candidate: RTCIceCandidateInit; senderId: string }) => {
-      console.log("Received ICE candidate from:", senderId);
-      await handleIceCandidate(candidate);
-    });
-
-    socket.on("user-disconnected", () => {
-      console.log("User disconnected");
-      setRemoteStream(null);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = null;
+  const flushIce = async () => {
+    const pc = peerConnectionRef.current;
+    if (!pc?.remoteDescription) return;
+    const queued = pendingIceRef.current.splice(0);
+    for (const candidate of queued) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn("ICE candidate skipped", err);
       }
-      setCallStatus("disconnected");
-    });
+    }
+  };
 
-    socket.on("call-ready", () => {
-      console.log("Call is ready to start");
-    });
+  const createPeerConnection = useCallback(() => {
+    if (peerConnectionRef.current) return peerConnectionRef.current;
 
-    return () => {
-      socket.off("connect");
-      socket.off("room-full");
-      socket.off("user-connected");
-      socket.off("offer");
-      socket.off("answer");
-      socket.off("ice-candidate");
-      socket.off("user-disconnected");
-      socket.off("call-ready");
-    };
-  }, [socket, roomId, onCallEnd]);
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    peerConnectionRef.current = pc;
 
-  const startCall = async (remoteUserId: string) => {
-    if (!socket) return;
-
-    const peerConnection = new RTCPeerConnection(ICE_SERVERS);
-    peerConnectionRef.current = peerConnection;
-
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit("ice-candidate", {
-          roomId,
-          candidate: event.candidate,
-        });
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socketRef.current) {
+        socketRef.current.emit("ice-candidate", { roomId, candidate: event.candidate });
       }
     };
 
-    peerConnection.ontrack = (event) => {
-      console.log("Received remote track");
-      setRemoteStream(event.streams[0]);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
+    pc.ontrack = (event) => {
+      const stream = event.streams[0] || new MediaStream([event.track]);
+      setRemoteStream(stream);
+      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
       setCallStatus("connected");
+      onRemoteJoined?.();
     };
 
-    if (localStream) {
-      localStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream);
-      });
-    }
-
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-
-    socket.emit("offer", {
-      roomId,
-      offer,
-    });
-  };
-
-  const handleOffer = async (offer: RTCSessionDescriptionInit, callerId: string) => {
-    const peerConnection = new RTCPeerConnection(ICE_SERVERS);
-    peerConnectionRef.current = peerConnection;
-
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate && socket) {
-        socket.emit("ice-candidate", {
-          roomId,
-          candidate: event.candidate,
-        });
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "connected") {
+        setCallStatus("connected");
+        onRemoteJoined?.();
+      }
+      if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+        setCallStatus("disconnected");
+        setRemoteStream(null);
       }
     };
 
-    peerConnection.ontrack = (event) => {
-      console.log("Received remote track");
-      setRemoteStream(event.streams[0]);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
-      setCallStatus("connected");
-    };
+    if (localStreamRef.current) attachLocalTracks(pc, localStreamRef.current);
+    return pc;
+  }, [roomId, onRemoteJoined]);
 
-    if (localStream) {
-      localStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream);
-      });
-    }
+  const startCall = useCallback(async () => {
+    if (makingOfferRef.current || role !== "doctor") return;
+    if (peerConnectionRef.current?.localDescription) return;
+    const stream = localStreamRef.current;
+    if (!stream || !socketRef.current) return;
 
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-
-    if (socket) {
-      socket.emit("answer", {
-        roomId,
-        answer,
-      });
-    }
-  };
-
-  const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
-    if (peerConnectionRef.current) {
-      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-    }
-  };
-
-  const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
-    if (peerConnectionRef.current) {
-      await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-    }
-  };
-
-  const startLocalVideo = async () => {
+    makingOfferRef.current = true;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      setLocalStream(stream);
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error("Error accessing media devices:", error);
-      alert("Could not access camera and microphone. Please check permissions.");
+      const pc = createPeerConnection();
+      attachLocalTracks(pc, stream);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socketRef.current.emit("offer", { roomId, offer });
+    } finally {
+      makingOfferRef.current = false;
     }
-  };
+  }, [createPeerConnection, role, roomId]);
+
+  const handleOffer = useCallback(
+    async (offer: RTCSessionDescriptionInit) => {
+      const stream = localStreamRef.current;
+      const pc = createPeerConnection();
+      if (stream) attachLocalTracks(pc, stream);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      await flushIce();
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socketRef.current?.emit("answer", { roomId, answer });
+    },
+    [createPeerConnection, roomId]
+  );
 
   useEffect(() => {
-    startLocalVideo();
-    return () => {
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+    let cancelled = false;
+
+    const boot = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        localStreamRef.current = stream;
+        cameraStreamRef.current = stream;
+        setLocalStream(stream);
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      } catch (error) {
+        console.error("Error accessing media devices:", error);
+        setMediaError("Camera or microphone permission was denied. Allow access to join the live room.");
       }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-      }
+
+      const socket = io(socketUrl(), {
+        transports: ["websocket", "polling"],
+        autoConnect: true,
+      });
+      socketRef.current = socket;
+
+      socket.on("connect", () => {
+        socket.emit("join-room", { roomId, name: userName, role });
+      });
+
+      socket.on("room-full", () => {
+        setMediaError("This consultation room is already full.");
+      });
+
+      socket.on("user-connected", () => {
+        if (role === "doctor") void startCall();
+      });
+
+      socket.on("call-ready", () => {
+        if (role === "doctor" && !peerConnectionRef.current) void startCall();
+      });
+
+      socket.on("offer", async ({ offer }: { offer: RTCSessionDescriptionInit }) => {
+        await handleOffer(offer);
+      });
+
+      socket.on("answer", async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
+        const pc = peerConnectionRef.current;
+        if (pc && !pc.currentRemoteDescription) {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          await flushIce();
+        }
+      });
+
+      socket.on("ice-candidate", async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
+        const pc = peerConnectionRef.current;
+        if (!pc?.remoteDescription) {
+          pendingIceRef.current.push(candidate);
+          return;
+        }
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.warn("ICE candidate error", err);
+        }
+      });
+
+      socket.on("user-disconnected", () => {
+        setRemoteStream(null);
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+        setCallStatus("disconnected");
+        peerConnectionRef.current?.close();
+        peerConnectionRef.current = null;
+      });
+
+      socket.on("chat-message", (msg: CallChatMessage) => {
+        setMessages((prev) => [...prev, msg]);
+      });
+
+      socket.on("media-state", (state: { muted?: boolean }) => {
+        if (typeof state.muted === "boolean") setRemoteMuted(state.muted);
+      });
     };
-  }, []);
+
+    void boot();
+
+    durationRef.current = setInterval(() => setCallDuration((d) => d + 1), 1000);
+
+    return () => {
+      cancelled = true;
+      if (durationRef.current) clearInterval(durationRef.current);
+      socketRef.current?.emit("leave-room", roomId);
+      socketRef.current?.disconnect();
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
+      peerConnectionRef.current?.close();
+    };
+    // Start the room once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, role, userName]);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) localVideoRef.current.srcObject = localStream;
+  }, [localStream]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) remoteVideoRef.current.srcObject = remoteStream;
+  }, [remoteStream]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const toggleMute = () => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
-      });
-      setIsMuted(!isMuted);
-    }
+    const next = !isMuted;
+    localStreamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    setIsMuted(next);
+    socketRef.current?.emit("media-state", { roomId, muted: next, cameraOff: isCameraOff });
   };
 
   const toggleCamera = () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach((track) => {
-        track.enabled = !track.enabled;
+    const next = !isCameraOff;
+    localStreamRef.current?.getVideoTracks().forEach((track) => {
+      track.enabled = !next;
+    });
+    setIsCameraOff(next);
+    socketRef.current?.emit("media-state", { roomId, muted: isMuted, cameraOff: next });
+  };
+
+  const stopScreenShare = async () => {
+    const pc = peerConnectionRef.current;
+    const camera = cameraStreamRef.current;
+    const sender = pc?.getSenders().find((s) => s.track?.kind === "video");
+    const camTrack = camera?.getVideoTracks()[0];
+    if (sender && camTrack) await sender.replaceTrack(camTrack);
+    if (localVideoRef.current && camera) localVideoRef.current.srcObject = camera;
+    localStreamRef.current = camera;
+    setLocalStream(camera);
+    sharingRef.current = false;
+    setScreenSharing(false);
+  };
+
+  const toggleScreenShare = async () => {
+    if (sharingRef.current) {
+      await stopScreenShare();
+      return;
+    }
+    try {
+      const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const displayTrack = display.getVideoTracks()[0];
+      const sender = peerConnectionRef.current?.getSenders().find((s) => s.track?.kind === "video");
+      if (sender) await sender.replaceTrack(displayTrack);
+      if (localVideoRef.current) localVideoRef.current.srcObject = display;
+      localStreamRef.current = display;
+      setLocalStream(display);
+      sharingRef.current = true;
+      setScreenSharing(true);
+      displayTrack.onended = () => {
+        void stopScreenShare();
+      };
+    } catch {
+      /* user cancelled share */
+    }
+  };
+
+  const sendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = chatMessage.trim();
+    if (!text) return;
+    const msg: CallChatMessage = {
+      id: `${Date.now()}`,
+      sender: role,
+      name: userName,
+      text,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+    setMessages((prev) => [...prev, msg]);
+    setChatMessage("");
+    socketRef.current?.emit("chat-message", { ...msg, roomId });
+    try {
+      await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderName: userName,
+          senderRole: role,
+          messageText: text,
+          consultationId: roomId,
+        }),
       });
-      setIsCameraOff(!isCameraOff);
+    } catch {
+      /* live socket already delivered */
     }
   };
 
   const endCall = () => {
-    if (socket) {
-      socket.emit("leave-room", roomId);
-    }
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-    }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-    }
+    socketRef.current?.emit("leave-room", roomId);
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
+    peerConnectionRef.current?.close();
     onCallEnd?.();
   };
 
-  return (
-    <div className="fixed inset-0 bg-slate-950 flex flex-col">
-      {/* Video Grid */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-        {/* Local Video */}
-        <div className="relative bg-slate-900 rounded-2xl overflow-hidden">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg text-white text-xs font-semibold">
-            {userName} (You)
-          </div>
-          {isMuted && (
-            <div className="absolute top-4 right-4 bg-red-600 px-2 py-1 rounded text-white text-xs font-bold">
-              Muted
-            </div>
-          )}
-          {isCameraOff && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-              <div className="text-slate-400 text-sm">Camera Off</div>
-            </div>
-          )}
-        </div>
+  const chips =
+    role === "doctor"
+      ? ["Please confirm you have no chest pain.", "Can you perform a full neck rotation?", "Vitals look optimal. Ready to sign."]
+      : ["Vitals: BP 118/78", "No symptoms", "Ready"];
 
-        {/* Remote Video */}
-        <div className="relative bg-slate-900 rounded-2xl overflow-hidden">
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-          {!remoteStream && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-              <div className="text-center">
-                <div className="text-slate-400 text-sm mb-2">
-                  {callStatus === "connecting" ? "Connecting..." : "Waiting for remote user..."}
-                </div>
-                <div className="animate-spin w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full mx-auto" />
-              </div>
-            </div>
-          )}
-          {remoteStream && (
-            <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg text-white text-xs font-semibold">
-              Remote User
-            </div>
+  const shellClass =
+    variant === "overlay"
+      ? "fixed inset-0 z-[90] bg-slate-950 flex flex-col"
+      : "relative min-h-[640px] h-[min(78vh,820px)] rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-2xl";
+
+  return (
+    <div className={shellClass}>
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900/90 border-b border-slate-800 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-bold text-emerald-300">
+              {callStatus === "connected" ? "Live" : "Signaling"} · {formatDuration(callDuration)}
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <Shield className="w-3.5 h-3.5 text-[#12B8B0]" />
+            <span className="text-[11px] text-slate-400 font-medium">Encrypted WebRTC</span>
+          </div>
+          <span className="text-[10px] text-slate-500 font-mono truncate">
+            {appointmentId || roomId}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-300 font-semibold hidden md:block truncate max-w-[240px]">{purpose}</span>
+          <button
+            onClick={() => setChatOpen((v) => !v)}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              chatOpen ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40" : "bg-slate-800 text-slate-300"
+            }`}
+            title="Toggle chat"
+          >
+            <MessageSquare className="w-4 h-4" />
+          </button>
+          {variant === "overlay" && (
+            <button onClick={endCall} className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center" title="Close">
+              <X className="w-4 h-4" />
+            </button>
           )}
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="bg-slate-900 border-t border-slate-800 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-center gap-4">
-          <button
-            onClick={toggleMute}
-            className={`p-4 rounded-full transition-all ${
-              isMuted
-                ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-slate-700 text-white hover:bg-slate-600"
-            }`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isMuted ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              )}
-            </svg>
-          </button>
+      <div className="flex-1 flex min-h-0">
+        <div className="flex-1 relative flex items-center justify-center p-3 sm:p-5 min-w-0">
+          <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl">
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className={`absolute inset-0 w-full h-full object-cover ${remoteStream ? "opacity-100" : "opacity-0"}`}
+            />
+            {!remoteStream && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900">
+                <div className="w-16 h-16 relative flex items-center justify-center">
+                  <span className="absolute inset-0 rounded-full border border-amber-300/70 animate-ping" />
+                  <span className="absolute inset-3 rounded-full bg-amber-100/10 border border-amber-300/60 flex items-center justify-center">
+                    <span className="w-3 h-3 rounded-full bg-[#12B8B0] animate-pulse" />
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-white">
+                  {mediaError || (role === "doctor" ? `Waiting for ${remoteName} to join` : `Connecting to ${remoteName}…`)}
+                </p>
+                <p className="text-[11px] text-slate-400 max-w-sm text-center">
+                  Stay in this room. Audio and video start automatically when both sides are present.
+                </p>
+              </div>
+            )}
 
-          <button
-            onClick={toggleCamera}
-            className={`p-4 rounded-full transition-all ${
-              isCameraOff
-                ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-slate-700 text-white hover:bg-slate-600"
-            }`}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isCameraOff ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              )}
-            </svg>
-          </button>
+            <div className="absolute top-4 left-4 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-700">
+              <span className={`w-2 h-2 rounded-full ${remoteStream ? "bg-emerald-400" : "bg-amber-400"}`} />
+              <span className="text-xs font-bold text-white">{remoteName}</span>
+              <BadgeCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
+              {remoteMuted && <MicOff className="w-3.5 h-3.5 text-rose-400" />}
+            </div>
+            <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-700">
+              <Wifi className={`w-3 h-3 ${remoteStream ? "text-emerald-400" : "text-slate-500"}`} />
+              <span className={`text-[10px] font-bold ${remoteStream ? "text-emerald-400" : "text-slate-400"}`}>
+                {remoteStream ? "HD" : "WAIT"}
+              </span>
+            </div>
 
-          <button
-            onClick={endCall}
-            className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z" />
-            </svg>
-          </button>
+            <div className="absolute bottom-4 right-4 w-36 sm:w-44 aspect-video rounded-2xl overflow-hidden border-2 border-[#12B8B0] shadow-2xl bg-slate-900">
+              <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${isCameraOff ? "opacity-0" : "opacity-100"}`} />
+              {isCameraOff && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                  <VideoOff className="w-5 h-5 text-slate-500" />
+                  <span className="text-[9px] text-slate-500">Camera off</span>
+                </div>
+              )}
+              {isMuted && (
+                <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-lg bg-rose-600/90 flex items-center justify-center">
+                  <MicOff className="w-3 h-3 text-white" />
+                </div>
+              )}
+              <div className="absolute bottom-1 left-2 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white font-bold">You</div>
+            </div>
+
+            {screenSharing && (
+              <div className="absolute top-16 left-4 px-3 py-1.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] text-[10px] font-extrabold">
+                Sharing screen
+              </div>
+            )}
+          </div>
+
+          <div className="absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-5 py-3 rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 shadow-2xl">
+            <button
+              onClick={toggleMute}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isMuted ? "bg-rose-600 text-white" : "bg-slate-700 text-white"}`}
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={toggleCamera}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isCameraOff ? "bg-rose-600 text-white" : "bg-slate-700 text-white"}`}
+              title={isCameraOff ? "Camera on" : "Camera off"}
+            >
+              {isCameraOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => void toggleScreenShare()}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${screenSharing ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-slate-700 text-white"}`}
+              title="Share screen"
+            >
+              {screenSharing ? <MonitorOff className="w-4 h-4" /> : <MonitorUp className="w-4 h-4" />}
+            </button>
+            <div className="w-px h-8 bg-slate-600" />
+            <button
+              onClick={endCall}
+              className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center gap-1.5"
+            >
+              <PhoneOff className="w-3.5 h-3.5" />
+              Leave
+            </button>
+          </div>
         </div>
+
+        {chatOpen && (
+          <div className="w-[min(100%,20rem)] flex-shrink-0 bg-slate-900 border-l border-slate-800 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[#12B8B0]" />
+                <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">In-call chat</h4>
+              </div>
+              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded-full">
+                {messages.length} messages
+              </span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.map((msg, i) => (
+                <div key={msg.id || i} className={`flex flex-col ${msg.sender === role ? "items-end" : "items-start"}`}>
+                  <span className="text-[10px] text-slate-500 mb-1">
+                    {msg.name} · {msg.time}
+                  </span>
+                  <div
+                    className={`px-3 py-2 rounded-2xl text-xs max-w-[88%] leading-relaxed ${
+                      msg.sender === role
+                        ? "bg-[#12B8B0] text-[#0B2D5C] font-semibold rounded-br-none"
+                        : "bg-slate-800 text-slate-200 rounded-bl-none"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="px-4 py-2 border-t border-slate-800">
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {chips.map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setChatMessage(chip)}
+                    className="text-[9px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2 py-1 rounded-lg flex-shrink-0 whitespace-nowrap"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <form onSubmit={sendChat} className="p-4 border-t border-slate-800 flex items-center gap-2">
+              <input
+                type="text"
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Message…"
+                className="flex-1 p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-[#12B8B0]"
+              />
+              <button type="submit" className="w-9 h-9 rounded-xl bg-[#12B8B0] text-[#0B2D5C] flex items-center justify-center">
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

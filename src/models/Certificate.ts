@@ -101,6 +101,7 @@ export interface ICertificate extends Document {
   expiresAt: Date;
   status: "Valid" | "Expired" | "Revoked" | "submitted" | "under-review" | "approved" | "rejected";
   paymentStatus?: "PAID" | "UNPAID";
+  iremboRef?: string;
   assignedDoctor?: string;
   assignedDoctorId?: string;
   riskLevel?: string;
@@ -218,13 +219,14 @@ const CertificateSchema = new Schema<ICertificate>(
       default: "submitted",
     },
     paymentStatus: { type: String, enum: ["PAID", "UNPAID"], default: "UNPAID" },
+    iremboRef: { type: String },
     assignedDoctor: { type: String },
     assignedDoctorId: { type: String },
     riskLevel: { type: String },
     riskColor: { type: String },
     appliedDate: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "certificates" }
 );
 
 export const Certificate: Model<ICertificate> =

@@ -10,6 +10,9 @@ export interface IUser extends Document {
   phone?: string;
   nationalId?: string;
   nationalIdImageUrl?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
   role: "applicant" | "doctor" | "admin" | "user";
   avatarUrl: string;
   avatarPublicId?: string;
@@ -43,6 +46,9 @@ const UserSchema = new Schema<IUser>(
     phone: { type: String, trim: true },
     nationalId: { type: String, trim: true },
     nationalIdImageUrl: { type: String },
+    dateOfBirth: { type: String, trim: true },
+    gender: { type: String, trim: true },
+    address: { type: String, trim: true },
     role: { type: String, default: "applicant" },
     avatarUrl: {
       type: String,
@@ -65,7 +71,7 @@ const UserSchema = new Schema<IUser>(
       garmin: { type: Boolean, default: false },
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "users" }
 );
 
 export const User: Model<IUser> =

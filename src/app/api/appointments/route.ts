@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       await connectToDatabase();
       const query: any = {};
       if (doctorId) query.doctorId = doctorId;
-      if (applicantEmail) query.applicantEmail = applicantEmail;
+      if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
       if (status) query.status = status;
 
       const appointments = await Appointment.find(query).sort({ scheduledDate: 1, scheduledTime: 1 });
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       doctorName,
       doctorSpecialty,
       purpose,
+      certificateDraftId,
       scheduledDate,
       scheduledTime,
       durationMinutes,
@@ -56,22 +57,25 @@ export async function POST(request: NextRequest) {
     }
 
     const appointmentId = `APT-${Date.now().toString().slice(-6)}`;
-    const roomUrl = `/dashboard/user?tab=consultation&room=${appointmentId}`;
+    const roomId = body.roomId || appointmentId;
+    const roomUrl = `/dashboard/user?tab=consultation&room=${roomId}`;
 
     let savedAppointment: any = {
       appointmentId,
       applicantName,
-      applicantEmail,
-      applicantPhone: applicantPhone || "+250 788 123 456",
+      applicantEmail: String(applicantEmail).toLowerCase(),
+      applicantPhone: applicantPhone || "",
       doctorId: doctorId || "DOC-RW-4091",
       doctorName: doctorName || "Dr. Telesphore Uwabera, MD",
       doctorSpecialty: doctorSpecialty || "Telehealth Physician",
       purpose: purpose || "Medical Fitness Review",
+      certificateDraftId: certificateDraftId || "",
       scheduledDate,
       scheduledTime,
       durationMinutes: durationMinutes || 15,
       status: "scheduled",
       notes: notes || "Video consultation scheduled for fitness certificate review.",
+      roomId,
       roomUrl,
       emailNotified: true,
       createdAt: new Date(),

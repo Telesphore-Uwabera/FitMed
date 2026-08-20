@@ -16,6 +16,7 @@ export interface IAppointment extends Document {
   durationMinutes: number;
   status: "scheduled" | "in-progress" | "completed" | "cancelled" | "rescheduled";
   notes?: string;
+  roomId: string;
   roomUrl: string;
   emailNotified: boolean;
   createdAt: Date;
@@ -43,10 +44,11 @@ const AppointmentSchema = new Schema<IAppointment>(
       default: "scheduled",
     },
     notes: { type: String },
+    roomId: { type: String },
     roomUrl: { type: String, required: true },
     emailNotified: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "appointments" }
 );
 
 export const Appointment: Model<IAppointment> =

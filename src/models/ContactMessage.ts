@@ -34,7 +34,7 @@ const ContactMessageSchema = new Schema<IContactMessage>(
     },
     adminNotes: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "contactmessages" }
 );
 
 export const ContactMessage: Model<IContactMessage> =

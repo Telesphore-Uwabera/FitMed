@@ -6,7 +6,10 @@ import { listMessages, saveMessage } from "@/lib/memoryStore";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const consultationId = searchParams.get("consultationId") || "ROOM-FM-9941";
+    const consultationId = searchParams.get("consultationId");
+    if (!consultationId) {
+      return NextResponse.json({ success: true, messages: [] });
+    }
 
     try {
       await connectToDatabase();
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { senderName, senderRole, messageText, consultationId, messageType } = body;
 
-    if (!senderName || !messageText) {
+    if (!senderName || !messageText || !consultationId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
         senderName,
         senderRole: senderRole || "applicant",
         messageText,
-        consultationId: consultationId || "ROOM-FM-9941",
+        consultationId,
         messageType: messageType || "text",
         timestamp: new Date(),
       });
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
         senderName,
         senderRole,
         messageText,
-        consultationId: consultationId || "ROOM-FM-9941",
+        consultationId,
         timestamp: new Date().toISOString(),
       });
       return NextResponse.json({
