@@ -1,50 +1,131 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══════════════════════════════════════════════════════════════════
+   FITMED BRAND PALETTE
+   #0B2D5C  deep navy      60% — primary backgrounds, headings, navbars
+   #12B8B0  teal           30% — accents, CTAs, highlights, icons
+   #FFFFFF  white          10% — body bg, card bg, text on dark
+═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Kind Sans @font-face Definitions ───────────────────────────── */
+@font-face {
+  font-family: "Kind Sans";
+  src: local("Kind Sans Regular"), local("KindSans-Regular"), local("Kind Sans"),
+       url("/fonts/KindSans-Regular.woff2") format("woff2"),
+       url("/fonts/KindSans-Regular.woff") format("woff"),
+       url("/fonts/KindSans-Regular.otf") format("opentype"),
+       url("/fonts/KindSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kind Sans";
+  src: local("Kind Sans Medium"), local("KindSans-Medium"),
+       url("/fonts/KindSans-Medium.woff2") format("woff2"),
+       url("/fonts/KindSans-Medium.woff") format("woff"),
+       url("/fonts/KindSans-Medium.otf") format("opentype"),
+       url("/fonts/KindSans-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kind Sans";
+  src: local("Kind Sans SemiBold"), local("KindSans-SemiBold"),
+       url("/fonts/KindSans-SemiBold.woff2") format("woff2"),
+       url("/fonts/KindSans-SemiBold.woff") format("woff"),
+       url("/fonts/KindSans-SemiBold.otf") format("opentype"),
+       url("/fonts/KindSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kind Sans";
+  src: local("Kind Sans Bold"), local("KindSans-Bold"),
+       url("/fonts/KindSans-Bold.woff2") format("woff2"),
+       url("/fonts/KindSans-Bold.woff") format("woff"),
+       url("/fonts/KindSans-Bold.otf") format("opentype"),
+       url("/fonts/KindSans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ─── Font variables ─────────────────────────────────────────────── */
+:root {
+  --font-primary: var(--font-manrope), "Manrope", system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-manrope), "Manrope", system-ui, -apple-system, sans-serif;
+}
+
 @theme {
-  --font-family-sans: var(--font-primary), "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-family-body: var(--font-body), "DM Sans", system-ui, sans-serif;
+  --font-family-sans: var(--font-manrope), "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-body: var(--font-manrope), "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Brand tokens */
+  --brand-navy:       #0B2D5C;
+  --brand-navy-dark:  #071d3d;
+  --brand-navy-light: #143d7a;
+  --brand-teal:       #12B8B0;
+  --brand-teal-dark:  #0d9690;
+  --brand-teal-light: #1dd9d0;
+  --brand-white:      #ffffff;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
+  scroll-padding-top: 88px;
+  overflow-x: clip;
+}
+
+[id] {
+  scroll-margin-top: 88px;
 }
 
 body {
   background-color: #ffffff;
-  color: #0f172a;
-  overflow-x: hidden;
+  color: #0B2D5C;
+  overflow-x: clip;
   line-height: 1.65;
-  font-family: var(--font-body, "DM Sans"), system-ui, sans-serif;
+  font-family: var(--font-manrope), "Manrope", system-ui, -apple-system, sans-serif;
   width: 100%;
   max-width: 100vw;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-primary, "Plus Jakarta Sans"), system-ui, sans-serif;
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-manrope), "Manrope", system-ui, -apple-system, sans-serif;
+    color: #0B2D5C;
+  }
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-track { background: #f0f4f8; }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #0ea5e9, #14b8a6);
+  background: linear-gradient(180deg, #0B2D5C, #12B8B0);
   border-radius: 3px;
 }
 
 /* ─── Section backgrounds ────────────────────────────────────────── */
+/*  60% navy  |  30% teal accents  |  10% white  */
 .section-white  { background: #ffffff; }
-.section-gray   { background: #f8fafc; }
-.section-light  { background: #f0f9ff; }
-.section-slate  { background: #f1f5f9; }
-.section-dark   { background: #0f172a; }
-.section-navy   { background: #0c1a3a; }
+.section-gray   { background: #f4f7fb; }          /* very light navy-tinted */
+.section-light  { background: #edf6f6; }          /* light teal wash */
+.section-slate  { background: #e8eef5; }          /* pale navy wash */
+.section-dark   { background: #0B2D5C; }          /* brand navy */
+.section-navy   { background: #071d3d; }          /* deeper navy */
 
-/* ─── Glass (used on dark hero) ──────────────────────────────────── */
+/* ─── Glass (hero — on brand-navy background) ────────────────────── */
 .glass-dark {
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(20px);
@@ -52,44 +133,52 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(255,255,255,0.15);
 }
 .glass-light {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(14,165,233,0.15);
+  border: 1px solid rgba(18,184,176,0.2);
 }
 
 /* ─── Cards ──────────────────────────────────────────────────────── */
 .card-white {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  border: 1px solid #dae4f0;
+  box-shadow: 0 1px 3px rgba(11,45,92,.05), 0 4px 16px rgba(11,45,92,.04);
 }
 .card-white:hover {
-  border-color: #bae6fd;
-  box-shadow: 0 4px 24px rgba(14,165,233,.12);
+  border-color: #12B8B0;
+  box-shadow: 0 4px 24px rgba(18,184,176,.15);
 }
 .card-tinted {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background: #edf6f6;
+  border: 1px solid rgba(18,184,176,.25);
 }
 
 /* ─── Gradient text ──────────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 60%, #6366f1 100%);
+  background: linear-gradient(135deg, #12B8B0 0%, #0B2D5C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .gradient-text-dark {
-  background: linear-gradient(135deg, #0369a1, #0f766e);
+  background: linear-gradient(135deg, #0B2D5C, #12B8B0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+/* Hero headline gradient — teal on dark navy bg */
+.gradient-text-hero {
+  background: linear-gradient(135deg, #12B8B0, #1dd9d0);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────── */
+/* Primary: teal fill (30% accent), white text */
 .btn-primary {
-  background: linear-gradient(135deg, #0ea5e9, #14b8a6);
+  background: linear-gradient(135deg, #12B8B0, #0d9690);
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -99,54 +188,110 @@ h1, h2, h3, h4, h5, h6 {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #38bdf8, #2dd4bf);
+  background: linear-gradient(135deg, #1dd9d0, #12B8B0);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 .btn-primary:hover::before { opacity: 1; }
 .btn-primary > * { position: relative; z-index: 1; }
 
+/* Outline: navy border, navy text → fills to navy on hover */
 .btn-outline-primary {
   background: transparent;
-  border: 1.5px solid #0ea5e9;
-  color: #0ea5e9;
+  border: 1.5px solid #0B2D5C;
+  color: #0B2D5C;
   transition: all 0.25s ease;
 }
 .btn-outline-primary:hover {
-  background: #0ea5e9;
+  background: #0B2D5C;
+  color: #fff;
+}
+
+/* Secondary outline using teal */
+.btn-outline-teal {
+  background: transparent;
+  border: 1.5px solid #12B8B0;
+  color: #12B8B0;
+  transition: all 0.25s ease;
+}
+.btn-outline-teal:hover {
+  background: #12B8B0;
   color: #fff;
 }
 
 .btn-white {
   background: #fff;
-  color: #0ea5e9;
+  color: #0B2D5C;
   transition: all 0.25s ease;
-  box-shadow: 0 2px 12px rgba(0,0,0,.1);
+  box-shadow: 0 2px 12px rgba(11,45,92,.12);
 }
 .btn-white:hover {
-  background: #f0f9ff;
-  box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  background: #edf6f6;
+  box-shadow: 0 4px 20px rgba(11,45,92,.18);
 }
 
 /* ─── Badge ──────────────────────────────────────────────────────── */
-.badge-primary   { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-.badge-teal      { background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4; }
-.badge-violet    { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
-.badge-fit       { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-.badge-review    { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
-.badge-notfit    { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.badge-primary   { background: #e2ecf8; color: #0B2D5C;  border: 1px solid #b8cde8; }
+.badge-teal      { background: #d6f5f4; color: #0B6E6A;  border: 1px solid #99e6e3; }
+.badge-violet    { background: #ede9fe; color: #6d28d9;  border: 1px solid #ddd6fe; }
+.badge-fit       { background: #dcfce7; color: #166534;  border: 1px solid #bbf7d0; }
+.badge-review    { background: #fefce8; color: #854d0e;  border: 1px solid #fde68a; }
+.badge-notfit    { background: #fee2e2; color: #991b1b;  border: 1px solid #fecaca; }
 
-/* ─── Dividers — removed, sections flow without borders ─────────── */
+/* ─── Dividers ───────────────────────────────────────────────────── */
 .section-divider-light { display: none; }
 .section-divider-dark  { display: none; }
 
-/* ─── Glow (hero only) ───────────────────────────────────────────── */
+/* ─── Glow ───────────────────────────────────────────────────────── */
 .glow-white { box-shadow: 0 0 40px rgba(255,255,255,.25); }
 
-/* ─── Pulse glow ─────────────────────────────────────────────────── */
+/* Keep the issued certificate to one standard A4 page when printed. */
+@page { size: A4 portrait; margin: 0; }
+
+@media print {
+  html, body { width: 210mm; height: 297mm; }
+  body { background: #fff !important; }
+  .official-certificate {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .official-certificate-border {
+    height: 100% !important;
+    overflow: hidden !important;
+    border-width: 2px !important;
+    border-radius: 0.2rem !important;
+    padding: 5mm !important;
+  }
+  .official-certificate-border .my-6 { margin-top: 0.45rem !important; margin-bottom: 0.45rem !important; }
+  .official-certificate-border .mt-8 { margin-top: 0.7rem !important; }
+  .official-certificate-border .mb-6 { margin-bottom: 0.45rem !important; }
+  .official-certificate-border .p-5 { padding: 0.65rem !important; }
+  .official-certificate-border .p-3 { padding: 0.45rem !important; }
+  .official-certificate-border .p-2\.5 { padding: 0.3rem !important; }
+  .official-certificate-border .gap-4 { gap: 0.55rem !important; }
+  .official-certificate-border .gap-6 { gap: 0.7rem !important; }
+  .official-certificate-border .text-sm { font-size: 0.7rem !important; line-height: 1.15 !important; }
+  .official-certificate-border .text-xs { font-size: 0.58rem !important; line-height: 1.2 !important; }
+  .official-certificate-border .text-\[10px\] { font-size: 0.5rem !important; line-height: 1.15 !important; }
+  .official-certificate-border .text-\[11px\] { font-size: 0.55rem !important; line-height: 1.15 !important; }
+  .official-certificate-border .text-\[9px\] { font-size: 0.45rem !important; line-height: 1.1 !important; }
+  .official-certificate-border h1 { font-size: 1.2rem !important; line-height: 1.1 !important; }
+  .official-certificate-border .w-16 { width: 3rem !important; }
+  .official-certificate-border .h-16 { height: 3rem !important; }
+  .official-certificate-border .w-16.h-16 { width: 3rem !important; height: 3rem !important; }
+  .official-certificate-border .w-14, .official-certificate-border .h-14 { width: 2.6rem !important; height: 2.6rem !important; }
+  .official-certificate-border .w-16.h-16 { flex-basis: 3rem !important; }
+}
+
+/* ─── Pulse glow (teal accent) ───────────────────────────────────── */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(14,165,233,.3); }
-  50%       { box-shadow: 0 0 45px rgba(14,165,233,.6); }
+  0%, 100% { box-shadow: 0 0 20px rgba(18,184,176,.35); }
+  50%       { box-shadow: 0 0 45px rgba(18,184,176,.65), 0 0 70px rgba(18,184,176,.25); }
 }
 .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 
@@ -170,13 +315,7 @@ h1, h2, h3, h4, h5, h6 {
   38%  { opacity: 0; transform: scale(0.97); }
   100% { opacity: 0; transform: scale(0.97); }
 }
-
-.hero-slide {
-  position: absolute;
-  inset: 0;
-  animation: heroFadeZoom 20s ease-in-out infinite;
-  will-change: opacity, transform;
-}
+.hero-slide            { position: absolute; inset: 0; animation: heroFadeZoom 20s ease-in-out infinite; will-change: opacity, transform; }
 .hero-slide:nth-child(1) { animation-delay:  0s; }
 .hero-slide:nth-child(2) { animation-delay:  5s; }
 .hero-slide:nth-child(3) { animation-delay: 10s; }
@@ -184,30 +323,22 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ─── Focus ──────────────────────────────────────────────────────── */
 *:focus-visible {
-  outline: 2px solid #0ea5e9;
+  outline: 2px solid #12B8B0;
   outline-offset: 2px;
 }
 
-/* ─── Layout safety ──────────────────────────────────────────────── */
+/* ─── Layout ─────────────────────────────────────────────────────── */
 section, footer, header, main {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
 }
 
-/* ─── Full-width content containers ─────────────────────────────── */
-/*
- * .container-full  — full viewport width, generous horizontal padding
- * .container-wide  — very wide max, for large screens
- * All sections use these instead of the narrow max-w-7xl (80rem / 1280px)
- * so content fills the page on large monitors.
- */
 .container-full {
   width: 100%;
   padding-left: clamp(1.25rem, 4vw, 5rem);
   padding-right: clamp(1.25rem, 4vw, 5rem);
 }
-
 .container-wide {
   width: 100%;
   max-width: 1600px;
@@ -217,9 +348,250 @@ section, footer, header, main {
   padding-right: clamp(1.25rem, 4vw, 5rem);
 }
 
-/* ─── Stat number counter ────────────────────────────────────────── */
+/* ─── Stat number ────────────────────────────────────────────────── */
 .stat-number {
   font-family: var(--font-primary, "Plus Jakarta Sans"), sans-serif;
   font-weight: 800;
   line-height: 1;
+}
+
+/* ─── Toast progress bar shrink ──────────────────────────────────── */
+@keyframes shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+.animate-shrink {
+  animation: shrink 4.5s linear forwards;
+}
+
+/* ─── Video call animations ──────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  50%  { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(1);   opacity: 0; }
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+/* ─── Dashboard dark mode ───────────────────────────────────────── */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #08111f;
+  color: #dbe7f3;
+}
+
+html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+  color: #eaf2fb;
+}
+
+html.dark .dashboard-app {
+  background-color: #08111f;
+}
+
+html.dark .dashboard-main {
+  background-color: #08111f;
+  color: #dbe7f3;
+  color-scheme: dark;
+}
+
+html.dark .dashboard-main header {
+  background-color: rgba(10, 22, 40, 0.92) !important;
+  border-color: #243a57 !important;
+  box-shadow: none !important;
+}
+
+/* Surfaces */
+html.dark .dashboard-main .bg-white,
+html.dark .dashboard-main .bg-white\/95 {
+  background-color: #12253d !important;
+}
+
+html.dark .dashboard-main .bg-slate-50,
+html.dark .dashboard-main .bg-slate-50\/70,
+html.dark .dashboard-main .bg-slate-50\/60,
+html.dark .dashboard-main .bg-slate-100,
+html.dark .dashboard-main .bg-slate-200\/80 {
+  background-color: #0e1c31 !important;
+}
+
+/* Pale tint chips / buttons that read as white in dark mode */
+html.dark .dashboard-main .bg-teal-50,
+html.dark .dashboard-main .bg-teal-50\/70,
+html.dark .dashboard-main .bg-teal-50\/60,
+html.dark .dashboard-main .hover\:bg-teal-100:hover {
+  background-color: rgba(18, 184, 176, 0.14) !important;
+}
+html.dark .dashboard-main .bg-sky-50,
+html.dark .dashboard-main .bg-sky-50\/80,
+html.dark .dashboard-main .bg-sky-100,
+html.dark .dashboard-main .hover\:bg-sky-100:hover {
+  background-color: rgba(56, 189, 248, 0.12) !important;
+}
+html.dark .dashboard-main .bg-emerald-50,
+html.dark .dashboard-main .bg-emerald-50\/70,
+html.dark .dashboard-main .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+}
+html.dark .dashboard-main .bg-amber-50,
+html.dark .dashboard-main .bg-amber-50\/70,
+html.dark .dashboard-main .bg-amber-50\/60,
+html.dark .dashboard-main .bg-amber-100,
+html.dark .dashboard-main .bg-amber-100\/80 {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+}
+html.dark .dashboard-main .bg-orange-50,
+html.dark .dashboard-main .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.14) !important;
+}
+html.dark .dashboard-main .bg-rose-50,
+html.dark .dashboard-main .bg-rose-100,
+html.dark .dashboard-main .hover\:bg-rose-50:hover {
+  background-color: rgba(244, 63, 94, 0.14) !important;
+}
+html.dark .dashboard-main .bg-indigo-50,
+html.dark .dashboard-main .bg-indigo-100 {
+  background-color: rgba(99, 102, 241, 0.14) !important;
+}
+html.dark .dashboard-main .bg-\[\#edf6f6\] {
+  background-color: rgba(18, 184, 176, 0.1) !important;
+}
+
+/* Text */
+html.dark .dashboard-main .text-\[\#0B2D5C\],
+html.dark .dashboard-main .text-slate-800,
+html.dark .dashboard-main .text-slate-700,
+html.dark .dashboard-main .text-slate-900,
+html.dark .dashboard-main .text-slate-950 {
+  color: #eaf2fb !important;
+}
+
+html.dark .dashboard-main .text-slate-600 {
+  color: #b7c7d8 !important;
+}
+
+html.dark .dashboard-main .text-slate-500,
+html.dark .dashboard-main .text-slate-400 {
+  color: #8ea2b8 !important;
+}
+
+html.dark .dashboard-main .text-emerald-800,
+html.dark .dashboard-main .text-emerald-700,
+html.dark .dashboard-main .text-emerald-950 {
+  color: #6ee7b7 !important;
+}
+html.dark .dashboard-main .text-amber-900,
+html.dark .dashboard-main .text-amber-800,
+html.dark .dashboard-main .text-amber-950 {
+  color: #fbbf24 !important;
+}
+html.dark .dashboard-main .text-orange-900,
+html.dark .dashboard-main .text-rose-800,
+html.dark .dashboard-main .text-rose-950 {
+  color: #fda4af !important;
+}
+html.dark .dashboard-main .text-sky-800,
+html.dark .dashboard-main .text-sky-700,
+html.dark .dashboard-main .text-teal-800,
+html.dark .dashboard-main .text-teal-700,
+html.dark .dashboard-main .text-indigo-700 {
+  color: #7dd3fc !important;
+}
+
+html.dark .dashboard-main .border-slate-200,
+html.dark .dashboard-main .border-slate-100,
+html.dark .dashboard-main .divide-slate-100 > * + *,
+html.dark .dashboard-main .divide-slate-200 > * + * {
+  border-color: #243a57 !important;
+}
+
+html.dark .dashboard-main .border-teal-200,
+html.dark .dashboard-main .border-teal-300 {
+  border-color: rgba(18, 184, 176, 0.32) !important;
+}
+html.dark .dashboard-main .border-emerald-200,
+html.dark .dashboard-main .border-emerald-300 {
+  border-color: rgba(16, 185, 129, 0.32) !important;
+}
+html.dark .dashboard-main .border-amber-200,
+html.dark .dashboard-main .border-amber-300 {
+  border-color: rgba(245, 158, 11, 0.32) !important;
+}
+html.dark .dashboard-main .border-sky-200,
+html.dark .dashboard-main .border-sky-300 {
+  border-color: rgba(56, 189, 248, 0.32) !important;
+}
+html.dark .dashboard-main .border-rose-200,
+html.dark .dashboard-main .border-rose-300 {
+  border-color: rgba(244, 63, 94, 0.32) !important;
+}
+
+/* FitMed form controls — keep native selects and calendars on brand. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230B2D5C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 0.75rem;
+  padding-right: 1.85rem;
+  color: #0B2D5C;
+  accent-color: #12B8B0;
+}
+
+select:focus,
+input[type="date"]:focus,
+input[type="time"]:focus {
+  outline: 2px solid rgba(18, 184, 176, 0.2);
+  outline-offset: 1px;
+  border-color: #12B8B0 !important;
+}
+
+select option {
+  background-color: #ffffff;
+  color: #0B2D5C;
+}
+
+input[type="date"],
+input[type="time"] {
+  color-scheme: light;
+  accent-color: #12B8B0;
+}
+
+/* Native selects / inputs — Windows otherwise paints these bright white */
+html.dark .dashboard-main input,
+html.dark .dashboard-main select,
+html.dark .dashboard-main textarea {
+  color-scheme: dark;
+  background-color: #0e1c31 !important;
+  border-color: #2c4666 !important;
+  color: #eaf2fb !important;
+}
+
+html.dark .dashboard-main select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238ea2b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  padding-right: 1.85rem;
+}
+
+html.dark .dashboard-main select option {
+  background-color: #12253d;
+  color: #eaf2fb;
+}
+
+html.dark .dashboard-main table thead {
+  background-color: #0e1c31;
+}
+
+html.dark .dashboard-main .hover\:bg-slate-50:hover,
+html.dark .dashboard-main .hover\:bg-slate-100:hover,
+html.dark .dashboard-main .hover\:bg-slate-100\/70:hover {
+  background-color: #17304c !important;
 }

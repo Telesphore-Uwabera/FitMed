@@ -1,0 +1,329 @@
+"use client";
+
+import React, { useState, useRef } from "react";
+import Image from "next/image";
+import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
+import {
+  ShieldCheck,
+  QrCode,
+  Download,
+  CheckCircle2,
+  Lock,
+  Stethoscope,
+  Building2,
+  Calendar,
+  User,
+  HeartPulse,
+  Activity,
+  FileCheck2,
+  Sparkles,
+} from "lucide-react";
+
+export interface CertificateData {
+  certificateId: string;
+  candidateName: string;
+  applicantImageUrl?: string;
+  nationalId: string;
+  gender: "Male" | "Female";
+  dateOfBirth: string;
+  weightKg: string;
+  heightCm: string;
+  bmi: string;
+  bloodPressure: string;
+  heartRate: string;
+  spo2: string;
+  purpose: string;
+  category: string;
+  decision: "FIT" | "FIT_RESTRICTED" | "FURTHER_ASSESSMENT" | "NOT_FIT";
+  restrictions?: string;
+  systemClearances?: {
+    hent: string;
+    respiratory: string;
+    cardiovascular: string;
+    git: string;
+    musculoskeletal: string;
+    mentalHealth: string;
+  };
+  doctorName: string;
+  doctorLicense: string;
+  doctorId: string;
+  doctorSpecialty: string;
+  hospitalPartner: string;
+  issueDate: string;
+  expiryDate: string;
+  sha256Hash: string;
+  qrUrl: string;
+}
+
+interface OfficialMedicalCertificateProps {
+  data?: Partial<CertificateData>;
+  onClose?: () => void;
+}
+
+export default function OfficialMedicalCertificate({
+  data,
+  onClose,
+}: OfficialMedicalCertificateProps) {
+  const certRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const cert: CertificateData = {
+    certificateId: data?.certificateId || "FM-2026-88421",
+    candidateName: data?.candidateName || "Telesphore Uwabera",
+    applicantImageUrl: data?.applicantImageUrl,
+    nationalId: data?.nationalId || "1199580048123049",
+    gender: data?.gender || "Male",
+    dateOfBirth: data?.dateOfBirth || "14 Aug 1995 (Age: 29)",
+    weightKg: data?.weightKg || "71 kg",
+    heightCm: data?.heightCm || "175 cm",
+    bmi: data?.bmi || "23.2 kg/m² (Normal)",
+    bloodPressure: data?.bloodPressure || "118/78 mmHg",
+    heartRate: data?.heartRate || "72 bpm (Normal Sinus)",
+    spo2: data?.spo2 || "98% (Room Air)",
+    purpose: data?.purpose || "Workplace & Occupational Fitness",
+    category: data?.category || "Occupational & General Employment",
+    decision: data?.decision || "FIT",
+    restrictions: data?.restrictions || "None. Unrestricted physical duties authorized.",
+    systemClearances: data?.systemClearances || {
+      hent: "Normal. Pharynx clear, vision uncorrected 20/20, hearing intact.",
+      respiratory: "Vesicular breath sounds bilaterally, no wheezes or rales.",
+      cardiovascular: "Regular rate & rhythm, S1/S2 present, no murmurs detected.",
+      git: "Soft, non-tender, no organomegaly or palpable masses.",
+      musculoskeletal: "Full range of motion in all joints, normal spine curvature and gait.",
+      mentalHealth: "Alert, oriented, stable affect, physically and mentally fit.",
+    },
+    doctorName: data?.doctorName || "Dr. Telesphore Uwabera, MD",
+    doctorLicense: data?.doctorLicense || "RW-MMC-4091",
+    doctorId: data?.doctorId || "DOC-RW-4091",
+    doctorSpecialty: data?.doctorSpecialty || "Occupational Medicine & Telemedicine Evaluator",
+    hospitalPartner: data?.hospitalPartner || "King Faisal Hospital Rwanda / MediConnect Alliance",
+    issueDate: data?.issueDate || "18 August 2026",
+    expiryDate: data?.expiryDate || "18 August 2027",
+    sha256Hash: data?.sha256Hash || "e9b4c27f9011a684b3d7c2e55198df44a1087cb1a29938e744b1c8f331902f82",
+    qrUrl:
+      data?.qrUrl ||
+      "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://verify.fitmed.rw/FM-2026-88421",
+  };
+
+  const handleDownload = async () => {
+    if (!certRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(certRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const imageData = canvas.toDataURL("image/png");
+      pdf.addImage(imageData, "PNG", 0, 0, 210, 297, undefined, "FAST");
+      pdf.save(`${cert.certificateId}-medical-fitness-certificate.pdf`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-between bg-slate-900 text-white p-4 rounded-2xl print:hidden shadow-lg">
+        <div className="flex items-center gap-2.5">
+          <ShieldCheck className="w-5 h-5 text-[#12B8B0]" />
+          <div>
+            <div className="text-xs font-extrabold text-white uppercase tracking-wider">
+              Official Medical Certificate Viewer
+            </div>
+            <div className="text-[11px] text-slate-400">
+              Purpose-specific certificate · Issued by a licensed physician
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="px-4 py-2 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] text-xs font-black flex items-center gap-1.5 transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isDownloading ? "Preparing PDF..." : "Download PDF"}</span>
+          </button>
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+            >
+              Close
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── THE OFFICIAL CERTIFICATE CANVAS ── */}
+      <div
+        ref={certRef}
+        className="official-certificate bg-white rounded-3xl p-6 sm:p-9 border-2 border-slate-300 text-slate-900 shadow-2xl relative overflow-hidden font-serif w-full max-w-[794px] mx-auto print:border-none print:shadow-none print:p-0 print:m-0"
+        style={{ minHeight: "1123px", aspectRatio: "210 / 297" }}
+      >
+        {/* Subtle Decorative Security Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+          <div className="text-[140px] font-black tracking-widest text-[#0B2D5C] rotate-[-25deg]">
+            FITMED RWANDA
+          </div>
+        </div>
+
+        {/* Outer Official Certificate Border */}
+        <div className="official-certificate-border border-4 border-double border-[#0B2D5C] p-5 sm:p-6 rounded-2xl relative">
+          {/* Header 1: Republic of Rwanda & Clinical Healthcare Network */}
+          <div className="flex items-center justify-between border-b-2 border-[#0B2D5C] pb-4 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-28 h-20 relative flex-shrink-0">
+                <Image
+                  src="/logo-1.webp"
+                  alt="FitMed Rwanda"
+                  width={641}
+                  height={390}
+                  className="w-full h-full object-contain object-left"
+                  priority
+                />
+              </div>
+              <div className="font-sans">
+                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0B2D5C]">
+                  Digital Medical Fitness Services
+                </div>
+                <div className="text-xs font-bold text-slate-700">
+                  FitMed Rwanda · Issued by a licensed physician
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right font-sans">
+              <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                Official Document No.
+              </div>
+              <div className="text-sm font-extrabold font-mono text-[#0B2D5C]">{cert.certificateId}</div>
+              <span className="inline-block mt-0.5 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                FITMED RECORD · VALID
+              </span>
+            </div>
+          </div>
+
+          {/* Certificate Main Title */}
+          <div className="text-center my-6 space-y-1 font-sans">
+            <h1
+              className="text-2xl sm:text-3xl font-extrabold text-[#0B2D5C] uppercase tracking-wider underline decoration-[#12B8B0] decoration-2 underline-offset-8"
+              style={{ fontFamily: "var(--font-primary)" }}
+            >
+              Medical Fitness Certificate
+            </h1>
+            <p className="text-xs text-slate-600 font-bold uppercase tracking-widest pt-2">
+              Certificate of fitness for a stated purpose
+            </p>
+          </div>
+
+          {/* Section 1: Applicant image and certificate purpose */}
+          <div className="my-6 space-y-2.5 font-sans text-xs">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C] mb-3 pb-1 border-b border-slate-200 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-[#12B8B0]" />
+              <span>1. Applicant & Certificate Purpose</span>
+            </div>
+
+            <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-5">
+              <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-[#12B8B0] bg-slate-200 flex-shrink-0">
+                {cert.applicantImageUrl ? (
+                  <img src={cert.applicantImageUrl} alt={`${cert.candidateName} applicant photograph`} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl font-black text-slate-400">{cert.candidateName.charAt(0)}</div>
+                )}
+              </div>
+              <div className="space-y-1">
+                <div className="text-slate-400 text-[10px] uppercase font-bold">Applicant</div>
+                <div className="font-extrabold text-base text-[#0B2D5C]">{cert.candidateName}</div>
+                <div className="text-slate-500 text-xs">Assessment purpose: <strong className="text-slate-700">{cert.purpose}</strong></div>
+                <div className="text-slate-500 text-xs">Category: <strong className="text-slate-700">{cert.category}</strong></div>
+              </div>
+            </div>
+            </div>
+          </div>
+
+          {/* Section 2: Clinical review confirmation */}
+          <div className="my-6 space-y-2.5 font-sans text-xs">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C] mb-2 flex items-center gap-1.5">
+              <Stethoscope className="w-3.5 h-3.5 text-[#12B8B0]" />
+              <span>2. Clinical Review</span>
+            </div>
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-600">
+              Clinical assessment completed by the evaluating physician. Detailed medical findings remain confidential in the clinical record and are not displayed on this certificate.
+            </div>
+          </div>
+
+          {/* Section 3: Physician declaration and fitness decision */}
+          <div className="my-6 space-y-2.5 font-sans">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C] mb-2 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#12B8B0]" />
+              <span>3. Physician Declaration & Determination</span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300 space-y-3">
+              <div className="flex justify-end">
+                <span className="px-3 py-1 rounded-full bg-emerald-600 text-white font-extrabold text-xs shadow-sm">
+                  DECISION: {cert.decision} FOR DUTIES
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-emerald-950 leading-relaxed font-serif italic text-justify">
+                "I, the undersigned licensed medical practitioner, <strong>{cert.doctorName}</strong> (License #<strong>{cert.doctorLicense}</strong>), certify that I have reviewed the assessment of <strong>{cert.candidateName}</strong> and, based on the clinical information available on the issue date, determine the applicant to be <strong>{cert.decision === "FIT_RESTRICTED" ? "fit with the restrictions stated below" : "fit for the stated purpose"}</strong>: <strong>{cert.purpose}</strong>."
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6 p-3 rounded-xl border border-amber-200 bg-amber-50 font-sans text-[10px] text-amber-900">
+            <strong>Scope of this certificate:</strong> This document confirms medical fitness for the stated purpose only. It is not a diagnosis, treatment record, or clearance for duties outside the purpose listed above. Any restrictions or referral requirements remain applicable.
+          </div>
+
+          {/* Section 4: Signatures and verification footer */}
+          <div className="mt-8 pt-6 border-t-2 border-[#0B2D5C] grid sm:grid-cols-3 gap-6 items-end font-sans">
+            {/* Evaluating Physician Details & Stamp */}
+            <div className="space-y-1.5 text-xs">
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Evaluating Physician</div>
+              <div className="font-extrabold text-sm text-[#0B2D5C]">{cert.doctorName}</div>
+              <div className="text-slate-600 text-[11px]">Doctor ID: <strong className="font-mono">{cert.doctorId}</strong></div>
+              <div className="text-slate-600 text-[11px]">MMC License: <strong className="font-mono">{cert.doctorLicense}</strong></div>
+              <div className="text-slate-500 text-[10px]">{cert.doctorSpecialty}</div>
+
+              <div className="pt-2 flex items-center gap-1.5 text-[10px] text-teal-700 font-bold">
+                <Lock className="w-3 h-3 text-[#12B8B0]" />
+                <span>Digitally signed & timestamped</span>
+              </div>
+            </div>
+
+            {/* Official Digital Seal / Stamp */}
+            <div className="flex flex-col items-center justify-center text-center p-3 rounded-2xl border-2 border-dashed border-[#0B2D5C]/30 bg-slate-50">
+              <div className="w-14 h-14 rounded-full border-2 border-[#0B2D5C] text-[#0B2D5C] flex items-center justify-center font-black text-[9px] uppercase tracking-tighter text-center leading-tight mb-1 bg-white shadow-inner">
+                FITMED<br />DIGITAL<br />SEAL
+              </div>
+              <div className="text-[10px] font-extrabold text-[#0B2D5C]">Issued in Kigali, Rwanda</div>
+              <div className="text-[10px] text-slate-500">Date: <strong>{cert.issueDate}</strong></div>
+              <div className="text-[10px] text-slate-500">Valid Until: <strong>{cert.expiryDate}</strong></div>
+            </div>
+
+            {/* QR Code Verification Link */}
+            <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+              <div className="w-16 h-16 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center">
+                <img src={cert.qrUrl} alt="QR Seal" className="w-full h-full object-contain" />
+              </div>
+              <div className="space-y-0.5 text-[10px] text-slate-600">
+                <div className="font-extrabold text-[#0B2D5C]">Scan to Verify</div>
+                <div className="font-mono text-[9px] text-sky-700 break-all">verify.fitmed.rw/{cert.certificateId}</div>
+                <div className="text-[9px] text-emerald-700 font-bold">Record integrity confirmed</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

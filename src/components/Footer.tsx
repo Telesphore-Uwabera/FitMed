@@ -1,15 +1,15 @@
 "use client";
 
 import { Mail, Phone, MapPin, Globe, Share2, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import Image from "next/image";
 
 const footerLinks = {
   Platform: [
-    { label: "How It Works",           href: "#how-it-works",   ext: false },
-    { label: "Certificate Categories",  href: "#certificates",   ext: false },
-    { label: "For Employers",           href: "#employers",      ext: false },
-    { label: "Technology",              href: "#technology",     ext: false },
-    { label: "Pricing",                 href: "#pricing",        ext: false },
+    { label: "How It Works",           href: "/#how-it-works",   ext: false },
+    { label: "Certificate Categories",  href: "/#certificates",   ext: false },
+    { label: "For Employers",           href: "/#employers",      ext: false },
+    { label: "Technology",              href: "/#technology",     ext: false },
   ],
   Company: [
     { label: "About FitMed",  href: "/about",    ext: false },
@@ -44,7 +44,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-slate-900">
+    <footer className="bg-[#0B2D5C]">
       <div className="container-wide pt-20 pb-10">
 
         {/* ── Main grid ─────────────────────────────────────── */}
@@ -54,7 +54,7 @@ export default function Footer() {
           <div className="col-span-2">
 
             {/* ── Logo: logo-4.webp has transparent background, shows cleanly on dark footer ── */}
-            <a href="#" aria-label="FitMed home" className="inline-block mb-7 group">
+            <Link href="/" aria-label="FitMed home" className="inline-block mb-7 group">
               <Image
                 src="/logo-4.webp"
                 alt="FitMed"
@@ -62,7 +62,7 @@ export default function Footer() {
                 height={390}
                 className="w-56 h-auto object-contain group-hover:opacity-80 transition-opacity"
               />
-            </a>
+            </Link>
 
             <p className="text-sm text-slate-400 leading-relaxed mb-7 max-w-xs">
               Secure digital medical fitness assessments, conducted by licensed doctors and verified online.
@@ -94,7 +94,7 @@ export default function Footer() {
           {Object.entries(footerLinks).map(([cat, links]) => (
             <div key={cat}>
               <h4
-                className="text-xs font-extrabold text-slate-200 uppercase tracking-[0.18em] mb-5"
+                className="text-xs font-extrabold text-white/90 uppercase tracking-[0.18em] mb-5"
                 style={{ fontFamily: "var(--font-primary)" }}
               >
                 {cat}
@@ -102,14 +102,23 @@ export default function Footer() {
               <ul className="space-y-3">
                 {links.map((l) => (
                   <li key={l.label}>
-                    <a
-                      href={l.href}
-                      target={l.ext ? "_blank" : undefined}
-                      rel={l.ext ? "noopener noreferrer" : undefined}
-                      className="text-sm text-slate-500 hover:text-sky-400 transition-colors duration-200"
-                    >
-                      {l.label}
-                    </a>
+                    {l.ext ? (
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-white/50 hover:text-[#12B8B0] transition-colors duration-200"
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={l.href}
+                        className="text-sm text-white/50 hover:text-[#12B8B0] transition-colors duration-200"
+                      >
+                        {l.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -118,12 +127,12 @@ export default function Footer() {
         </div>
 
         {/* ── Divider ─────────────────────────────────────────── */}
-        <div className="h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent mb-8" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#12B8B0]/30 to-transparent mb-8" />
 
         {/* ── Bottom bar ──────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-5">
 
-          <p className="text-xs text-slate-600 order-2 md:order-1">
+          <p className="text-xs text-white/30 order-2 md:order-1">
             © {year} FitMed. All rights reserved. A{" "}
             <a
               href="https://mediconnect.rw"
@@ -145,14 +154,14 @@ export default function Footer() {
                 aria-label={ariaLabel}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 hover:text-sky-400 hover:border-sky-500/40 hover:bg-slate-800/80 transition-all"
+                className="w-9 h-9 rounded-xl bg-[#143d7a] border border-white/10 flex items-center justify-center text-white/50 hover:text-[#12B8B0] hover:border-[#12B8B0]/50 transition-all"
               >
                 <Icon className="w-4 h-4" />
               </a>
             ))}
           </div>
 
-          <p className="text-xs text-slate-600 order-3">
+          <p className="text-xs text-white/30 order-3">
             Built with clinical safety and privacy in mind.
           </p>
         </div>

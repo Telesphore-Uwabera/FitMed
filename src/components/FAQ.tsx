@@ -2,7 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState } from "react";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
@@ -11,7 +11,7 @@ const faqs = [
   },
   {
     q: "Can AI issue the certificate on its own?",
-    a: "No. AI is strictly a decision-support tool. It screens questionnaires, flags red flags, summarises patient history, and assists with documentation — but the final fitness decision is always made by a licensed doctor after a live video consultation.",
+    a: "No. AI is strictly a decision-support tool. It screens questionnaires, flags red flags, summarises applicant history, and assists with documentation — but the final fitness decision is always made by a licensed doctor after a live video consultation.",
   },
   {
     q: "What if I need a certificate for a high-risk occupation like aviation or heavy machinery?",
@@ -96,13 +96,9 @@ export default function FAQ() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
 
-  /* Split into two columns for large screens */
-  const col1 = faqs.filter((_, i) => i % 2 === 0);
-  const col2 = faqs.filter((_, i) => i % 2 === 1);
-
   return (
     <section className="relative py-28 section-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="container-wide">
 
         {/* Header */}
         <motion.div
@@ -112,10 +108,6 @@ export default function FAQ() {
           transition={{ duration: 0.7 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full badge-primary text-sm font-bold mb-6">
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>Frequently Asked Questions</span>
-          </div>
           <h2
             className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
             style={{ fontFamily: "var(--font-primary)" }}
@@ -145,20 +137,11 @@ export default function FAQ() {
           ))}
         </div>
 
-        {/* Two-column layout on lg+ */}
-        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
-          {/* Column 1 — questions 1, 3, 5, 7 */}
-          <div className="space-y-4">
-            {col1.map((faq, i) => (
-              <FAQItem key={faq.q} faq={faq} index={i * 2} />
-            ))}
-          </div>
-          {/* Column 2 — questions 2, 4, 6, 8 */}
-          <div className="space-y-4">
-            {col2.map((faq, i) => (
-              <FAQItem key={faq.q} faq={faq} index={i * 2 + 1} />
-            ))}
-          </div>
+        {/* Shared-row two-column layout on lg+ keeps paired cards equal in height. */}
+        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-4 lg:items-stretch">
+          {faqs.map((faq, i) => (
+            <FAQItem key={faq.q} faq={faq} index={i} />
+          ))}
         </div>
       </div>
     </section>

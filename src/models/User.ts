@@ -1,0 +1,74 @@
+import mongoose, { Schema, Document, Model } from "mongoose";
+
+export interface IUser extends Document {
+  fullName: string;
+  name?: string;
+  email: string;
+  password?: string;
+  temporaryPassword?: string;
+  requiresPasswordReset?: boolean;
+  phone?: string;
+  nationalId?: string;
+  nationalIdImageUrl?: string;
+  role: "applicant" | "doctor" | "admin" | "user";
+  avatarUrl: string;
+  avatarPublicId?: string;
+  status: "Active" | "Suspended" | "Pending" | "pending_approval" | "active";
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  employerInfo?: {
+    companyName: string;
+    employeeId: string;
+  };
+  wearablesConnected?: {
+    appleHealth?: boolean;
+    googleFit?: boolean;
+    garmin?: boolean;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const UserSchema = new Schema<IUser>(
+  {
+    fullName: { type: String, trim: true },
+    name: { type: String, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String },
+    temporaryPassword: { type: String },
+    requiresPasswordReset: { type: Boolean, default: false },
+    phone: { type: String, trim: true },
+    nationalId: { type: String, trim: true },
+    nationalIdImageUrl: { type: String },
+    role: { type: String, default: "applicant" },
+    avatarUrl: {
+      type: String,
+      default: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
+    },
+    avatarPublicId: { type: String },
+    status: { type: String, default: "Active" },
+    emergencyContact: {
+      name: { type: String },
+      phone: { type: String },
+      relationship: { type: String },
+    },
+    employerInfo: {
+      companyName: { type: String },
+      employeeId: { type: String },
+    },
+    wearablesConnected: {
+      appleHealth: { type: Boolean, default: false },
+      googleFit: { type: Boolean, default: false },
+      garmin: { type: Boolean, default: false },
+    },
+  },
+  { timestamps: true }
+);
+
+export const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+
+export default User;

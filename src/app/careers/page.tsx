@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 
 const openRoles = [
   { title: "Senior Full-Stack Developer", dept: "Engineering", type: "Full-time · Remote", desc: "Build and scale the FitMed platform using Next.js, TypeScript, and modern cloud infrastructure." },
-  { title: "Product Designer (UI/UX)", dept: "Design", type: "Full-time · Kigali / Remote", desc: "Design intuitive clinical and patient experiences that make medical certification simple and beautiful." },
+  { title: "Product Designer (UI/UX)", dept: "Design", type: "Full-time · Kigali / Remote", desc: "Design intuitive clinical and applicant experiences that make medical certification simple and beautiful." },
   { title: "Clinical Operations Manager", dept: "Medical", type: "Full-time · Kigali", desc: "Manage the FitMed doctor network, quality control processes, and clinical compliance." },
   { title: "Business Development Manager", dept: "Growth", type: "Full-time · Kigali", desc: "Drive employer and institutional partnerships across Rwanda and East Africa." },
-  { title: "Customer Success Specialist", dept: "Support", type: "Full-time · Kigali", desc: "Support patients, doctors, and employers using the FitMed platform." },
+  { title: "Customer Success Specialist", dept: "Support", type: "Full-time · Kigali", desc: "Support applicants, doctors, and employers using the FitMed platform." },
 ];
 
 export default function CareersPage() {

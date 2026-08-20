@@ -8,7 +8,7 @@ import Image from "next/image";
 const testimonials = [
   { name: "Alphonse Rugira",        role: "Construction Site Manager",   company: "Kigali Build Co.",     text: "Our whole team got their certificates within 48 hours. The employer portal makes tracking renewals effortless. No more chasing paperwork.",          img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
   { name: "Diane Uwimana",          role: "University Student",           company: "University of Rwanda",  text: "I needed a fitness certificate for enrolment and got it without leaving my dorm. The doctor was thorough and professional. Took about 2 hours total.", img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
-  { name: "Dr. Emmanuel N.",        role: "Occupational Health Physician",company: "Independent Practitioner",text: "The dashboard gives me everything I need before the consultation. The AI summary saves 15 minutes per patient.",                                        img: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
+  { name: "Dr. Emmanuel N.",        role: "Occupational Health Physician",company: "Independent Practitioner",text: "The dashboard gives me everything I need before the consultation. The AI summary saves 15 minutes per applicant.",                                       img: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
   { name: "Grace Mukashyaka",       role: "HR Director",                  company: "Telecom Rwanda",        text: "FitMed has cut our administrative workload in half. The QR verification means instant confirmation for our compliance records.",                     img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
   { name: "Patrick Ntirenganya",    role: "Long-Distance Truck Driver",   company: "East Africa Logistics", text: "I was sceptical but the doctor was as thorough as any clinic I've visited. My employer accepted the certificate immediately.",                        img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
   { name: "Solange Musabyimana",    role: "Head of Compliance",           company: "Rwanda Finance Group",  text: "Employees complete their own assessments and we only see validity status. Clean, compliant, and efficient.",                                          img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
@@ -20,7 +20,7 @@ export default function Testimonials() {
 
   return (
     <section className="relative py-28 section-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="container-wide">
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 30 }}
@@ -28,14 +28,11 @@ export default function Testimonials() {
           transition={{ duration: 0.7 }}
           className="text-center mb-20"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-primary">
-            Trusted by Patients, Doctors & Employers
-          </span>
           <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5" style={{ fontFamily: "var(--font-primary)" }}>
             What People <span className="gradient-text">Are Saying</span>
           </h2>
           <p className="text-slate-500 text-lg max-w-xl mx-auto">
-            From patients to doctors to HR teams — FitMed is transforming how medical fitness certification gets done.
+            From applicants to doctors to HR teams — FitMed is transforming how medical fitness certification gets done.
           </p>
         </motion.div>
 

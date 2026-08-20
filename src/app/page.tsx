@@ -9,7 +9,6 @@ import CertificatePreview from "@/components/CertificatePreview";
 import Pricing from "@/components/Pricing";
 import Testimonials from "@/components/Testimonials";
 import FAQ from "@/components/FAQ";
-import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
 
 /*
@@ -50,8 +49,6 @@ export default function Home() {
       {/* Social proof & conversion */}
       <Testimonials />
       <FAQ />
-      <CTA />
-
       <Footer />
     </main>
   );

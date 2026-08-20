@@ -4,14 +4,18 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "How It Works",  href: "#how-it-works" },
-  { label: "Certificates",  href: "#certificates" },
-  { label: "For Employers", href: "#employers" },
-  { label: "Technology",    href: "#technology" },
-  { label: "Pricing",       href: "#pricing" },
+  { label: "Home",          href: "/" },
+  { label: "About Us",      href: "/about" },
+  { label: "How It Works",  href: "/#how-it-works" },
+  { label: "Certificates",  href: "/#certificates" },
+  { label: "For Employers", href: "/#employers" },
+  { label: "Technology",    href: "/#technology" },
+  { label: "Contact Us",    href: "/contact" },
 ];
 
 /*
@@ -33,6 +37,7 @@ export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [onHero,     setOnHero]     = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handle = () => {
@@ -44,6 +49,34 @@ export default function Navbar() {
     window.addEventListener("scroll", handle, { passive: true });
     return () => window.removeEventListener("scroll", handle);
   }, []);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const target = hash ? document.getElementById(hash.slice(1)) : null;
+    window.requestAnimationFrame(() => {
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+  }, [pathname]);
+
+  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const url = new URL(href, window.location.origin);
+    if (url.pathname !== window.location.pathname) return;
+
+    event.preventDefault();
+    window.history.pushState({}, "", `${url.pathname}${url.hash}`);
+    setMobileOpen(false);
+
+    const target = url.hash ? document.getElementById(url.hash.slice(1)) : null;
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const navH = scrolled ? NAV_H_SCROLLED : NAV_H_TOP;
 
@@ -62,7 +95,7 @@ export default function Navbar() {
           "fixed top-0 left-0 right-0 z-50 overflow-hidden",
           scrolled
             ? onHero
-              ? "bg-slate-900/92 backdrop-blur-xl shadow-xl shadow-black/25"
+              ? "bg-[#071d3d]/95 backdrop-blur-xl shadow-xl shadow-black/30"
               : "bg-white/97 backdrop-blur-xl shadow-md"
             : "bg-transparent"
         )}
@@ -70,7 +103,7 @@ export default function Navbar() {
         <div className="container-wide h-full flex items-center justify-between gap-4">
 
           {/* ── Logo ─────────────────────────────────────────── */}
-          <a href="#" aria-label="FitMed home" className="flex-shrink-0 block">
+          <Link href="/" aria-label="FitMed home" className="flex-shrink-0 block">
             <motion.div
               animate={{ width: scrolled ? 120 : 180 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -89,10 +122,11 @@ export default function Navbar() {
                 width={641}
                 height={390}
                 priority
+                loading="eager"
                 className="w-full h-auto object-contain transition-all duration-300"
               />
             </motion.div>
-          </a>
+          </Link>
 
           {/* ── Desktop nav — visible from lg (1024px) up ─────
               flex-nowrap + overflow-hidden ensures links NEVER
@@ -100,43 +134,48 @@ export default function Navbar() {
           ─────────────────────────────────────────────────── */}
           <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-hidden">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
+                onClick={(event) => handleLinkClick(event, link.href)}
                 className={cn(
                   "whitespace-nowrap flex-shrink-0 px-3 xl:px-4 py-2 rounded-xl text-sm xl:text-[0.9rem] font-semibold transition-all duration-200",
                   onHero
-                    ? "text-white/80 hover:text-white hover:bg-white/10"
-                    : "text-slate-600 hover:text-sky-600 hover:bg-sky-50"
+                    ? "text-white/85 hover:text-white hover:bg-white/12"
+                    : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
                 )}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
           {/* ── CTA — desktop only (lg+) ──────────────────────── */}
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-            <a
-              href="#"
+            <Link
+              href="/signin"
               className={cn(
                 "whitespace-nowrap flex-shrink-0 px-3 xl:px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-200",
                 onHero
                   ? "text-white/70 hover:text-white hover:bg-white/10"
-                  : "text-slate-500 hover:text-slate-800"
+                  : "text-[#0B2D5C]/70 hover:text-[#0B2D5C]"
               )}
             >
               Sign In
-            </a>
-            <motion.a
-              href="#request"
+            </Link>
+            <motion.div
               whileHover={{ scale: 1.04, boxShadow: "0 8px 30px rgba(14,165,233,.35)" }}
               whileTap={{ scale: 0.97 }}
-              className="flex-shrink-0 flex items-center gap-1.5 px-4 xl:px-5 py-2.5 rounded-xl text-sm font-bold text-white btn-primary shadow-md shadow-sky-500/20 whitespace-nowrap"
+              className="flex-shrink-0"
             >
-              <span>Request Certificate</span>
-              <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
-            </motion.a>
+              <Link
+                href="/signin"
+                className="flex items-center gap-1.5 px-4 xl:px-5 py-2.5 rounded-xl text-sm font-bold text-white btn-primary shadow-md shadow-sky-500/20 whitespace-nowrap"
+              >
+                <span>Request Certificate</span>
+                <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+              </Link>
+            </motion.div>
           </div>
 
           {/* ── Hamburger — visible below lg (< 1024px) ─────────
@@ -147,8 +186,8 @@ export default function Navbar() {
             className={cn(
               "lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase flex-shrink-0",
               onHero
-                ? "text-white hover:bg-white/10"
-                : "text-slate-700 hover:bg-slate-100"
+                ? "text-white hover:bg-white/12"
+                : "text-[#0B2D5C] hover:bg-[#edf6f6]"
             )}
             aria-label="Toggle menu"
           >
@@ -221,35 +260,39 @@ export default function Navbar() {
               {/* Nav links */}
               <div className="flex flex-col p-4 gap-1 flex-1 overflow-y-auto">
                 {navLinks.map((link, i) => (
-                  <motion.a
+                  <motion.div
                     key={link.href}
-                    href={link.href}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    onClick={() => setMobileOpen(false)}
-                    className="px-4 py-3.5 text-slate-700 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all text-sm font-semibold"
                   >
-                    {link.label}
-                  </motion.a>
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="block px-4 py-3.5 text-slate-700 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all text-sm font-semibold"
+                    >
+                      {link.label}
+                    </Link>
+                  </motion.div>
                 ))}
               </div>
 
               {/* Bottom actions */}
               <div className="p-4 border-t border-slate-100 flex flex-col gap-3">
-                <a
-                  href="#"
+                <Link
+                  href="/signin"
+                  onClick={() => setMobileOpen(false)}
                   className="py-3 text-center text-slate-600 rounded-xl border border-slate-200 hover:border-slate-300 text-sm font-semibold transition-all"
                 >
                   Sign In
-                </a>
-                <a
-                  href="#request"
+                </Link>
+                <Link
+                  href="/signin"
                   onClick={() => setMobileOpen(false)}
                   className="py-3 text-center rounded-xl font-bold text-white btn-primary text-sm"
                 >
                   Request Certificate
-                </a>
+                </Link>
               </div>
             </motion.div>
           </>

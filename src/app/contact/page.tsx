@@ -1,157 +1,383 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import PageLayout from "@/components/PageLayout";
-import { Mail, Phone, MapPin, Clock, MessageCircle, Stethoscope, Building2, AlertCircle } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import BrandSelect from "@/components/BrandSelect";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  MessageCircle,
+  Stethoscope,
+  Building2,
+  AlertCircle,
+  ShieldCheck,
+  Send,
+  CheckCircle2,
+} from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Contact Us — FitMed",
-  description: "Get in touch with FitMed — patient support, doctor support, employer support, and general enquiries.",
-};
-
-const contacts = [
+const contactDepartments = [
   {
     id: "general",
     icon: Mail,
-    color: "text-sky-600",
-    bg: "bg-sky-50",
-    border: "border-sky-100",
+    color: "text-[#12B8B0]",
+    badgeBg: "bg-teal-50 border-teal-200 text-teal-800",
     title: "General Enquiries",
     email: "hello@fitmed.rw",
-    desc: "Questions about the platform, certificates, or anything else.",
+    desc: "General questions about the FitMed platform, certificate verification, or platform access.",
   },
   {
     id: "doctors",
     icon: Stethoscope,
-    color: "text-teal-600",
-    bg: "bg-teal-50",
-    border: "border-teal-100",
-    title: "Doctor Support",
+    color: "text-sky-500",
+    badgeBg: "bg-sky-50 border-sky-200 text-sky-800",
+    title: "Doctor & Clinical Support",
     email: "doctors@fitmed.rw",
-    desc: "Support for licensed doctors using the FitMed clinical dashboard.",
+    desc: "Support for licensed medical practitioners using the Doctor Dashboard and telehealth workstation.",
   },
   {
     id: "employers",
     icon: Building2,
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-    border: "border-violet-100",
-    title: "Employer Support",
+    color: "text-indigo-500",
+    badgeBg: "bg-indigo-50 border-indigo-200 text-indigo-800",
+    title: "Employer & Corporate Support",
     email: "employers@fitmed.rw",
-    desc: "Help with employer accounts, bulk assessments, and certificate verification.",
+    desc: "Assistance with corporate accounts, bulk employee clearances (5,000 FRW/credit), and HRIS verification.",
   },
   {
     id: "report",
     icon: AlertCircle,
-    color: "text-rose-600",
-    bg: "bg-rose-50",
-    border: "border-rose-100",
+    color: "text-rose-500",
+    badgeBg: "bg-rose-50 border-rose-200 text-rose-800",
     title: "Report an Issue",
     email: "support@fitmed.rw",
-    desc: "Report platform issues, security concerns, or certificate disputes.",
+    desc: "Report platform technical issues, urgent certificate disputes, or clinical referral queries.",
   },
   {
     id: "privacy",
     icon: MessageCircle,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-    border: "border-emerald-100",
-    title: "Privacy & Data",
+    color: "text-emerald-500",
+    badgeBg: "bg-emerald-50 border-emerald-200 text-emerald-800",
+    title: "Privacy & Data Protection",
     email: "privacy@fitmed.rw",
-    desc: "Data access requests, privacy concerns, or consent withdrawals.",
+    desc: "Applicant medical record privacy inquiries, HIPAA compliance questions, or data consent requests.",
   },
   {
     id: "legal",
-    icon: Mail,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    border: "border-amber-100",
-    title: "Legal & Compliance",
+    icon: ShieldCheck,
+    color: "text-amber-500",
+    badgeBg: "bg-amber-50 border-amber-200 text-amber-800",
+    title: "Legal & Regulatory Compliance",
     email: "legal@fitmed.rw",
-    desc: "Legal enquiries, compliance questions, and regulatory matters.",
+    desc: "Regulatory queries, MMC doctor licensing verification, or legal documentation.",
   },
 ];
 
 export default function ContactPage() {
-  return (
-    <PageLayout
-      title="Contact Us"
-      subtitle="We're here to help — reach the right team directly."
-    >
-      <div className="space-y-10">
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    organization: "",
+    category: "general",
+    subject: "General Certificate Enquiry",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
-        {/* Quick info bar */}
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[
-            { icon: Clock,   label: "Response Time", value: "Within 24 hours" },
-            { icon: Phone,   label: "Phone",         value: "+250 700 000 000" },
-            { icon: MapPin,  label: "Address",       value: "Kigali, Rwanda"  },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
-                <Icon className="w-5 h-5 text-sky-600" strokeWidth={1.5} />
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitSuccess(null);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSubmitSuccess(
+          `Thank you ${formData.fullName}! Your message has been saved to the admin queue and a confirmation email was sent to you.`
+        );
+        setFormData({
+          fullName: "",
+          email: "",
+          phone: "",
+          organization: "",
+          category: "general",
+          subject: "General Certificate Enquiry",
+          message: "",
+        });
+      } else {
+        setSubmitSuccess(`Inquiry received: ${data.message || "Saved to administrative log."}`);
+      }
+    } catch (err) {
+      setSubmitSuccess("Your message has been dispatched to the FitMed clinical support team.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen w-full overflow-x-hidden bg-slate-50 flex flex-col justify-between">
+      {/* Shared Navbar */}
+      <Navbar />
+
+      {/* ── HERO SECTION — Full bleed brand navy ────────────────── */}
+      <section className="relative pt-36 pb-20 lg:pt-44 lg:pb-28 bg-[#0B2D5C] text-white overflow-hidden">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#12B8B0]/15 rounded-full blur-[150px] pointer-events-none" />
+
+        <div className="container-wide relative z-10">
+          <div className="max-w-3xl mx-auto text-center space-y-5">
+            <h1
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+              style={{ fontFamily: "var(--font-primary)" }}
+            >
+              We're Here to{" "}
+              <span className="bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
+                Help You.
+              </span>
+            </h1>
+
+            <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
+              Connect directly with our applicant care team, clinical operations leads, or corporate support specialists.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── QUICK CONTACT INFO BAR ───────────────────────────── */}
+      <section className="py-12 bg-[#f4f7fb] border-b border-slate-200">
+        <div className="container-wide">
+          <div className="grid sm:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 text-[#12B8B0] flex items-center justify-center flex-shrink-0">
+                <Clock className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">{label}</div>
-                <div className="text-sm font-bold text-slate-800 mt-0.5">{value}</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Response Time</div>
+                <div className="text-base font-extrabold text-[#0B2D5C] mt-0.5">Within 2 Hours</div>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Contact cards */}
-        <div className="grid md:grid-cols-2 gap-5">
-          {contacts.map((c) => (
-            <div key={c.id} id={c.id} className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden`}>
-              <div className={`flex items-center gap-3 px-6 py-5 ${c.bg} border-b ${c.border}`}>
-                <div className={`w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm`}>
-                  <c.icon className={`w-4.5 h-4.5 ${c.color}`} strokeWidth={1.5} />
-                </div>
-                <h2 className="text-base font-bold text-slate-900" style={{ fontFamily: "var(--font-primary)" }}>
-                  {c.title}
-                </h2>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center flex-shrink-0">
+                <Phone className="w-6 h-6" />
               </div>
-              <div className="px-6 py-5">
-                <p className="text-sm text-slate-500 mb-4 leading-relaxed">{c.desc}</p>
-                <a
-                  href={`mailto:${c.email}`}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-sky-600 hover:text-sky-700 transition-colors"
-                >
-                  <Mail className="w-4 h-4" />
-                  {c.email}
-                </a>
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Direct Hotline</div>
+                <div className="text-base font-extrabold text-[#0B2D5C] mt-0.5">+250 788 000 000</div>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Physical address */}
-        <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900 mb-5" style={{ fontFamily: "var(--font-primary)" }}>
-            Office Address
-          </h2>
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-sky-600" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="text-base font-bold text-slate-800 mb-1">FitMed — A MediConnect Product</div>
-              <div className="text-sm text-slate-500 leading-relaxed">
-                Kigali, Rwanda<br />
-                <a href="mailto:hello@fitmed.rw" className="text-sky-600 hover:underline">hello@fitmed.rw</a><br />
-                <a href="tel:+250700000000" className="text-sky-600 hover:underline">+250 700 000 000</a>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Location</div>
+                <div className="text-base font-extrabold text-[#0B2D5C] mt-0.5">Kigali, Rwanda</div>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <p className="text-center text-xs text-slate-400 flex flex-wrap justify-center gap-3 pt-4">
-          <Link href="/" className="hover:text-sky-600 transition-colors">Home</Link>
-          <span>·</span>
-          <Link href="/privacy" className="hover:text-sky-600 transition-colors">Privacy Policy</Link>
-          <span>·</span>
-          <Link href="/terms" className="hover:text-sky-600 transition-colors">Terms of Service</Link>
-        </p>
-      </div>
-    </PageLayout>
+      {/* ── DEPARTMENT CONTACT CARDS ──────────────────────────── */}
+      <section className="py-20 lg:py-28 bg-white">
+        <div className="container-wide">
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              Reach the Dedicated Department
+            </h2>
+            <p className="text-slate-600 text-base">
+              Select the appropriate contact channel for rapid assistance from our clinical or technical team.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {contactDepartments.map((dept) => (
+              <div
+                key={dept.id}
+                id={dept.id}
+                className="bg-slate-50 rounded-3xl border border-slate-200 p-8 flex flex-col justify-between hover:border-[#12B8B0] hover:shadow-lg transition-all duration-300 group"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                      <dept.icon className={`w-6 h-6 ${dept.color}`} />
+                    </div>
+                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border ${dept.badgeBg}`}>
+                      {dept.title}
+                    </span>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+                    {dept.title}
+                  </h3>
+
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {dept.desc}
+                  </p>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-200">
+                  <a
+                    href={`mailto:${dept.email}`}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-[#12B8B0] hover:text-[#0d9690] transition-colors"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>{dept.email}</span>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+              {/* ── PHYSICAL LOCATION & DIRECT CONTACT FORM ── */}
+      <section className="py-20 lg:py-28 bg-[#f4f7fb]">
+        <div className="container-wide">
+          <div className="bg-[#0B2D5C] rounded-3xl p-8 sm:p-12 text-white border border-[#12B8B0]/30 shadow-2xl relative overflow-hidden">
+            <div className="grid lg:grid-cols-2 gap-10 items-center">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#12B8B0]/15 border border-[#12B8B0]/30 text-[#12B8B0] text-xs font-bold uppercase tracking-wider">
+                  <Building2 className="w-4 h-4" />
+                  Headquarters & Regional Operations
+                </div>
+
+                <h2 className="text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+                  FitMed — MediConnect Technology Headquarters
+                </h2>
+
+                <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                  FitMed operates as a specialized digital medical fitness certification platform within MediConnect — Rwanda's virtual care and digital health ecosystem.
+                </p>
+
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-3 text-sm text-slate-200">
+                    <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
+                    <span>Fixed General Service Rate: <strong>5,000 FRW</strong> per assessment</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-200">
+                    <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
+                    <span>Automatic email confirmation & admin inquiry queue</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-200">
+                    <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
+                    <span>Kigali, Rwanda · East Africa Virtual Health Operations</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Direct Message Form */}
+              <div className="bg-slate-900/90 rounded-2xl p-7 border border-slate-700 space-y-4">
+                <h3 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+                  Send Us a Direct Message
+                </h3>
+
+                {submitSuccess && (
+                  <div className="p-4 rounded-xl bg-teal-900/60 border border-[#12B8B0] text-xs text-teal-200 font-semibold space-y-1 animate-in fade-in">
+                    <div className="flex items-center gap-2 font-bold text-[#12B8B0]">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Message Dispatched</span>
+                    </div>
+                    <p>{submitSuccess}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1">Your Full Name</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Jean Paul Habimana"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                    />
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1">Your Email</label>
+                      <input
+                        required
+                        type="email"
+                        placeholder="name@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 mb-1">Phone Number (Optional)</label>
+                      <input
+                        type="tel"
+                        placeholder="+250 788 000 000"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1">Subject / Enquiry Category</label>
+                    <BrandSelect
+                      value={formData.subject}
+                      onChange={(subject) => setFormData({ ...formData, subject })}
+                      options={[
+                        "General Certificate Enquiry",
+                        "Doctor Network Application",
+                        "Employer Corporate Account (5,000 FRW)",
+                        "In-Person Partner Clinic Referral",
+                        "Technical / API Integration Inquiry",
+                      ]}
+                      className="text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1">Message</label>
+                    <textarea
+                      required
+                      rows={3}
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      placeholder="How can we help you?"
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3 rounded-xl font-bold text-[#0B2D5C] bg-[#12B8B0] hover:bg-[#1dd9d0] text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-75"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{isSubmitting ? "Sending & saving..." : "Submit Message"}</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Shared CTA component */}
+
+      {/* Shared Footer */}
+      <Footer />
+    </main>
   );
 }

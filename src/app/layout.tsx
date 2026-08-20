@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, DM_Sans } from "next/font/google";
+import Script from "next/script";
+import { Manrope } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ToastProvider";
+import { DialogProvider } from "@/components/DialogProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
-const plusJakarta = Plus_Jakarta_Sans({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-primary",
+  variable: "--font-manrope",
   weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: "FitMed — Your health. Verified.",
+  title: "FitMed — Fit, Verified, and Ready.",
   description:
     "Secure digital medical fitness assessments conducted by licensed doctors. Get your medical fitness certificate online — verified, digitally signed, and instantly shareable.",
   keywords: [
@@ -30,16 +27,11 @@ export const metadata: Metadata = {
     "Rwanda health",
   ],
   openGraph: {
-    title: "FitMed — Your health. Verified.",
+    title: "FitMed — Fit, Verified, and Ready.",
     description: "Secure digital medical fitness assessments by licensed doctors.",
     type: "website",
-    images: [{ url: "/logo.webp", width: 939, height: 330 }],
+    images: [{ url: "/logo-4.webp", width: 641, height: 390 }],
   },
-  /*
-   * favicon-white.webp is the square icon (256×256) from favicon-icon.webp
-   * with all visible pixels turned white — clearly visible in the browser tab.
-   * src/app/favicon.ico is the same image saved as PNG (Next.js serves it automatically).
-   */
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -54,8 +46,21 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable}`}>
-      <body className="antialiased">{children}</body>
+    <html lang="en" className={manrope.variable} suppressHydrationWarning>
+      <body className="antialiased">
+        <Script
+          id="fitmed-theme"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("fitmed_theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark";}}catch(e){}})();`,
+          }}
+        />
+        <ThemeProvider>
+          <ToastProvider>
+            <DialogProvider>{children}</DialogProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

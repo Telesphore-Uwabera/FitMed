@@ -3,7 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import {
-  Building2, Users, SendHorizonal, CheckCircle,
+  Users, SendHorizonal, CheckCircle,
   BarChart3, CreditCard, Bell, ShieldCheck, ArrowRight,
 } from "lucide-react";
 import Image from "next/image";
@@ -65,14 +65,14 @@ export default function EmployerPortal() {
 
   return (
     <section id="employers" className="relative py-28 section-gray overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="container-wide">
 
         {/*
          * items-stretch  → both columns grow to the same height.
          * Left column uses flex-col so its content fills the height
          * and the CTA button is pinned to the bottom.
          */}
-        <div className="grid lg:grid-cols-2 gap-16 xl:gap-20 items-stretch">
+        <div className="grid lg:grid-cols-[1fr_0.75fr] gap-16 xl:gap-20 items-start">
 
           {/* ── Left column ─────────────────────────────────── */}
           <motion.div
@@ -84,9 +84,7 @@ export default function EmployerPortal() {
           >
             {/* Heading block */}
             <div className="mb-10">
-              <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-primary">
-                For Employers &amp; Organisations
-              </span>
+
               <h2
                 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
                 style={{ fontFamily: "var(--font-primary)" }}
@@ -100,7 +98,7 @@ export default function EmployerPortal() {
             </div>
 
             {/* Features grid — fills remaining height */}
-            <div className="grid sm:grid-cols-2 gap-4 flex-1 mb-10">
+            <div className="grid sm:grid-cols-2 gap-4 mb-10">
               {features.map((f, i) => (
                 <motion.div
                   key={f.title}
@@ -129,18 +127,6 @@ export default function EmployerPortal() {
               ))}
             </div>
 
-            {/* CTA — pinned to bottom of left column */}
-            <div>
-              <motion.a
-                href="#"
-                whileHover={{ scale: 1.04, boxShadow: "0 12px 35px rgba(14,165,233,.3)" }}
-                whileTap={{ scale: 0.97 }}
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white btn-primary shadow-lg shadow-sky-500/20 group text-base"
-              >
-                Set Up Employer Account
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-              </motion.a>
-            </div>
           </motion.div>
 
           {/* ── Right column ─────────────────────────────────── */}
@@ -185,9 +171,9 @@ export default function EmployerPortal() {
               <ul className="space-y-3">
                 {[
                   "Employers see certificate validity only — not diagnoses or clinical notes",
-                  "Patient full medical history is never shared with employers",
+                  "Applicant full medical history is never shared with employers",
                   "All certificate data is encrypted and access-controlled",
-                  "Patient consent is obtained before any employer access",
+                  "Applicant consent is obtained before any employer access",
                 ].map((p) => (
                   <li key={p} className="flex items-start gap-2.5 text-sm text-slate-500">
                     <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
@@ -197,33 +183,18 @@ export default function EmployerPortal() {
               </ul>
             </div>
 
-            {/* Employee table — fills remaining space */}
-            <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex-1">
-              <div className="flex items-center gap-2 px-5 py-4 bg-slate-50">
-                <Building2 className="w-4 h-4 text-sky-500" />
-                <span className="text-sm font-bold text-slate-700">Kigali Industries Ltd.</span>
-                <span className="ml-auto text-xs text-slate-400">4 employees</span>
-              </div>
-              <div className="p-4 space-y-2">
-                {[
-                  ["AU", "Ange Uwimana",     "Valid",   "badge-fit"],
-                  ["CN", "Claude Nzeyimana", "Pending", "badge-review"],
-                  ["MM", "Marie Mukamana",   "Valid",   "badge-fit"],
-                  ["PH", "Patrick Habimana", "Expired", "badge-notfit"],
-                ].map(([ini, name, status, cls]) => (
-                  <div
-                    key={name}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-teal-400 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                      {ini}
-                    </div>
-                    <span className="text-sm text-slate-700 flex-1 font-medium truncate">{name}</span>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${cls}`}>{status}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="pt-1">
+              <motion.a
+                href="/signin"
+                whileHover={{ scale: 1.04, boxShadow: "0 12px 35px rgba(14,165,233,.3)" }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-[#0B2D5C] bg-[#12B8B0] hover:bg-[#1dd9d0] shadow-lg shadow-sky-500/20 group text-base transition-colors"
+              >
+                <span>Set Up Employer Account</span>
+                <ArrowRight className="w-5 h-5 text-[#0B2D5C] group-hover:translate-x-0.5 transition-transform" />
+              </motion.a>
             </div>
+
           </motion.div>
         </div>
       </div>

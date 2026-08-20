@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const frameworks = [
   { color: "bg-sky-50 border-sky-100", heading: "bg-sky-50 border-sky-100", title: "Rwandan Health Law", items: ["Ministry of Health telemedicine guidelines", "Medical practice and licensing requirements", "Occupational health standards", "Professional medical certification rules"] },
-  { color: "bg-teal-50 border-teal-100", heading: "bg-teal-50 border-teal-100", title: "Data Protection", items: ["Rwanda Data Protection Act", "Patient consent and data minimisation", "Right to access, correct, and delete data", "Data retention and deletion policies"] },
+  { color: "bg-teal-50 border-teal-100", heading: "bg-teal-50 border-teal-100", title: "Data Protection", items: ["Rwanda Data Protection Act", "Applicant consent and data minimisation", "Right to access, correct, and delete data", "Data retention and deletion policies"] },
   { color: "bg-violet-50 border-violet-100", heading: "bg-violet-50 border-violet-100", title: "Electronic Signatures", items: ["Rwanda Electronic Transactions Act", "Qualified electronic signatures by licensed doctors", "Certificate authenticity and non-repudiation", "Legally binding digital issuance"] },
   { color: "bg-emerald-50 border-emerald-100", heading: "bg-emerald-50 border-emerald-100", title: "International Standards", items: ["HIPAA-aligned data security architecture", "ISO 27001-compatible controls", "GDPR-aligned data subject rights", "WHO telemedicine guidelines"] },
 ];

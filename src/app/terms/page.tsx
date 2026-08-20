@@ -14,7 +14,7 @@ const sections = [
   },
   {
     title: "2. Description of Service",
-    body: "FitMed provides a digital medical fitness certification platform that connects patients with licensed doctors for remote health assessments. FitMed does not provide medical treatment, emergency services, or specialist care. The platform facilitates fitness assessments for specific purposes only.",
+    body: "FitMed provides a digital medical fitness certification platform that connects applicants with licensed doctors for remote health assessments. FitMed does not provide medical treatment, emergency services, or specialist care. The platform facilitates fitness assessments for specific purposes only.",
   },
   {
     title: "3. Medical Disclaimer",

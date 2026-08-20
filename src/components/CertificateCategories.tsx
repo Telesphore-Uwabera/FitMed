@@ -97,7 +97,7 @@ export default function CertificateCategories() {
 
   return (
     <section id="certificates" className="relative py-28 section-gray">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="container-wide">
 
         {/* Header */}
         <motion.div
@@ -107,9 +107,7 @@ export default function CertificateCategories() {
           transition={{ duration: 0.7 }}
           className="text-center mb-20"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-violet">
-            Purpose-Specific Assessments
-          </span>
+
           <h2
             className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
             style={{ fontFamily: "var(--font-primary)" }}

@@ -7,15 +7,16 @@ import {
   TrendingUp, Clock, Star, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 /* ────────────────────────────────────────────────────────────────
    Slides — Black African people, fitness & medical context
 ──────────────────────────────────────────────────────────────── */
 const SLIDES = [
   {
-    // African doctor with patient — telemedicine consultation
+    // African doctor with applicant — telemedicine consultation
     url: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1800&q=85&auto=format&fit=crop",
-    alt: "African doctor conducting a telemedicine consultation with a patient",
+    alt: "African doctor conducting a telemedicine consultation with an applicant",
     caption: "Consult a licensed doctor from anywhere",
   },
   {
@@ -28,7 +29,7 @@ const SLIDES = [
     // African medical professional reviewing records on tablet
     // photo-1666214276372 was broken — replaced with reliable alternative
     url: "https://images.unsplash.com/photo-1638202993928-7267aad84c31?w=1800&q=85&auto=format&fit=crop",
-    alt: "African medical professional reviewing patient digital health records on a tablet",
+    alt: "African medical professional reviewing applicant digital health records on a tablet",
     caption: "Digitally signed certificates issued in hours",
   },
   {
@@ -42,9 +43,9 @@ const SLIDES = [
 const SLIDE_DURATION = 6000; // ms
 
 const stats = [
-  { icon: TrendingUp, value: "10,000+", label: "Certificates Issued", color: "text-sky-300"  },
+  { icon: TrendingUp, value: "10,000+", label: "Certificates Issued", color: "text-[#12B8B0]"  },
   { icon: Star,        value: "4.9 / 5",  label: "Doctor Rating",      color: "text-amber-300" },
-  { icon: Clock,       value: "< 4 hrs",  label: "Avg. Turnaround",    color: "text-teal-300"  },
+  { icon: Clock,       value: "< 4 hrs",  label: "Avg. Turnaround",    color: "text-white"  },
 ];
 
 const trustBadges = [
@@ -72,8 +73,8 @@ function ECGLine() {
       <defs>
         <linearGradient id="ecgHero" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="#fff"    stopOpacity="0" />
-          <stop offset="25%"  stopColor="#38bdf8" stopOpacity="1" />
-          <stop offset="75%"  stopColor="#2dd4bf" stopOpacity="1" />
+          <stop offset="25%"  stopColor="#12B8B0" stopOpacity="1" />
+          <stop offset="75%"  stopColor="#1dd9d0" stopOpacity="1" />
           <stop offset="100%" stopColor="#fff"    stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -129,10 +130,10 @@ export default function Hero() {
           </AnimatePresence>
         ))}
 
-        {/* Layered overlays for text legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r  from-slate-950/90 via-slate-900/75 to-slate-800/30" />
-        <div className="absolute inset-0 bg-gradient-to-t  from-slate-950/80 via-transparent to-slate-900/20" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-950/20  to-transparent" />
+        {/* Layered overlays — brand navy #0B2D5C with reduced opacity */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0B2D5C]/70 via-[#0B2D5C]/45 to-[#0B2D5C]/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/60 via-transparent to-[#0B2D5C]/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#071d3d]/15 to-transparent" />
       </div>
 
       {/* ── Hero content — 70% on lg, full on smaller ─────────── */}
@@ -155,13 +156,13 @@ export default function Hero() {
               style={{ fontFamily: "var(--font-primary)" }}
             >
               {/* Line 1 */}
-              <span className="block">Get Your</span>
-              {/* Line 2 — gradient accent */}
-              <span className="block bg-gradient-to-r from-sky-400 via-teal-300 to-sky-400 bg-clip-text text-transparent">
+              <span className="block text-white">Get Your</span>
+              {/* Line 2 — brand teal gradient */}
+              <span className="block bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
                 Medical Fitness
               </span>
               {/* Line 3 */}
-              <span className="block">Certificate Online.</span>
+              <span className="block text-white">Certificate Online.</span>
             </motion.h1>
 
             {/* Animated slide caption */}
@@ -172,7 +173,7 @@ export default function Hero() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
                 transition={{ duration: 0.45 }}
-                className="text-sky-300 text-sm font-bold mb-4 tracking-wide uppercase"
+                className="text-[#12B8B0] text-sm font-bold mb-4 tracking-wide uppercase"
               >
                 {SLIDES[current].caption}
               </motion.p>
@@ -207,19 +208,22 @@ export default function Hero() {
               transition={{ duration: 0.65, delay: 0.5 }}
               className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10"
             >
-              <motion.a
-                href="#request"
+              <motion.div
                 whileHover={{ scale: 1.04, boxShadow: "0 20px 50px rgba(14,165,233,.45)" }}
                 whileTap={{ scale: 0.97 }}
-                className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-base font-bold text-white btn-primary shadow-xl shadow-sky-500/25"
               >
-                <Shield className="w-5 h-5 flex-shrink-0" />
-                <span>Request a Certificate</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.a>
+                <Link
+                  href="/signin"
+                  className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-base font-bold text-white btn-primary shadow-xl shadow-sky-500/25"
+                >
+                  <Shield className="w-5 h-5 flex-shrink-0" />
+                  <span>Request a Certificate</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </motion.div>
 
-              <motion.button
-                type="button"
+              <motion.a
+                href="#how-it-works"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 className="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl font-semibold text-white/90 glass-dark hover:bg-white/12 hover:text-white transition-all duration-300 text-sm"
@@ -228,7 +232,7 @@ export default function Hero() {
                   <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
                 </div>
                 <span>Watch how it works</span>
-              </motion.button>
+              </motion.a>
             </motion.div>
 
             {/* Trust badges */}
@@ -296,7 +300,7 @@ export default function Hero() {
             <span
               className={`block rounded-full transition-all duration-400 ${
                 i === current
-                  ? "w-7 h-2.5 bg-sky-400"
+                  ? "w-7 h-2.5 bg-[#12B8B0]"
                   : "w-2.5 h-2.5 bg-white/30 hover:bg-white/55"
               }`}
             />
@@ -324,7 +328,7 @@ export default function Hero() {
       <div className="absolute bottom-0 left-0 right-0 z-10 h-0.5 bg-white/8">
         <motion.div
           key={current}
-          className="h-full bg-gradient-to-r from-sky-400 to-teal-400"
+          className="h-full bg-gradient-to-r from-[#12B8B0] to-[#1dd9d0]"
           initial={{ width: "0%" }}
           animate={{ width: "100%" }}
           transition={{ duration: SLIDE_DURATION / 1000, ease: "linear" }}

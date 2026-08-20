@@ -1,6 +1,6 @@
 # FitMed — Digital Medical Fitness Certification Platform
 
-> **Your health. Verified.**  
+> **Fit, Verified, and Ready.**  
 > Secure digital medical fitness assessments conducted and certified by licensed doctors.
 
 ![FitMed](public/logo.webp)
@@ -12,7 +12,7 @@
 1. [Overview](#overview)
 2. [Core Concept](#core-concept)
 3. [Brand & Design](#brand--design)
-4. [Patient Journey](#patient-journey)
+4. [Applicant Journey](#applicant-journey)
 5. [Certificate Categories](#certificate-categories)
 6. [Health Assessment](#health-assessment)
 7. [Measurements, AI & Wearables](#measurements-ai--wearables)
@@ -41,9 +41,9 @@
 
 ## Overview
 
-**FitMed** is a digital medical fitness certification service that allows individuals or organisations to request a medical fitness assessment entirely online. Patients create an account, select the purpose of their certificate, complete a structured health questionnaire, provide relevant measurements, and then undergo a secure video consultation with a licensed doctor.
+**FitMed** is a digital medical fitness certification service that allows individuals or organisations to request a medical fitness assessment entirely online. Applicants create an account, select the purpose of their certificate, complete a structured health questionnaire, provide relevant measurements, and then undergo a secure video consultation with a licensed doctor.
 
-The doctor reviews the application, verifies the patient's identity, performs an appropriate remote clinical assessment, determines whether the patient is fit for the stated purpose, and issues a digitally signed electronic certificate when appropriate.
+The doctor reviews the application, verifies the applicant's identity, performs an appropriate remote clinical assessment, determines whether the applicant is fit for the stated purpose, and issues a digitally signed electronic certificate when appropriate.
 
 **Key differentiator:** AI and automated measurements remain decision-support tools only. The final medical fitness decision is always made by an appropriately licensed doctor.
 
@@ -53,7 +53,7 @@ The doctor reviews the application, verifies the patient's identity, performs an
 
 > *"A secure digital medical fitness assessment conducted by a licensed doctor."*
 
-The platform is positioned as a **secure digital medical fitness assessment**, not an automated certificate generator. Fitness is purpose-specific — a person may be fit for an office role but not fit for a high-risk occupation such as working at heights or operating heavy machinery. The platform therefore requires the patient to specify the **purpose** of the certificate before assessment.
+The platform is positioned as a **secure digital medical fitness assessment**, not an automated certificate generator. Fitness is purpose-specific — a person may be fit for an office role but not fit for a high-risk occupation such as working at heights or operating heavy machinery. The platform therefore requires the applicant to specify the **purpose** of the certificate before assessment.
 
 ---
 
@@ -63,7 +63,7 @@ The platform is positioned as a **secure digital medical fitness assessment**, n
 |-------------------|-------|
 | **Brand name**    | FitMed |
 | **Descriptor**    | Digital Medical Fitness Certification |
-| **Tagline**       | *Your health. Verified.* |
+| **Tagline**       | *Fit, Verified, and Ready.* |
 | **Alternative**   | MedClear — *Medical clearance, made simple.* |
 | **Logo concept**  | Modern medical shield + check mark, optional ECG line, digital identity element |
 | **Primary colour**| Deep navy / sky blue — trust, professionalism, security |
@@ -76,7 +76,7 @@ The platform is positioned as a **secure digital medical fitness assessment**, n
 
 ---
 
-## Patient Journey
+## Applicant Journey
 
 1. Create an account and verify phone / email
 2. Provide identity and demographic information
@@ -89,11 +89,11 @@ The platform is positioned as a **secure digital medical fitness assessment**, n
 9. Submit the application
 10. A licensed doctor reviews the application
 11. The doctor initiates a secure live video consultation
-12. The doctor verifies the patient's identity
+12. The doctor verifies the applicant's identity
 13. The doctor completes history-taking and an appropriate virtual assessment
 14. The doctor decides: **Fit** | **Fit with Restrictions** | **Further Assessment Required** | **Not Fit**
 15. If appropriate, the doctor digitally signs and issues the certificate
-16. The patient receives the certificate and QR verification code
+16. The applicant receives the certificate and QR verification code
 17. An employer or authorised organisation can verify the certificate without accessing unnecessary medical information
 
 ---
@@ -135,7 +135,7 @@ Full name · Date of birth · Sex · Phone · Email · Address · National ID or
 ### Medical History
 Previous illnesses · Hypertension · Diabetes · Cardiovascular disease · Asthma/COPD · Epilepsy/seizures · Mental health history · Previous surgery · Hospitalisation · Current medications · Allergies · Family history · Smoking · Alcohol/substance use (where clinically relevant) · Pregnancy status (where clinically relevant)
 
-The questionnaire is **adaptive** — patients are not forced to answer irrelevant questions. Positive responses trigger targeted follow-up questions.
+The questionnaire is **adaptive** — applicants are not forced to answer irrelevant questions. Positive responses trigger targeted follow-up questions.
 
 ### Danger-Sign Screening
 Chest pain · Severe shortness of breath · Syncope or near-syncope · Severe headache · New neurological deficits · Severe abdominal pain · Active bleeding · Seizures · Severe allergic reaction · Altered mental status · Purpose-specific red flags
@@ -146,14 +146,14 @@ A serious red flag interrupts the certificate pathway and triggers an appropriat
 
 ## Measurements, AI & Wearables
 
-### Patient Measurements
+### Applicant Measurements
 Height · Weight · BMI · Temperature · Heart rate · Blood pressure · Respiratory rate · SpO₂
 
 ### AI-Assisted Measurements
 Smartphone camera / computer-vision or remote-PPG technologies may be used to estimate selected physiological parameters. Such outputs are clearly labelled as **AI-estimated or screening measurements** unless the specific technology has appropriate validation for clinical use.
 
 The interface distinguishes among:
-- Patient-reported measurements
+- Applicant-reported measurements
 - Device-measured values
 - AI-estimated values
 
@@ -168,8 +168,8 @@ The platform displays the source, timestamp, and measurement type so the doctor 
 
 The doctor dashboard is the core clinical workspace.
 
-### Patient Overview
-Patient identity & verification status · Certificate purpose · Risk level / screening status · Medical history summary · Current medications & allergies · Vital signs & source · BMI · Red flags · Previous certificates · Relevant supporting documents
+### Applicant Overview
+Applicant identity & verification status · Certificate purpose · Risk level / screening status · Medical history summary · Current medications & allergies · Vital signs & source · BMI · Red flags · Previous certificates · Relevant supporting documents
 
 ### Consultation Features
 Secure live video consultation · Identity verification workflow · Structured history-taking form · Purpose-specific clinical checklist · Virtual examination prompts · Clinical notes · Decision support & AI-generated summary · Digital signature
@@ -210,9 +210,9 @@ Four decision categories are used instead of a simple Fit/Unfit model because it
 
 Every certificate is professionally designed, digitally signed, and verifiable online. Contents:
 
-Platform name & logo · Certificate title · Patient name · Date of birth (where appropriate) · Certificate purpose · Assessment date · Unique certificate number · Decision · Purpose-specific certification statement · Doctor name · Professional licence number · Digital signature · Issue date · Expiry date (where applicable) · QR code · Online verification code/URL
+Platform name & logo · Certificate title · Applicant name · Date of birth (where appropriate) · Certificate purpose · Assessment date · Unique certificate number · Decision · Purpose-specific certification statement · Doctor name · Professional licence number · Digital signature · Issue date · Expiry date (where applicable) · QR code · Online verification code/URL
 
-> **Privacy:** The certificate contains only the information necessary for its intended use. Employers do not automatically receive the patient's full medical history.
+> **Privacy:** The certificate contains only the information necessary for its intended use. Employers do not automatically receive the applicant's full medical history.
 
 ---
 
@@ -257,7 +257,7 @@ AI capabilities:
 - Calculate BMI and derived measurements
 - Flag abnormal vital signs
 - Analyse trends
-- Summarise patient history
+- Summarise applicant history
 - Suggest relevant questions to the doctor
 - Detect inconsistencies
 - Assist with clinical documentation
@@ -271,19 +271,19 @@ AI capabilities:
 
 Doctor name & professional credentials · Professional licence number · Licence verification status · Specialty · Certificate issuance history · Consultation history · Appropriate clinical audit metrics · Complaint and incident management · Certificate revocation capability
 
-The system maintains audit trails so that every certificate can be traced from patient submission through doctor review, identity verification, consultation, decision, signature, and issuance.
+The system maintains audit trails so that every certificate can be traced from applicant submission through doctor review, identity verification, consultation, decision, signature, and issuance.
 
 ---
 
 ## Administration Dashboard
 
-Patient management · Doctor management · Organisation management · Certificate requests · Issued certificates · Payments · Video consultations · Audit logs · Complaints · Reports and analytics · Certificate revocation · Regulatory/compliance monitoring
+Applicant management · Doctor management · Organisation management · Certificate requests · Issued certificates · Payments · Video consultations · Audit logs · Complaints · Reports and analytics · Certificate revocation · Regulatory/compliance monitoring
 
 ---
 
 ## Payment Model
 
-- Patient-paid assessments
+- Applicant-paid assessments
 - Employer/organisation-paid assessments
 - Organisational packages or assessment credits
 - Different pricing by certificate type and clinical complexity
@@ -306,7 +306,7 @@ This architecture allows the platform to support multiple types of medical fitne
 ## Platform Architecture
 
 ```
-Patient Web/App
+Applicant Web/App
     ↓
 AI Screening Engine
     ↓
@@ -322,11 +322,11 @@ Electronic Certificate
     ↓
 QR Verification
     ↓
-Patient / Authorised Organisation
+Applicant / Authorised Organisation
 ```
 
 ### Main Platform Components
-- Patient web/mobile interface
+- Applicant web/mobile interface
 - Doctor portal
 - Organisation/employer portal
 - Administrator portal
@@ -349,17 +349,17 @@ Patient / Authorised Organisation
 
 > Do not attempt to launch every AI and wearable feature in the first version. The first release should prove the clinical workflow and certificate-verification model.
 
-### Patient MVP
+### Applicant MVP
 Account creation · Identity information · Certificate request · Purpose selection · Adaptive medical questionnaire · Danger-sign screening · Vital-sign entry · Payment · Video consultation · Certificate access
 
 ### Doctor MVP
-Doctor registration and verification · Patient queue · Patient history · Video consultation · Structured clinical assessment · Decision workflow · Digital signature · Certificate issuance
+Doctor registration and verification · Applicant queue · Applicant history · Video consultation · Structured clinical assessment · Decision workflow · Digital signature · Certificate issuance
 
 ### Verification MVP
 Unique certificate number · QR code · Public verification page · Valid/expired/revoked status
 
 ### Admin MVP
-Patient management · Doctor management · Certificate management · Payments · Audit trail
+Applicant management · Doctor management · Certificate management · Payments · Audit trail
 
 ---
 
@@ -367,7 +367,7 @@ Patient management · Doctor management · Certificate management · Payments ·
 
 | Phase | Key Features |
 |-------|-------------|
-| **V1 — MVP** | Patient portal, doctor portal, questionnaire, video consultation, digital certificates, QR verification, payments, audit logs |
+| **V1 — MVP** | Applicant portal, doctor portal, questionnaire, video consultation, digital certificates, QR verification, payments, audit logs |
 | **V2** | AI screening, AI clinical summaries, wearable/device integrations, employer portal, organisation accounts, automated reminders |
 | **V3** | Mobile apps, APIs, occupational-health integrations, insurance partnerships, advanced clinical decision support, broader regional/international expansion |
 

@@ -19,7 +19,7 @@ export default function DoctorsPage() {
         <div className="bg-teal-50 border border-teal-100 rounded-2xl p-7">
           <p className="text-slate-700 leading-relaxed">
             Every FitMed certificate is issued by an appropriately licensed doctor. Our doctors
-            use a purpose-built clinical dashboard to review patient history, conduct live video
+            use a purpose-built clinical dashboard to review applicant history, conduct live video
             consultations, and digitally sign certificates — all within a single secure platform.
           </p>
         </div>
@@ -53,7 +53,7 @@ export default function DoctorsPage() {
           <h2 className="text-xl font-extrabold text-slate-900 mb-6" style={{ fontFamily: "var(--font-primary)" }}>The Clinical Dashboard</h2>
           <div className="grid sm:grid-cols-2 gap-5">
             {[
-              { icon: Stethoscope, color: "text-sky-600",    bg: "bg-sky-50",    title: "Patient Overview",     desc: "Full history, vitals, medications, and AI-flagged red flags — all before the consultation begins." },
+              { icon: Stethoscope, color: "text-sky-600",    bg: "bg-sky-50",    title: "Applicant Overview",   desc: "Full history, vitals, medications, and AI-flagged red flags — all before the consultation begins." },
               { icon: Video,       color: "text-teal-600",   bg: "bg-teal-50",   title: "Secure Video Call",    desc: "End-to-end encrypted live video with built-in identity verification workflow." },
               { icon: Brain,       color: "text-violet-600", bg: "bg-violet-50", title: "AI Decision Support",  desc: "AI-generated summaries, risk scoring, and documentation assistance — you stay in clinical control." },
               { icon: FileSignature, color: "text-emerald-600", bg: "bg-emerald-50", title: "Digital Signature", desc: "One-click digitally signed certificate issuance with a full, traceable audit trail." },

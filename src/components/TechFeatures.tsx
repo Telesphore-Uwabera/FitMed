@@ -21,7 +21,7 @@ export default function TechFeatures() {
 
   return (
     <section id="technology" className="relative py-28 section-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="container-wide">
 
         {/* Header */}
         <motion.div
@@ -31,9 +31,7 @@ export default function TechFeatures() {
           transition={{ duration: 0.7 }}
           className="text-center mb-20"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-primary">
-            Cutting-Edge Technology
-          </span>
+
           <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5" style={{ fontFamily: "var(--font-primary)" }}>
             Built for the <span className="gradient-text">Future of Healthcare</span>
           </h2>
@@ -77,7 +75,7 @@ export default function TechFeatures() {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs">
             {[
-              { label: "Patient App",      icon: Smartphone, cls: "text-sky-700 border-sky-200 bg-white" },
+              { label: "Applicant App",    icon: Smartphone, cls: "text-sky-700 border-sky-200 bg-white" },
               { label: "AI Screening",     icon: Brain,      cls: "text-violet-700 border-violet-200 bg-white" },
               { label: "Clinical Engine",  icon: Activity,   cls: "text-teal-700 border-teal-200 bg-white" },
               { label: "Doctor Dashboard", icon: Lock,       cls: "text-emerald-700 border-emerald-200 bg-white" },

@@ -3,7 +3,6 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { UserPlus, FileText, Video, Award, ArrowRight, CheckCircle } from "lucide-react";
-import Image from "next/image";
 
 const steps = [
   {
@@ -13,8 +12,6 @@ const steps = [
       "Create your account, choose your certificate purpose, and provide your identity details. We make it simple to get started.",
     color: "from-sky-500 to-sky-600",
     accent: "sky",
-    // Black African man on laptop — account creation
-    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80&auto=format&fit=crop&crop=top",
     details: [
       "Account creation & phone / email verification",
       "Identity & demographic information",
@@ -28,8 +25,6 @@ const steps = [
       "Fill out a smart adaptive health questionnaire personalised to your specific certificate need — takes under 10 minutes.",
     color: "from-teal-500 to-teal-600",
     accent: "teal",
-    // Black woman on phone / tablet — health questionnaire
-    img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&q=80&auto=format&fit=crop&crop=top",
     details: [
       "Adaptive medical history questionnaire",
       "Danger-sign & symptom screening",
@@ -43,8 +38,6 @@ const steps = [
       "Meet a licensed doctor face-to-face through a secure, end-to-end encrypted video call — from wherever you are.",
     color: "from-violet-500 to-violet-600",
     accent: "violet",
-    // African doctor in telemedicine consultation
-    img: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&q=80&auto=format&fit=crop",
     details: [
       "Secure live video consultation",
       "Identity verification workflow",
@@ -58,8 +51,6 @@ const steps = [
       "Receive a digitally signed certificate with a unique QR code — valid anywhere, shareable instantly.",
     color: "from-emerald-500 to-emerald-600",
     accent: "emerald",
-    // Black professional with documents / certificate
-    img: "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=800&q=80&auto=format&fit=crop",
     details: [
       "Digitally signed certificate",
       "Unique QR verification code",
@@ -74,7 +65,7 @@ export default function HowItWorks() {
 
   return (
     <section id="how-it-works" className="relative py-28 section-white">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="container-wide">
 
         {/* ── Header ─────────────────────────────────────────── */}
         <motion.div
@@ -103,7 +94,7 @@ export default function HowItWorks() {
             mobile  → 1 column (full width)
             lg      → 2 columns (big, spacious cards)
 
-          Cards are intentionally large: tall image + generous content area.
+          Cards are intentionally large: generous icon panel + content area.
         ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-20">
           {steps.map((s, i) => (
@@ -115,23 +106,14 @@ export default function HowItWorks() {
               whileHover={{ y: -8, transition: { duration: 0.25 } }}
               className="group card-white rounded-3xl overflow-hidden transition-all duration-300 flex flex-col"
             >
-              {/* ── Image — tall, fills well on large cards ── */}
-              <div className="relative h-72 lg:h-96 overflow-hidden flex-shrink-0">
-                <Image
-                  src={s.img}
-                  alt={s.title}
-                  fill
-                  className="object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                  sizes="(max-width:1024px) 100vw, 50vw"
-                />
-                {/* Gradient overlay — darkens bottom for text legibility */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/65" />
-
-                {/* Icon badge — top left, no step number */}
-                <div
-                  className={`absolute top-5 left-5 w-14 h-14 rounded-2xl bg-gradient-to-br ${s.color} flex items-center justify-center shadow-xl`}
-                >
-                  <s.icon className="w-7 h-7 text-white" strokeWidth={1.8} />
+              {/* ── Large visual icon panel ── */}
+              <div className="relative h-48 lg:h-56 overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-800 flex items-center justify-center">
+                <span className="absolute top-5 left-6 text-3xl font-black tracking-wider text-white/90" aria-label={`Step ${i + 1}`}>
+                  {i + 1}<sup className="ml-0.5 text-sm align-super tracking-normal">{i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}</sup>
+                </span>
+                <div className="absolute top-0 right-0 w-56 h-56 bg-[#12B8B0]/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative w-28 h-28 rounded-[2rem] bg-white/15 border border-white/30 flex items-center justify-center shadow-2xl backdrop-blur-sm">
+                  <s.icon className="w-16 h-16 text-white" strokeWidth={1.35} />
                 </div>
               </div>
 
@@ -167,13 +149,13 @@ export default function HowItWorks() {
           className="text-center"
         >
           <motion.a
-            href="#request"
+            href="/signin"
             whileHover={{ scale: 1.04, boxShadow: "0 16px 40px rgba(14,165,233,.3)" }}
             whileTap={{ scale: 0.97 }}
-            className="inline-flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-white btn-primary shadow-lg shadow-sky-500/20 text-base"
+            className="inline-flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-[#0B2D5C] bg-[#12B8B0] hover:bg-[#1dd9d0] shadow-lg shadow-sky-500/20 text-base transition-colors"
           >
-            Start Your Assessment
-            <ArrowRight className="w-5 h-5" />
+            <span className="text-[#0B2D5C]">Start Your Assessment</span>
+            <ArrowRight className="w-5 h-5 text-[#0B2D5C]" />
           </motion.a>
         </motion.div>
       </div>
