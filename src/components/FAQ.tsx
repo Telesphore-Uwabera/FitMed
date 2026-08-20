@@ -56,8 +56,8 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
         aria-expanded={open}
       >
         <span
-          className="text-sm md:text-base font-semibold text-slate-800 leading-snug flex-1"
-          style={{ fontFamily: "var(--font-primary)" }}
+          className="text-sm md:text-base font-semibold leading-snug flex-1"
+          style={{ fontFamily: "var(--font-primary)", color: "#0B2D5C" }}
         >
           {faq.q}
         </span>
@@ -109,12 +109,12 @@ export default function FAQ() {
           className="text-center mb-16"
         >
           <h2
-            className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
-            style={{ fontFamily: "var(--font-primary)" }}
+            className="text-4xl md:text-5xl font-extrabold mb-5"
+            style={{ fontFamily: "var(--font-primary)", color: "#0B2D5C" }}
           >
             Got <span className="gradient-text">Questions?</span>
           </h2>
-          <p className="text-slate-500 text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg max-w-xl mx-auto leading-relaxed" style={{ color: "#5b6f86" }}>
             Everything you need to know about FitMed.{" "}
             <a
               href="mailto:hello@fitmed.rw"

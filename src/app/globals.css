@@ -376,15 +376,26 @@ section, footer, header, main {
 
 /* ─── Dashboard dark mode ───────────────────────────────────────── */
 html.dark {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html.dark body {
+  background-color: #ffffff;
+  color: #0B2D5C;
+}
+
+html.dark .dashboard-app,
+html.dark .dashboard-main {
   background-color: #08111f;
   color: #dbe7f3;
 }
 
-html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+html.dark .dashboard-main h1,
+html.dark .dashboard-main h2,
+html.dark .dashboard-main h3,
+html.dark .dashboard-main h4,
+html.dark .dashboard-main h5,
+html.dark .dashboard-main h6 {
   color: #eaf2fb;
 }
 
