@@ -16,18 +16,23 @@ export async function GET() {
       .sort({ createdAt: -1 })
       .lean();
     const doctors = await Doctor.find({}).select("fullName email licenseNumber specialty status isVerified").lean();
+    const userByEmail = new Map(users.map((u) => [String(u.email || "").toLowerCase(), u]));
 
     return NextResponse.json({
       success: true,
       admins: users.filter((u) => u.role === "admin"),
-      doctors: doctors.map((d) => ({
-        id: String(d._id),
-        name: d.fullName,
-        email: d.email,
-        license: d.licenseNumber,
-        role: d.specialty,
-        status: d.isVerified ? "Active" : "Pending",
-      })),
+      doctors: doctors.map((d) => {
+        const linked = userByEmail.get(String(d.email || "").toLowerCase());
+        const suspended = String(linked?.status || "").toLowerCase() === "suspended";
+        return {
+          id: String(d._id),
+          name: d.fullName,
+          email: d.email,
+          license: d.licenseNumber,
+          role: d.specialty,
+          status: suspended ? "Suspended" : d.isVerified ? "Active" : "Pending",
+        };
+      }),
       staff: users,
     });
   } catch (error: unknown) {
@@ -99,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      temporaryPassword: body.password ? undefined : plainPassword,
+      oneTimePassword: body.password ? undefined : plainPassword,
       user: {
         id: String(user._id),
         name,
@@ -112,6 +117,102 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create account.";
     console.error("Create staff error:", error);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const id = String(body.id || "").trim();
+    const action = String(body.action || "").trim();
+    if (!id || !action) {
+      return NextResponse.json({ success: false, error: "Staff member and action are required." }, { status: 400 });
+    }
+
+    await connectToDatabase();
+    const doctor = await Doctor.findById(id);
+    if (!doctor) {
+      return NextResponse.json({ success: false, error: "Doctor not found." }, { status: 404 });
+    }
+    const user = await User.findOne({ email: doctor.email });
+
+    if (action === "approve") {
+      doctor.isVerified = true;
+      doctor.status = "ONLINE";
+      await doctor.save();
+      if (user) {
+        user.status = "active";
+        await user.save();
+      }
+      return NextResponse.json({ success: true, status: "Active" });
+    }
+
+    if (action === "suspend") {
+      if (user) {
+        user.status = "Suspended";
+        await user.save();
+      }
+      doctor.status = "OFF";
+      await doctor.save();
+      return NextResponse.json({ success: true, status: "Suspended" });
+    }
+
+    if (action === "activate") {
+      doctor.isVerified = true;
+      doctor.status = "ONLINE";
+      await doctor.save();
+      if (user) {
+        user.status = "active";
+        await user.save();
+      }
+      return NextResponse.json({ success: true, status: "Active" });
+    }
+
+    if (action === "reset-password" && user) {
+      const oneTimePassword = generateTempPassword();
+      user.password = hashPassword(oneTimePassword);
+      user.temporaryPassword = oneTimePassword;
+      user.requiresPasswordReset = true;
+      await user.save();
+      await sendBrevoEmail({
+        toEmail: user.email,
+        toName: user.fullName || user.name || doctor.fullName,
+        subject: "Your new FitMed sign-in password",
+        htmlContent: EmailTemplates.staffAccountCreated(
+          user.fullName || user.name || doctor.fullName,
+          user.email,
+          "doctor",
+          oneTimePassword
+        ),
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ success: false, error: "Unknown action." }, { status: 400 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Could not update staff account.";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Doctor id is required." }, { status: 400 });
+    }
+    await connectToDatabase();
+    const doctor = await Doctor.findById(id);
+    if (!doctor) {
+      return NextResponse.json({ success: false, error: "Doctor not found." }, { status: 404 });
+    }
+    await User.deleteOne({ email: doctor.email, role: "doctor" });
+    await Doctor.findByIdAndDelete(id);
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Could not delete doctor.";
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

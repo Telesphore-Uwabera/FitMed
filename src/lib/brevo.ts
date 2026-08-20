@@ -146,11 +146,11 @@ export const EmailTemplates = {
     brandedEmail(
       "Account approved",
       `<p>Dear <strong>${name}</strong>,</p>
-       <p>Your National ID has been verified. Your FitMed account is active. Sign in with the temporary password below, then set a permanent password.</p>
+       <p>Your National ID has been verified and your FitMed account is ready. Sign in with the one-time password below, then choose a password of your own.</p>
        <p style="margin:4px 0;color:#64748b;font-size:13px;">Email</p>
        <p style="margin:0 0 12px;font-weight:800;color:#0B2D5C;">${email}</p>
        <div style="background:#edf6f6;border:1px solid #12B8B0;border-radius:12px;padding:16px;text-align:center;">
-         <p style="margin:0;font-size:12px;font-weight:700;color:#0B2D5C;">Temporary password</p>
+         <p style="margin:0;font-size:12px;font-weight:700;color:#0B2D5C;">One-time sign-in password</p>
          <p style="margin:8px 0 0;font-family:Consolas,monospace;font-size:20px;font-weight:800;letter-spacing:1px;color:#0B2D5C;">${tempPassword}</p>
        </div>
        ${button(loginLink, "Sign in and set your password")}`
@@ -160,7 +160,7 @@ export const EmailTemplates = {
     brandedEmail(
       `Your FitMed ${role} account`,
       `<p>Dear <strong>${name}</strong>,</p>
-       <p>A FitMed <strong>${role}</strong> account has been created for you. Use these credentials on the sign-in page. If a temporary password was issued, you may be asked to change it on first access.</p>
+       <p>A FitMed <strong>${role}</strong> account has been created for you. Sign in with the details below. You may be asked to choose your own password the first time you sign in.</p>
        <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
          <tr><td style="padding:6px 0;color:#64748b;">Role</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;text-transform:capitalize;">${role}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Email</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${email}</td></tr>

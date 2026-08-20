@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendBrevoEmail({
       toEmail: email,
       toName: name || "FitMed Applicant",
-      subject: "Your FitMed Account is Approved — Temporary Password Inside",
+      subject: "Your FitMed account is approved — sign-in details inside",
       htmlContent: EmailTemplates.applicantAccountApprovedWithTempPassword(
         name || "Applicant",
         email,

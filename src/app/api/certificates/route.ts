@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
       if (assignedDoctorId) query.assignedDoctorId = assignedDoctorId;
 
       const certificates = await Certificate.find(query)
-        .sort({ appliedDate: -1 })
-        .limit(50);
+        .sort({ appliedDate: -1, createdAt: -1 })
+        .limit(500);
 
       return NextResponse.json({ success: true, certificates });
     } catch (dbErr) {
@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { certificateId, decision, restrictions, decisionNotes, status, paymentStatus, doctorNotes, doctorDocuments, structuredAssessment, iremboRef } = body;
+    const { certificateId, decision, restrictions, decisionNotes, status, paymentStatus, doctorNotes, doctorDocuments, structuredAssessment, iremboRef, action } = body;
 
     if (!certificateId) {
       return NextResponse.json({ error: "certificateId required" }, { status: 400 });
@@ -234,6 +234,14 @@ export async function PATCH(request: NextRequest) {
 
     try {
       await connectToDatabase();
+      if (action === "payment-reminder") {
+        const cert = await Certificate.findOne({ certificateId: certKey });
+        if (!cert) {
+          return NextResponse.json({ success: false, error: "Certificate not found." }, { status: 404 });
+        }
+        await notifyCertificateEmails(cert.toObject(), { status: "approved" });
+        return NextResponse.json({ success: true });
+      }
       const updateData: any = {};
       if (decision) updateData.decision = decision;
       if (restrictions !== undefined) updateData.restrictions = restrictions;

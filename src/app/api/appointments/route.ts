@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { appointmentId, status, notes, scheduledDate, scheduledTime } = body;
+    const { appointmentId, status, notes, scheduledDate, scheduledTime, action } = body;
 
     if (!appointmentId) {
       return NextResponse.json({ error: "appointmentId required" }, { status: 400 });
@@ -129,6 +129,28 @@ export async function PATCH(request: NextRequest) {
 
     try {
       await connectToDatabase();
+      const appointment = await Appointment.findOne({ appointmentId });
+      if (!appointment) {
+        return NextResponse.json({ success: false, error: "Appointment not found." }, { status: 404 });
+      }
+
+      if (action === "remind") {
+        const time = `${appointment.scheduledDate || ""} ${appointment.scheduledTime || ""}`.trim() || "as scheduled";
+        const meetingLink = `${FITMED_APP_URL}${appointment.roomUrl || "/dashboard/user?tab=consultation"}`;
+        await sendBrevoEmail({
+          toEmail: appointment.applicantEmail,
+          toName: appointment.applicantName,
+          subject: "Reminder: your FitMed video visit",
+          htmlContent: EmailTemplates.appointmentReminder(
+            appointment.applicantName,
+            appointment.doctorName || "your FitMed doctor",
+            meetingLink,
+            time
+          ),
+        });
+        return NextResponse.json({ success: true, appointment });
+      }
+
       const updated = await Appointment.findOneAndUpdate(
         { appointmentId },
         {

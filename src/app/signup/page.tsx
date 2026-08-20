@@ -195,8 +195,8 @@ export default function SignUpPage() {
               <div className="font-extrabold text-[#0B2D5C]">What happens next?</div>
               <ul className="list-disc ml-4 space-y-1 text-slate-600">
                 <li>The administrator verifies your identity against Rwanda National ID records.</li>
-                <li>You will receive an official approval email at <strong>{email}</strong> with your <strong>Temporary Password</strong>.</li>
-                <li>Upon first sign-in, you will be prompted to set your new permanent password and access your dashboard.</li>
+                <li>You will receive an email at <strong>{email}</strong> with a first-time sign-in password.</li>
+                <li>The first time you sign in, you will choose a password of your own and then open your dashboard.</li>
               </ul>
             </div>
 

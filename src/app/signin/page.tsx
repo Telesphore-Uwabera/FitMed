@@ -129,7 +129,7 @@ function SignInContent() {
         return;
       }
       persistSession(pendingAccount.role || "user", pendingAccount.name || "Applicant", pendingAccount.email.toLowerCase());
-      success("Password Activated", "Your permanent password has been set! Welcome to FitMed.");
+      success("Password saved", "You can now use this password to sign in.");
       setShowTempResetModal(false);
       if (pendingAccount.role === "doctor") router.push("/dashboard/doctor");
       else if (pendingAccount.role === "admin") router.push("/dashboard/admin");
@@ -422,7 +422,7 @@ function SignInContent() {
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
-                    New Permanent Password
+                    New password
                   </label>
                   <input
                     type="password"
@@ -466,17 +466,17 @@ function SignInContent() {
                 <span>First-Time Account Activation</span>
               </div>
               <h3 className="text-xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                Set Your Permanent Password
+                Choose your password
               </h3>
               <p className="text-xs text-slate-500">
-                Welcome to FitMed! You have authenticated with your admin-issued temporary credentials. Please set your new secure password before accessing your dashboard.
+                You signed in with the password we emailed you. Please choose a new password before opening your dashboard.
               </p>
             </div>
 
             <form onSubmit={handleCompleteTempReset} className="space-y-4 text-xs">
               <div>
                 <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
-                  New Permanent Password
+                  New password
                 </label>
                 <input
                   type="password"
@@ -491,10 +491,10 @@ function SignInContent() {
               <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-slate-700 text-[11px] space-y-1">
                 <div className="font-extrabold text-[#0B2D5C] flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
-                  <span>National ID Verified &amp; Encrypted</span>
+                  <span>Identity verified</span>
                 </div>
                 <p className="text-slate-600">
-                  Your identity has been verified by the administrator. This permanent password will protect your medical certifications and telehealth records.
+                  Your identity has been verified. This password will protect your certificates and video visits.
                 </p>
               </div>
 

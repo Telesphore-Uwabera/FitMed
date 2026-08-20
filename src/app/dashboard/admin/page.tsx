@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import DashboardShell from "@/components/DashboardShell";
@@ -43,13 +44,48 @@ import {
   CreditCard,
   Download,
 } from "lucide-react";
-import { convertToWebP, uploadToCloudinary, formatBytes, WebPConversionResult } from "@/lib/imageUtils";
+import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
 import { useDialog } from "@/components/DialogProvider";
+import { useSession } from "@/lib/useSession";
+
+type ApplicantRecord = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  nationalId: string;
+  idDocUrl?: string;
+  avatarUrl?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
+  applied?: string;
+  joined: string;
+  status: string;
+  certs: number;
+};
+
+function isActiveAccount(status?: string) {
+  return String(status || "").toLowerCase() === "active";
+}
+
+function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escape = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+  const csv = [headers.map(escape).join(","), ...rows.map((row) => row.map(escape).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function AdminDashboardPage() {
   const { success, error, warning, info } = useToast();
   const { confirm, prompt } = useDialog();
+  const { session, loading: sessionLoading } = useSession("admin");
   const [activeNav, setActiveNav] = useState("overview");
   const [settingsSection, setSettingsSection] = useState<"profile" | "password" | "settings">("settings");
   const [adminProfile, setAdminProfile] = useState({
@@ -73,6 +109,15 @@ export default function AdminDashboardPage() {
     if (savedProfile) setAdminProfile((prev) => ({ ...prev, ...JSON.parse(savedProfile) }));
     if (savedGovernance) setGovernanceSettings((prev) => ({ ...prev, ...JSON.parse(savedGovernance) }));
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    setAdminProfile((prev) => ({
+      ...prev,
+      name: prev.name === "FitMed Admin" ? session.name : prev.name,
+      email: session.email || prev.email,
+    }));
+  }, [session]);
 
   const handleAdminAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -156,104 +201,46 @@ export default function AdminDashboardPage() {
     if (nav) setActiveNav(nav);
   }, []);
 
-  useEffect(() => {
-    const loadStaff = async () => {
-      try {
-        const res = await fetch("/api/admin/staff");
-        const data = await res.json();
-        if (!data.success) return;
-        if (Array.isArray(data.doctors) && data.doctors.length > 0) {
-          setVerifiedDoctors(data.doctors);
-        }
-        if (Array.isArray(data.admins)) {
-          setAdminAccounts(
-            data.admins.map((a: { fullName?: string; name?: string; email: string; role: string; status?: string }) => ({
-              name: a.fullName || a.name || "Admin",
-              email: a.email,
-              role: a.role,
-              status: a.status,
-            }))
-          );
-        }
-      } catch {
-        /* keep local fallback lists */
-      }
-    };
-    loadStaff();
-  }, []);
-
+  const [adminRefresh, setAdminRefresh] = useState(0);
   const [auditDate, setAuditDate] = useState("—");
   useEffect(() => {
     setAuditDate(new Date().toLocaleDateString("en-GB"));
   }, []);
 
   // Pending Doctor Approvals
-  const [pendingDoctors, setPendingDoctors] = useState([
-    {
-      id: "DOC-REG-104",
-      name: "Dr. Divine Umutesi, MD",
-      specialty: "General Medicine & Telehealth",
-      license: "RW-RMDC-2024-9912",
-      applied: "Yesterday",
-      status: "Pending License Verification",
-    },
-    {
-      id: "DOC-REG-105",
-      name: "Dr. Innocent Manzi, MBBS",
-      specialty: "Occupational Health",
-      license: "RW-RMDC-2023-4108",
-      applied: "2 days ago",
-      status: "Pending License Verification",
-    },
-  ]);
+  const [pendingDoctors, setPendingDoctors] = useState<
+    { id: string; name: string; specialty?: string; license?: string; applied?: string; status: string }[]
+  >([]);
 
-  // Verified Doctors List
-  const [verifiedDoctors, setVerifiedDoctors] = useState([
-    { id: "DOC-001", name: "Dr. Telesphore Uwabera, MD", role: "Chief Clinical Evaluator", license: "RW-RMDC-4091", status: "Active" },
-    { id: "DOC-002", name: "Dr. Amina Nshimiyimana, MD", role: "Telehealth Director", license: "RW-RMDC-3382", status: "Active" },
-    { id: "DOC-003", name: "Dr. Patrick Uwase, MBBS", role: "Risk Stratification Lead", license: "RW-RMDC-2910", status: "Active" },
-    { id: "DOC-004", name: "Dr. Claire Akamanzi, MD", role: "Referral Coordinator", license: "RW-RMDC-4890", status: "Active" },
-  ]);
+  const [verifiedDoctors, setVerifiedDoctors] = useState<
+    { id: string; name: string; role?: string; license?: string; status: string }[]
+  >([]);
 
   const [showAddClinic, setShowAddClinic] = useState(false);
   const [clinicForm, setClinicForm] = useState({ name: "", city: "", status: "Active Partner", capacity: "Medium" });
-  const [clinics, setClinics] = useState([
-    { id: "CLN-01", name: "CHUK (University Teaching Hospital)", city: "Kigali (Nyarugenge)", status: "Active Partner", capacity: "High" },
-    { id: "CLN-02", name: "King Faisal Hospital Rwanda", city: "Kigali (Gasabo)", status: "Active Partner", capacity: "High" },
-    { id: "CLN-03", name: "Kigali Independent Polyclinic", city: "Kigali (Kicukiro)", status: "Active Partner", capacity: "Medium" },
-    { id: "CLN-04", name: "Ruhengeri Referral Hospital", city: "Musanze", status: "Regional Referral", capacity: "Medium" },
-    { id: "CLN-05", name: "Butare University Hospital (CHUB)", city: "Huye", status: "Regional Referral", capacity: "High" },
-  ]);
+  const [clinics, setClinics] = useState<{ id: string; name: string; city: string; status: string; capacity: string }[]>([]);
 
-  const approveDoctor = (id: string, name: string) => {
-    success("Doctor Approved", `${name}'s license verified & portal account activated.`);
-    setPendingDoctors((prev) => prev.filter((d) => d.id !== id));
-    setVerifiedDoctors((prev) => [...prev, { id, name, role: "Clinical Evaluator", license: "RW-RMDC-2026-VAL", status: "Active" }]);
+  const approveDoctor = async (id: string, name: string) => {
+    try {
+      const res = await fetch("/api/admin/staff", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "approve" }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Could not approve doctor", data.error || "Please try again.");
+        return;
+      }
+      success("Doctor approved", `${name} can now sign in and see their cases.`);
+      setAdminRefresh((n) => n + 1);
+    } catch {
+      error("Could not approve doctor", "Could not reach the server.");
+    }
   };
 
   // Pending Applicant Registrations (Awaiting Admin ID Verification)
-  const [pendingApplicants, setPendingApplicants] = useState([
-    {
-      id: "PAT-PENDING-101",
-      name: "Emmanuel Mugisha",
-      email: "e.mugisha@gmail.com",
-      phone: "+250 788 889 900",
-      nationalId: "1199880012345678",
-      idDocUrl: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
-      applied: "Today, 11:20 AM",
-      status: "Pending National ID Verification",
-    },
-    {
-      id: "PAT-PENDING-102",
-      name: "Diane Mukeshimana",
-      email: "diane.mukesh@gmail.com",
-      phone: "+250 788 334 455",
-      nationalId: "1200180023456789",
-      idDocUrl: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
-      applied: "Yesterday, 04:10 PM",
-      status: "Pending National ID Verification",
-    },
-  ]);
+  const [pendingApplicants, setPendingApplicants] = useState<ApplicantRecord[]>([]);
 
   const approveApplicant = async (id: string, name: string, email: string) => {
     try {
@@ -263,46 +250,59 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ email, name }),
       });
       const data = await res.json();
-      const tempPass = data.tempPassword || `FitMed#${Math.floor(1000 + Math.random() * 9000)}`;
-
-      setPendingApplicants((prev) => prev.filter((p) => p.id !== id));
-      setApplicants((prev) => [
-        {
-          id: `PAT-00${prev.length + 1}`,
-          name,
-          email,
-          phone: "+250 788 123 456",
-          nationalId: "1199880012345678",
-          joined: "Today",
-          status: "Active",
-          certs: 0,
-          avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
-        },
-        ...prev,
-      ]);
-
+      if (!data.success) {
+        error("Approval failed", data.error || "Could not approve this applicant.");
+        return;
+      }
       success(
-        "Applicant Approved & Activated",
-        `${name}'s National ID verified. Temporary Password (${tempPass}) was sent to their email address.`
+        "Applicant approved",
+        `We emailed ${name} a first-time sign-in password. They will choose their own password after signing in.`
       );
+      setAdminRefresh((n) => n + 1);
     } catch {
-      setPendingApplicants((prev) => prev.filter((p) => p.id !== id));
-      success("Applicant Approved", `${name}'s account activated.`);
+      error("Approval failed", "Could not reach the server.");
     }
   };
 
-  // All registered applicants
-  const [applicants, setApplicants] = useState([
-    { id: "PAT-001", name: "Telesphore Uwabera",   email: "telesphore91073@gmail.com",  phone: "+250 788 910 730", nationalId: "1199580048123049", joined: "2026-08-19", status: "Active",    certs: 2, avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop" },
-    { id: "PAT-002", name: "Claudine Uwamahoro",    email: "claudine.u@gmail.com",        phone: "+250 788 123 456", nationalId: "1199200012340001", joined: "2026-08-15", status: "Active",    certs: 1, avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80&auto=format&fit=crop" },
-    { id: "PAT-003", name: "Eric Ndayishimiye",     email: "eric.nday@gmail.com",         phone: "+250 788 234 567", nationalId: "1198500023451002", joined: "2026-08-10", status: "Active",    certs: 0, avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop" },
-    { id: "PAT-004", name: "Aline Uwase",           email: "aline.uwase@gmail.com",       phone: "+250 788 345 678", nationalId: "1200100034562003", joined: "2026-07-28", status: "Suspended", certs: 1, avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=80&auto=format&fit=crop" },
-  ]);
+  const [applicants, setApplicants] = useState<ApplicantRecord[]>([]);
+  const [selectedApplicant, setSelectedApplicant] = useState<ApplicantRecord | null>(null);
 
-  const toggleDoctorStatus = (id: string) => {
-    setVerifiedDoctors((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: d.status === "Active" ? "Suspended" : "Active" } : d))
-    );
+  const toggleDoctorStatus = async (id: string, name: string, currentStatus: string) => {
+    const action = currentStatus === "Active" ? "suspend" : "activate";
+    try {
+      const res = await fetch("/api/admin/staff", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Status not updated", data.error || "Please try again.");
+        return;
+      }
+      success(action === "suspend" ? "Doctor paused" : "Doctor reactivated", `${name}'s account is now ${action === "suspend" ? "paused" : "active"}.`);
+      setAdminRefresh((n) => n + 1);
+    } catch {
+      error("Status not updated", "Could not reach the server.");
+    }
+  };
+
+  const resetStaffPassword = async (id: string, name: string) => {
+    try {
+      const res = await fetch("/api/admin/staff", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "reset-password" }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Password not reset", data.error || "Please try again.");
+        return;
+      }
+      success("New password emailed", `${name} will receive a first-time sign-in password by email.`);
+    } catch {
+      error("Password not reset", "Could not reach the server.");
+    }
   };
 
   const deleteDoctor = async (id: string, name: string) => {
@@ -314,11 +314,39 @@ export default function AdminDashboardPage() {
       variant: "danger",
     });
     if (!ok) return;
-    setVerifiedDoctors((prev) => prev.filter((d) => d.id !== id));
-    success("Account removed", `${name} has been removed from the system.`);
+    try {
+      const res = await fetch(`/api/admin/staff?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) {
+        error("Account not deleted", data.error || "Please try again.");
+        return;
+      }
+      success("Account removed", `${name} has been removed.`);
+      setAdminRefresh((n) => n + 1);
+    } catch {
+      error("Account not deleted", "Could not reach the server.");
+    }
   };
 
-  const deleteApplicant = async (id: string, name: string) => {
+  const resetApplicantPassword = async (id: string, name: string, email?: string) => {
+    try {
+      const res = await fetch("/api/admin/applicants", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, email, action: "reset-password" }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Password not reset", data.error || "Please try again.");
+        return;
+      }
+      success("New password emailed", `${name} will receive a first-time sign-in password by email.`);
+    } catch {
+      error("Password not reset", "Could not reach the server.");
+    }
+  };
+
+  const deleteApplicant = async (id: string, name: string, email?: string) => {
     const ok = await confirm({
       title: "Delete applicant account",
       message: `Permanently delete ${name}'s applicant account?`,
@@ -327,11 +355,29 @@ export default function AdminDashboardPage() {
       variant: "danger",
     });
     if (!ok) return;
-    setApplicants((prev) => prev.filter((p) => p.id !== id));
-    warning("Applicant deleted", `${name}'s account has been permanently removed.`);
+    try {
+      const params = new URLSearchParams({ id });
+      if (email) params.set("email", email);
+      const res = await fetch(`/api/admin/applicants?${params.toString()}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) {
+        error("Account not deleted", data.error || "Please try again.");
+        return;
+      }
+      setApplicants((prev) => prev.filter((p) => p.id !== id && p.email !== email));
+      success("Applicant deleted", `${name}'s account has been removed.`);
+      setSelectedApplicant(null);
+      setAdminRefresh((n) => n + 1);
+    } catch {
+      error("Account not deleted", "Could not reach the server.");
+    }
   };
 
   const [userSearch, setUserSearch] = useState("");
+  const [portalReady, setPortalReady] = useState(false);
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
   const [addDoctorForm, setAddDoctorForm] = useState({
     role: "doctor" as "admin" | "doctor",
     name: "",
@@ -355,104 +401,24 @@ export default function AdminDashboardPage() {
   const [selectedTxn, setSelectedTxn] = useState<any | null>(null);
   const [showTxnModal, setShowTxnModal] = useState(false);
 
-  const [transactions, setTransactions] = useState([
+  const [transactions, setTransactions] = useState<
     {
-      id: "TXN-IREMBO-2026-9104",
-      certId: "FM-2024-88421",
-      applicantName: "Telesphore Uwabera",
-      applicantEmail: "telesphore91073@gmail.com",
-      applicantPhone: "+250 788 123 456",
-      purpose: "Workplace & Office Fitness",
-      amount: 5000,
-      channel: "MTN Mobile Money (*182#)",
-      iremboRef: "IREMBO-RW-2026-9104",
-      date: "2026-08-20 10:30",
-      status: "PAID",
-      doctorName: "Dr. Telesphore Uwabera, MD",
-      doctorPayout: 4000,
-      platformFee: 1000,
-    },
-    {
-      id: "TXN-IREMBO-2026-9105",
-      certId: "FM-2026-99412",
-      applicantName: "Jean-Paul Habimana",
-      applicantEmail: "jp.habimana@gmail.com",
-      applicantPhone: "+250 788 456 789",
-      purpose: "Commercial Driver & Transport",
-      amount: 5000,
-      channel: "Airtel Money (*500#)",
-      iremboRef: "IREMBO-RW-2026-9105",
-      date: "2026-08-20 09:15",
-      status: "WAITING",
-      doctorName: "Dr. Amina Nshimiyimana, MD",
-      doctorPayout: 4000,
-      platformFee: 1000,
-    },
-    {
-      id: "TXN-IREMBO-2026-9106",
-      certId: "FM-2026-88102",
-      applicantName: "Chantal Mutoni",
-      applicantEmail: "chantal.mutoni@gmail.com",
-      applicantPhone: "+250 783 112 334",
-      purpose: "Food Handler & Hygiene Clearance",
-      amount: 5000,
-      channel: "Visa / MasterCard Card",
-      iremboRef: "IREMBO-RW-2026-9106",
-      date: "2026-08-19 16:45",
-      status: "PAID",
-      doctorName: "Dr. Patrick Uwase, MD",
-      doctorPayout: 4000,
-      platformFee: 1000,
-    },
-    {
-      id: "TXN-IREMBO-2026-9107",
-      certId: "FM-2026-77301",
-      applicantName: "Eric Ndayishimiye",
-      applicantEmail: "eric.ndayishimiye@gmail.com",
-      applicantPhone: "+250 788 778 899",
-      purpose: "Construction & Heights Fitness",
-      amount: 5000,
-      channel: "MTN Mobile Money",
-      iremboRef: "IREMBO-RW-2026-9107",
-      date: "2026-08-15 14:00",
-      status: "EXPIRED",
-      doctorName: "Dr. Telesphore Uwabera, MD",
-      doctorPayout: 4000,
-      platformFee: 1000,
-    },
-    {
-      id: "TXN-IREMBO-2026-9108",
-      certId: "FM-2026-66419",
-      applicantName: "Alice Uwimana",
-      applicantEmail: "alice.uwimana@gmail.com",
-      applicantPhone: "+250 788 991 223",
-      purpose: "School & University Admission",
-      amount: 5000,
-      channel: "MTN Mobile Money (*182#)",
-      iremboRef: "IREMBO-RW-2026-9108",
-      date: "2026-08-19 11:20",
-      status: "PAID",
-      doctorName: "Dr. Claire Akamanzi, MD",
-      doctorPayout: 4000,
-      platformFee: 1000,
-    },
-    {
-      id: "TXN-IREMBO-2026-9109",
-      certId: "FM-2026-55310",
-      applicantName: "Patrick Mugabo",
-      applicantEmail: "patrick.mugabo@gmail.com",
-      applicantPhone: "+250 788 223 344",
-      purpose: "Sports, Gym & Athletic Fitness",
-      amount: 5000,
-      channel: "Airtel Money",
-      iremboRef: "IREMBO-RW-2026-9109",
-      date: "2026-08-20 11:45",
-      status: "WAITING",
-      doctorName: "Dr. Telesphore Uwabera, MD",
-      doctorPayout: 4000,
-      platformFee: 1000,
-    },
-  ]);
+      id: string;
+      certId: string;
+      applicantName: string;
+      applicantEmail: string;
+      applicantPhone: string;
+      purpose: string;
+      amount: number;
+      channel: string;
+      iremboRef: string;
+      date: string;
+      status: string;
+      doctorName: string;
+      doctorPayout: number;
+      platformFee: number;
+    }[]
+  >([]);
 
   const filteredTransactions = transactions
     .filter((txn) => {
@@ -496,51 +462,199 @@ export default function AdminDashboardPage() {
     (p) =>
       p.name.toLowerCase().includes(userSearch.toLowerCase()) ||
       p.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-      p.nationalId.includes(userSearch)
+      (p.nationalId || "").includes(userSearch)
   );
 
-  const [inquiries, setInquiries] = useState([
+  const [inquiries, setInquiries] = useState<
     {
-      id: "INQ-101",
-      name: "Jean Paul Habimana",
-      email: "jeanpaul.h@gmail.com",
-      phone: "+250 788 112 233",
-      category: "Doctor Network Application",
-      subject: "Physician Onboarding & RMDC Verification",
-      message: "Hello FitMed team, I am a certified occupational health physician in Kigali and would like to apply to conduct telehealth evaluations on your platform.",
-      date: "Today, 09:20 AM",
-      status: "New",
-      lastReply: "",
-    },
-    {
-      id: "INQ-102",
-      name: "MTN Rwanda HR Operations",
-      email: "hr.ops@mtn.co.rw",
-      phone: "+250 788 440 000",
-      category: "Employer Corporate Account",
-      subject: "Bulk 450 Employee Fitness Clearance Contract",
-      message: "We need an annual workplace fitness certificate package for 450 staff members at 5,000 FRW. Please send corporate invoice & HRIS API documentation.",
-      date: "Yesterday, 03:45 PM",
-      status: "In Review",
-    },
-    {
-      id: "INQ-103",
-      name: "Kigali Independent Polyclinic",
-      email: "referrals@kigaliclinic.rw",
-      phone: "+250 788 556 677",
-      category: "In-Person Partner Clinic Referral",
-      subject: "Referral Network Partnership Renewal",
-      message: "Confirming readiness to receive secondary high-risk candidates for physical stress ECG tests and chest X-rays.",
-      date: "Aug 18, 2026",
-      status: "Resolved",
-    },
-  ]);
+      id: string;
+      name: string;
+      email: string;
+      phone: string;
+      category: string;
+      subject: string;
+      message: string;
+      date: string;
+      status: string;
+      lastReply?: string;
+    }[]
+  >([]);
 
-  const toggleApplicantStatus = (id: string) => {
-    setApplicants((prev) =>
-      prev.map((p) => p.id === id ? { ...p, status: p.status === "Active" ? "Suspended" : "Active" } : p)
-    );
+  useEffect(() => {
+    const loadAdminData = async () => {
+      try {
+        const staffRes = await fetch("/api/admin/staff");
+        const staffData = await staffRes.json();
+        if (staffData.success) {
+          const doctors = Array.isArray(staffData.doctors) ? staffData.doctors : [];
+          setVerifiedDoctors(doctors.filter((d: { status?: string }) => d.status !== "Pending"));
+          setPendingDoctors(
+            doctors
+              .filter((d: { status?: string }) => d.status === "Pending")
+              .map((d: { id: string; name: string; role?: string; license?: string; status: string }) => ({
+                id: d.id,
+                name: d.name,
+                specialty: d.role,
+                license: d.license,
+                applied: "—",
+                status: "Pending License Verification",
+              }))
+          );
+          setAdminAccounts(
+            (staffData.admins || []).map((a: { fullName?: string; name?: string; email: string; role: string; status?: string }) => ({
+              name: a.fullName || a.name || "Admin",
+              email: a.email,
+              role: a.role,
+              status: a.status,
+            }))
+          );
+        }
+      } catch {
+        setVerifiedDoctors([]);
+        setPendingDoctors([]);
+        setAdminAccounts([]);
+      }
+
+      try {
+        const appRes = await fetch("/api/admin/applicants");
+        const appData = await appRes.json();
+        if (appData.success) {
+          setPendingApplicants(appData.pending || []);
+          setApplicants(appData.applicants || []);
+        }
+      } catch {
+        setPendingApplicants([]);
+        setApplicants([]);
+      }
+
+      try {
+        const certRes = await fetch("/api/certificates");
+        const certData = await certRes.json();
+        if (certData.success && Array.isArray(certData.certificates)) {
+          setTransactions(
+            certData.certificates.map((c: Record<string, unknown>) => {
+              const amount = Number(c.amount) || 5000;
+              const payment = String(c.paymentStatus || "UNPAID").toUpperCase();
+              const status = payment === "PAID" ? "PAID" : payment === "EXPIRED" ? "EXPIRED" : "WAITING";
+              const applied = c.appliedDate ? new Date(String(c.appliedDate)).toLocaleString() : "—";
+              return {
+                id: String(c.iremboRef || c.certificateId),
+                certId: String(c.certificateId || ""),
+                applicantName: String(c.candidateName || "Applicant"),
+                applicantEmail: String(c.applicantEmail || ""),
+                applicantPhone: String(c.applicantPhone || "—"),
+                purpose: String(c.purpose || "—"),
+                amount,
+                channel: String(c.paymentChannel || "Irembo"),
+                iremboRef: String(c.iremboRef || c.certificateId || "—"),
+                date: applied,
+                status,
+                doctorName: String(c.assignedDoctor || "—"),
+                doctorPayout: Math.round(amount * 0.8),
+                platformFee: Math.round(amount * 0.2),
+              };
+            })
+          );
+        } else {
+          setTransactions([]);
+        }
+      } catch {
+        setTransactions([]);
+      }
+
+      try {
+        const inqRes = await fetch("/api/contact");
+        const inqData = await inqRes.json();
+        if (inqData.success && Array.isArray(inqData.inquiries)) {
+          setInquiries(
+            inqData.inquiries.map((i: Record<string, unknown>) => ({
+              id: String(i._id || i.id),
+              name: String(i.fullName || "Contact"),
+              email: String(i.email || ""),
+              phone: String(i.phone || "—"),
+              category: String(i.category || "general"),
+              subject: String(i.subject || ""),
+              message: String(i.message || ""),
+              date: i.createdAt ? new Date(String(i.createdAt)).toLocaleString() : "—",
+              status: String(i.status || "New"),
+              lastReply: String(i.adminNotes || ""),
+            }))
+          );
+        } else {
+          setInquiries([]);
+        }
+      } catch {
+        setInquiries([]);
+      }
+    };
+
+    loadAdminData();
+  }, [adminRefresh]);
+
+  const paidTransactions = transactions.filter((t) => t.status === "PAID");
+  const grossRevenue = paidTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const doctorPayoutTotal = paidTransactions.reduce((sum, t) => sum + t.doctorPayout, 0);
+  const platformMargin = paidTransactions.reduce((sum, t) => sum + t.platformFee, 0);
+  const purposeRows = (() => {
+    const counts = new Map<string, number>();
+    for (const t of transactions) {
+      const key = t.purpose || "Other";
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const max = Math.max(1, ...counts.values());
+    return [...counts.entries()].map(([purpose, count]) => ({
+      purpose,
+      count,
+      pct: Math.round((count / max) * 100),
+    }));
+  })();
+  const recentEvents = [
+    ...transactions.slice(0, 5).map((t) => ({
+      time: t.date,
+      event: t.status === "PAID" ? "Certificate paid" : t.status === "EXPIRED" ? "Payment expired" : "Payment waiting",
+      detail: `${t.applicantName} · ${t.certId}`,
+    })),
+    ...pendingApplicants.slice(0, 3).map((p) => ({
+      time: p.applied,
+      event: "Applicant pending review",
+      detail: `${p.name} · ${p.email}`,
+    })),
+    ...pendingDoctors.slice(0, 3).map((d) => ({
+      time: d.applied || "—",
+      event: "Doctor pending verification",
+      detail: `${d.name}${d.license ? ` · ${d.license}` : ""}`,
+    })),
+  ].slice(0, 8);
+
+  const toggleApplicantStatus = async (id: string, name: string, currentStatus: string, email?: string) => {
+    const action = isActiveAccount(currentStatus) ? "suspend" : "activate";
+    try {
+      const res = await fetch("/api/admin/applicants", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, email, action }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Status not updated", data.error || "Please try again.");
+        return;
+      }
+      const nextStatus = action === "suspend" ? "Suspended" : "Active";
+      setApplicants((prev) => prev.map((p) => (p.id === id || p.email === email ? { ...p, status: nextStatus } : p)));
+      success(action === "suspend" ? "Account paused" : "Account reactivated", `${name}'s account is now ${action === "suspend" ? "paused" : "active"}.`);
+      setAdminRefresh((n) => n + 1);
+    } catch {
+      error("Status not updated", "Could not reach the server.");
+    }
   };
+
+  if (sessionLoading || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Loading administrator console…
+      </div>
+    );
+  }
 
   return (
     <DashboardShell
@@ -573,10 +687,10 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Certificates</div>
               <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                10,480
+                {transactions.length.toLocaleString()}
               </div>
               <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <span className="text-emerald-600 font-semibold">52.4M FRW</span>
+                <span className="text-emerald-600 font-semibold">{grossRevenue.toLocaleString()} FRW</span>
                 &nbsp;total revenue
               </div>
             </div>
@@ -597,7 +711,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Doctors</div>
               <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                42
+                {verifiedDoctors.filter((d) => d.status === "Active").length}
                 <span className="text-sm font-semibold text-slate-400 ml-1">physicians</span>
               </div>
               <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
@@ -621,7 +735,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Partner Clinics</div>
               <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                18
+                {clinics.length}
                 <span className="text-sm font-semibold text-slate-400 ml-1">clinics</span>
               </div>
               <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
@@ -650,7 +764,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
                 <ShieldAlert className="w-3 h-3 text-emerald-400" />
-                HIPAA AES-256 Active
+                Privacy & records protected
               </div>
             </div>
           </div>
@@ -667,7 +781,7 @@ export default function AdminDashboardPage() {
             { id: "inquiries", label: `Contact Inquiries (${inquiries.filter(i => i.status === 'New').length} New)` },
             { id: "clinics",   label: `Partner Clinics (${clinics.length})` },
             { id: "revenue",   label: "Revenue & Payouts" },
-            { id: "security",  label: "HIPAA & Audit Logs" },
+            { id: "security",  label: "Privacy & activity log" },
             { id: "settings",  label: "Governance Settings" },
           ].map((tab) => (
             <button
@@ -711,14 +825,13 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="bg-[#082247] text-white rounded-3xl p-6 sm:p-8 border border-[#12B8B0]/30 shadow-lg space-y-4">
-                <h3 className="text-lg font-bold text-white">Cryptographic Certificate Integrity</h3>
+                <h3 className="text-lg font-bold text-white">Certificate security</h3>
                 <p className="text-xs text-slate-300">
-                  Every issued certificate is signed with sha256 hashes and stored with immutable audit trails.
+                  Issued certificates can be checked with a QR code so employers know they are genuine.
                 </p>
-                <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-mono text-[#12B8B0]">
-                  SERVER_STATUS: ONLINE<br />
-                  ENCRYPTION: AES-256-GCM<br />
-                  LAST_AUDIT: {auditDate}
+                <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-[#12B8B0]">
+                  System status: Online<br />
+                  Last check: {auditDate}
                 </div>
               </div>
             </div>
@@ -739,8 +852,13 @@ export default function AdminDashboardPage() {
               </div>
               <button
                 onClick={() => {
-                  info("Export started", "Compiling monthly operations report...");
-                  setTimeout(() => success("Report ready", "fitmed_ops_report_aug_2026.csv downloaded."), 900);
+                  info("Preparing report", "Building a spreadsheet of current activity…");
+                  downloadCsv(
+                    "fitmed_activity_report.csv",
+                    ["Event", "Detail", "Time"],
+                    recentEvents.map((row) => [row.event, row.detail, row.time])
+                  );
+                  success("Report ready", "Your activity spreadsheet has been downloaded.");
                 }}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 self-start"
               >
@@ -751,7 +869,7 @@ export default function AdminDashboardPage() {
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Certificates this month", value: "842", hint: "+11% vs July", color: "text-emerald-600" },
+                { label: "Certificates this month", value: String(transactions.length), hint: "From live certificate records", color: "text-emerald-600" },
                 { label: "Pending clinical reviews", value: String(pendingApplicants.length + pendingDoctors.length), hint: "Awaiting admin or doctor action", color: "text-amber-600" },
                 { label: "Active applicants", value: String(applicants.filter((a) => a.status === "Active").length), hint: `${applicants.length} total accounts`, color: "text-[#0B2D5C]" },
                 { label: "Paid transactions", value: String(transactions.filter((t) => t.status === "PAID").length), hint: `${transactions.filter((t) => t.status === "WAITING").length} waiting payment`, color: "text-[#12B8B0]" },
@@ -767,14 +885,7 @@ export default function AdminDashboardPage() {
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
                 <h3 className="text-sm font-extrabold text-[#0B2D5C]">Certificate volume by purpose</h3>
-                {[
-                  { purpose: "Workplace & Office Fitness", count: 312, pct: 78 },
-                  { purpose: "School & University Admission", count: 186, pct: 46 },
-                  { purpose: "Commercial Driver & Transport", count: 141, pct: 35 },
-                  { purpose: "Food Handler & Hygiene", count: 98, pct: 24 },
-                  { purpose: "Construction & Heights", count: 64, pct: 16 },
-                  { purpose: "Sports & Athletic Fitness", count: 41, pct: 10 },
-                ].map((row) => (
+                {(purposeRows.length > 0 ? purposeRows : [{ purpose: "No certificates yet", count: 0, pct: 0 }]).map((row) => (
                   <div key={row.purpose} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">{row.purpose}</span>
@@ -790,13 +901,7 @@ export default function AdminDashboardPage() {
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
                 <h3 className="text-sm font-extrabold text-[#0B2D5C]">Recent system events</h3>
                 <div className="divide-y divide-slate-100 text-xs">
-                  {[
-                    { time: "Today, 11:45", event: "Irembo payment WAITING", detail: "Patrick Mugabo · FM-2026-55310" },
-                    { time: "Today, 10:30", event: "Certificate paid & unlocked", detail: "Telesphore Uwabera · FM-2024-88421" },
-                    { time: "Today, 09:20", event: "New doctor application", detail: "Dr. Divine Umutesi · RW-RMDC-2024-9912" },
-                    { time: "Yesterday", event: "Applicant ID pending review", detail: "Diane Mukeshimana · PAT-PENDING-102" },
-                    { time: "Aug 18", event: "Clinic referral partnership note", detail: "Kigali Independent Polyclinic" },
-                  ].map((row) => (
+                  {(recentEvents.length > 0 ? recentEvents : [{ time: "—", event: "No recent activity", detail: "Events appear here as certificates, applicants, and staff are created." }]).map((row) => (
                     <div key={row.time + row.event} className="py-3 flex items-start justify-between gap-3">
                       <div>
                         <div className="font-bold text-[#0B2D5C]">{row.event}</div>
@@ -867,27 +972,26 @@ export default function AdminDashboardPage() {
                           <span>National ID: <strong className="font-mono text-[#0B2D5C]">{applicant.nationalId}</strong></span>
                         </div>
                         <div className="text-[11px] text-amber-900 font-semibold">
-                          Submitted: {applicant.applied} · Document: <em>National ID / Passport WebP</em>
+                          Submitted: {applicant.applied} · ID document attached
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <a
-                          href={applicant.idDocUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => setSelectedApplicant(applicant)}
                           className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5"
                         >
                           <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
-                          <span>Inspect National ID</span>
-                        </a>
+                          <span>View details</span>
+                        </button>
 
                         <button
                           onClick={() => approveApplicant(applicant.id, applicant.name, applicant.email)}
                           className="px-4 py-2 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Approve &amp; Send Temp Password</span>
+                          <span>Approve &amp; send sign-in details</span>
                         </button>
                       </div>
                     </div>
@@ -903,6 +1007,9 @@ export default function AdminDashboardPage() {
                 <span className="text-sm font-bold text-[#0B2D5C]">Registered Applicants ({filteredApplicants.length})</span>
               </div>
               <div className="divide-y divide-slate-100 text-xs">
+                {filteredApplicants.length === 0 && (
+                  <div className="px-5 py-8 text-center text-slate-400">No applicant accounts yet.</div>
+                )}
                 {filteredApplicants.map((p) => (
                   <div key={p.id} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-start gap-3">
@@ -921,43 +1028,63 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${
-                        p.status === "Active"
+                        isActiveAccount(p.status)
                           ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                           : "bg-rose-100 text-rose-800 border border-rose-300"
                       }`}>
                         {p.status}
                       </span>
                       <button
-                        onClick={() => info("Viewing Profile", `Opening ${p.name}'s full applicant record.`)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#0B2D5C] transition-colors"
-                        title="View Profile"
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelectedApplicant(p);
+                        }}
+                        className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-[11px] font-bold flex items-center gap-1.5"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
+                        View
                       </button>
                       <button
-                        onClick={() => success("Reset Link Sent", `Password reset email dispatched to ${p.email}.`)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#12B8B0] transition-colors"
-                        title="Reset Password"
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void resetApplicantPassword(p.id, p.name, p.email);
+                        }}
+                        className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-[11px] font-bold flex items-center gap-1.5"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" />
+                        <RotateCcw className="w-3.5 h-3.5 text-[#12B8B0]" />
+                        Reset
                       </button>
                       <button
-                        onClick={() => toggleApplicantStatus(p.id)}
-                        className={`p-2 rounded-lg border transition-colors ${
-                          p.status === "Active"
-                            ? "border-rose-200 hover:bg-rose-50 text-rose-500"
-                            : "border-emerald-200 hover:bg-emerald-50 text-emerald-600"
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void toggleApplicantStatus(p.id, p.name, p.status, p.email);
+                        }}
+                        className={`px-3 py-2 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 ${
+                          isActiveAccount(p.status)
+                            ? "border-rose-200 hover:bg-rose-50 text-rose-600"
+                            : "border-emerald-200 hover:bg-emerald-50 text-emerald-700"
                         }`}
-                        title={p.status === "Active" ? "Suspend Account" : "Reactivate Account"}
                       >
-                        {p.status === "Active" ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {isActiveAccount(p.status) ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {isActiveAccount(p.status) ? "Pause" : "Restore"}
                       </button>
                       <button
-                        onClick={() => deleteApplicant(p.id, p.name)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
-                        title="Delete Applicant Account"
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void deleteApplicant(p.id, p.name, p.email);
+                        }}
+                        className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-rose-50 text-rose-600 text-[11px] font-bold flex items-center gap-1.5"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -974,7 +1101,7 @@ export default function AdminDashboardPage() {
                     <span className="text-xs font-extrabold uppercase tracking-wider text-[#12B8B0]">Admin Action: Staff Onboarding</span>
                   </div>
                   <h3 className="text-base font-extrabold text-white">Create Admin or Doctor Account</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">New accounts are saved in MongoDB and can sign in immediately.</p>
+                  <p className="text-xs text-slate-300 mt-0.5">New staff can sign in as soon as you create the account.</p>
                 </div>
                 <button
                   type="button"
@@ -1045,8 +1172,11 @@ export default function AdminDashboardPage() {
                           { name: addDoctorForm.name, email: addDoctorForm.email.toLowerCase(), role: "admin", status: "active" },
                         ]);
                       }
-                      const extra = data.temporaryPassword ? ` Temporary password: ${data.temporaryPassword}` : "";
-                      success("Account created", `${addDoctorForm.name} can now sign in.${extra}`);
+                      const extra = data.oneTimePassword
+                        ? " We emailed them a first-time sign-in password."
+                        : " They can sign in with the password you set.";
+                      success("Account created", `${addDoctorForm.name} can now sign in as ${addDoctorForm.role === "admin" ? "an administrator" : "a doctor"}.${extra}`);
+                      setAdminRefresh((n) => n + 1);
                       setShowAddDoctor(false);
                       setAddDoctorForm({
                         role: "doctor",
@@ -1079,11 +1209,11 @@ export default function AdminDashboardPage() {
                         )}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-white">Doctor Profile Picture</div>
-                        <div className="text-[10px] text-slate-300">Auto-converted to WebP before Cloudinary storage</div>
+                        <div className="text-xs font-bold text-white">Profile photo</div>
+                        <div className="text-[10px] text-slate-300">We shrink the photo automatically so it loads quickly.</div>
                         {doctorWebpResult && (
                           <div className="text-[10px] text-[#12B8B0] font-bold mt-0.5">
-                            Converted: {formatBytes(doctorWebpResult.compressedSize)} (-{doctorWebpResult.reductionPercentage}%)
+                            Photo ready · smaller by {doctorWebpResult.reductionPercentage}%
                           </div>
                         )}
                       </div>
@@ -1091,7 +1221,7 @@ export default function AdminDashboardPage() {
 
                     <label className="cursor-pointer px-3.5 py-2 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-extrabold text-xs flex items-center gap-1.5 transition-colors">
                       <Camera className="w-3.5 h-3.5" />
-                      <span>Upload & Convert WebP</span>
+                      <span>Upload photo</span>
                       <input type="file" accept="image/*" onChange={handleDoctorImageSelect} className="hidden" />
                     </label>
                   </div>
@@ -1237,15 +1367,15 @@ export default function AdminDashboardPage() {
                       </span>
 
                       <button
-                        onClick={() => success("Reset Email Sent", `Password reset instructions were sent to ${d.name}'s email address.`)}
+                        onClick={() => resetStaffPassword(d.id, d.name)}
                         className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#12B8B0] transition-colors"
-                        title="Reset Doctor Password"
+                        title="Email a new sign-in password"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                       </button>
 
                       <button
-                        onClick={() => toggleDoctorStatus(d.id)}
+                        onClick={() => toggleDoctorStatus(d.id, d.name, d.status)}
                         className={`p-2 rounded-lg border transition-colors ${
                           d.status === "Active"
                             ? "border-rose-200 hover:bg-rose-50 text-rose-500"
@@ -1484,13 +1614,17 @@ export default function AdminDashboardPage() {
 
               <button
                 onClick={() => {
-                  info("Export Dispatched", "Generating financial CSV ledger export...");
-                  setTimeout(() => success("Ledger Exported", "fitmed_transactions_2026.csv downloaded."), 1000);
+                  downloadCsv(
+                    "fitmed_payments.csv",
+                    ["Reference", "Certificate", "Applicant", "Email", "Purpose", "Amount", "Status", "Date"],
+                    filteredTransactions.map((t) => [t.iremboRef, t.certId, t.applicantName, t.applicantEmail, t.purpose, t.amount, t.status, t.date])
+                  );
+                  success("Spreadsheet downloaded", "Payment records were saved to your computer.");
                 }}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 shadow-xs transition-colors self-start sm:self-auto"
               >
                 <TrendingUp className="w-3.5 h-3.5 text-[#12B8B0]" />
-                <span>Export CSV Ledger</span>
+                <span>Export spreadsheet</span>
               </button>
             </div>
 
@@ -1651,8 +1785,22 @@ export default function AdminDashboardPage() {
                             <div className="flex items-center justify-end gap-2">
                               {txn.status === "WAITING" && (
                                 <button
-                                  onClick={() => {
-                                    success("Payment Link Sent", `Reminder email with IremboPay link dispatched to ${txn.applicantEmail}.`);
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch("/api/certificates", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ certificateId: txn.certId, action: "payment-reminder" }),
+                                      });
+                                      const data = await res.json();
+                                      if (!data.success) {
+                                        error("Reminder not sent", data.error || "Please try again.");
+                                        return;
+                                      }
+                                      success("Payment reminder sent", `We emailed ${txn.applicantName} the payment link.`);
+                                    } catch {
+                                      error("Reminder not sent", "Could not reach the server.");
+                                    }
                                   }}
                                   className="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] font-bold transition-colors"
                                 >
@@ -1687,15 +1835,15 @@ export default function AdminDashboardPage() {
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-400 uppercase font-bold">Total Gross Revenue</div>
-                <div className="text-2xl font-extrabold text-[#0B2D5C] mt-1">52,400,000 FRW</div>
+                <div className="text-2xl font-extrabold text-[#0B2D5C] mt-1">{grossRevenue.toLocaleString()} FRW</div>
               </div>
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-400 uppercase font-bold">Doctor Payouts (80%)</div>
-                <div className="text-2xl font-extrabold text-emerald-600 mt-1">41,920,000 FRW</div>
+                <div className="text-2xl font-extrabold text-emerald-600 mt-1">{doctorPayoutTotal.toLocaleString()} FRW</div>
               </div>
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-400 uppercase font-bold">Platform Margin (20%)</div>
-                <div className="text-2xl font-extrabold text-[#12B8B0] mt-1">10,480,000 FRW</div>
+                <div className="text-2xl font-extrabold text-[#12B8B0] mt-1">{platformMargin.toLocaleString()} FRW</div>
               </div>
             </div>
           </div>
@@ -1704,11 +1852,17 @@ export default function AdminDashboardPage() {
         {/* ── TAB 5: SECURITY & HIPAA ── */}
         {activeNav === "security" && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <h3 className="text-lg font-bold text-[#0B2D5C]">HIPAA & Rwandan Data Privacy Audit Trail</h3>
+            <h3 className="text-lg font-bold text-[#0B2D5C]">Privacy & activity log</h3>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs font-mono text-slate-700">
-              <div>[2026-08-20 00:15:02] CERT_ISSUED: FM-2024-88421 by Dr. Telesphore Uwabera (SHA256: 8f92a1...bc)</div>
-              <div>[2026-08-20 00:14:18] IDENTITY_VERIFIED: Applicant Telesphore (National ID: 1199580048123049)</div>
-              <div>[2026-08-20 00:10:04] SCREENING_SUBMITTED: MC-FIT-4HCU-20260818-1309 (Risk: Low)</div>
+              {transactions.length === 0 ? (
+                <div>No audit events yet. Certificate activity will appear here.</div>
+              ) : (
+                transactions.slice(0, 8).map((t) => (
+                  <div key={t.certId + t.date}>
+                    [{t.date}] {t.status}: {t.certId} · {t.applicantName} · {t.doctorName}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -1746,7 +1900,7 @@ export default function AdminDashboardPage() {
                     Upload real profile photo
                     <input type="file" accept="image/*" onChange={handleAdminAvatarChange} className="hidden" />
                   </label>
-                  {adminAvatarWebp && <span className="text-[11px] text-teal-700 font-bold">WebP ready: {formatBytes(adminAvatarWebp.compressedSize)}</span>}
+                  {adminAvatarWebp && <span className="text-[11px] text-teal-700 font-bold">Photo ready · smaller by {adminAvatarWebp.reductionPercentage}%</span>}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4 text-xs">
                   <label className="font-bold text-slate-500">Display name<input value={adminProfile.name} onChange={(event) => setAdminProfile({ ...adminProfile, name: event.target.value })} className="mt-1 w-full p-3 rounded-xl border border-slate-200 font-semibold" required /></label>
@@ -1774,7 +1928,7 @@ export default function AdminDashboardPage() {
                 <div className="space-y-3 text-xs">
                   <label className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50">Standard Assessment Rate (FRW)<input type="text" value={governanceSettings.assessmentRate} onChange={(event) => setGovernanceSettings({ ...governanceSettings, assessmentRate: event.target.value })} className="p-2 rounded-lg border border-slate-200 font-bold text-right" required /></label>
                   <label className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50">Require Live Video Consultation for High-Risk Categories<input type="checkbox" checked={governanceSettings.requireLiveConsultation} onChange={(event) => setGovernanceSettings({ ...governanceSettings, requireLiveConsultation: event.target.checked })} className="w-4 h-4 accent-[#12B8B0]" /></label>
-                  <label className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50">Automatic QR Verification Cryptographic Validation<input type="checkbox" checked={governanceSettings.qrValidation} onChange={(event) => setGovernanceSettings({ ...governanceSettings, qrValidation: event.target.checked })} className="w-4 h-4 accent-[#12B8B0]" /></label>
+                  <label className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50">Confirm certificates with a QR code<input type="checkbox" checked={governanceSettings.qrValidation} onChange={(event) => setGovernanceSettings({ ...governanceSettings, qrValidation: event.target.checked })} className="w-4 h-4 accent-[#12B8B0]" /></label>
                 </div>
                 <div className="flex justify-end"><button type="button" onClick={saveGovernanceSettings} className="px-5 py-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-black text-xs">Save governance settings</button></div>
               </div>
@@ -1847,13 +2001,27 @@ export default function AdminDashboardPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  success("Receipt Downloaded", `Official PDF receipt for ${selectedTxn.id} generated.`);
+                  downloadCsv(
+                    `fitmed_receipt_${selectedTxn.certId}.csv`,
+                    ["Field", "Value"],
+                    [
+                      ["Receipt", selectedTxn.id],
+                      ["Certificate", selectedTxn.certId],
+                      ["Applicant", selectedTxn.applicantName],
+                      ["Email", selectedTxn.applicantEmail],
+                      ["Purpose", selectedTxn.purpose],
+                      ["Amount (FRW)", selectedTxn.amount],
+                      ["Status", selectedTxn.status],
+                      ["Date", selectedTxn.date],
+                    ]
+                  );
+                  success("Receipt downloaded", `Payment details for ${selectedTxn.certId} were saved.`);
                   setShowTxnModal(false);
                 }}
                 className="flex-1 py-3 rounded-xl bg-[#0B2D5C] hover:bg-[#082247] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
               >
                 <Download className="w-4 h-4 text-[#12B8B0]" />
-                <span>Download Irembo Receipt PDF</span>
+                <span>Download receipt</span>
               </button>
               <button
                 onClick={() => setShowTxnModal(false)}
@@ -1864,6 +2032,81 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+      )}
+      {portalReady && selectedApplicant && createPortal(
+        <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedApplicant(null)}>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full my-auto shadow-2xl relative space-y-5" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setSelectedApplicant(null)}
+              className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#12B8B0] bg-slate-100 flex-shrink-0">
+                {selectedApplicant.avatarUrl ? (
+                  <img src={selectedApplicant.avatarUrl} alt={selectedApplicant.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[#0B2D5C] font-black">{selectedApplicant.name.charAt(0)}</div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xl font-extrabold text-[#0B2D5C]">{selectedApplicant.name}</h3>
+                <p className="text-xs text-slate-500 mt-1">Applicant record</p>
+                <span className={`mt-2 inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                  selectedApplicant.status === "Active"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}>
+                  {selectedApplicant.status}
+                </span>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 text-xs">
+              {[
+                ["Email", selectedApplicant.email],
+                ["Phone", selectedApplicant.phone],
+                ["National ID", selectedApplicant.nationalId],
+                ["Date of birth", selectedApplicant.dateOfBirth || "—"],
+                ["Gender", selectedApplicant.gender || "—"],
+                ["Joined", selectedApplicant.joined || selectedApplicant.applied || "—"],
+                ["Certificates", String(selectedApplicant.certs ?? 0)],
+                ["Address", selectedApplicant.address || "—"],
+              ].map(([label, value]) => (
+                <div key={label} className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{label}</div>
+                  <div className="font-bold text-[#0B2D5C] mt-1 break-words">{value}</div>
+                </div>
+              ))}
+            </div>
+            {selectedApplicant.idDocUrl ? (
+              <div className="space-y-2">
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">National ID / passport photo</div>
+                <img src={selectedApplicant.idDocUrl} alt="National ID" className="w-full max-h-72 object-contain rounded-2xl border border-slate-200 bg-slate-50" />
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">No ID document was uploaded.</p>
+            )}
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => resetApplicantPassword(selectedApplicant.id, selectedApplicant.name, selectedApplicant.email)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Email new password
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedApplicant(null)}
+                className="px-4 py-2.5 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </DashboardShell>
   );

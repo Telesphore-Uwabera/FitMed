@@ -1,6 +1,20 @@
 import User from "@/models/User";
 import Doctor from "@/models/Doctor";
+import Certificate from "@/models/Certificate";
+import Appointment from "@/models/Appointment";
+import Message from "@/models/Message";
+import ContactMessage from "@/models/ContactMessage";
+import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword } from "@/lib/password";
+
+export const FITMED_COLLECTIONS = [
+  "users",
+  "doctors",
+  "certificates",
+  "appointments",
+  "messages",
+  "contactmessages",
+] as const;
 
 const SEED_PASSWORD = "91073@Tecy";
 
@@ -33,7 +47,32 @@ declare global {
   var fitmedAccountsSeeded: boolean | undefined;
 }
 
+export async function ensureFitMedCollections(): Promise<string[]> {
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+  if (!db) throw new Error("MongoDB database handle is not ready.");
+
+  // Register models so indexes/collections match the app.
+  void User;
+  void Doctor;
+  void Certificate;
+  void Appointment;
+  void Message;
+  void ContactMessage;
+
+  const existing = new Set((await db.listCollections().toArray()).map((c) => c.name));
+  const created: string[] = [];
+  for (const name of FITMED_COLLECTIONS) {
+    if (!existing.has(name)) {
+      await db.createCollection(name);
+      created.push(name);
+    }
+  }
+  return created;
+}
+
 export async function seedFitMedAccounts(): Promise<void> {
+  await ensureFitMedCollections();
   if (global.fitmedAccountsSeeded) return;
 
   const passwordHash = hashPassword(SEED_PASSWORD);

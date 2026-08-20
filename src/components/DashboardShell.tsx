@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
+  ClipboardList,
   LayoutDashboard,
   FileCheck2,
   PlusCircle,
@@ -107,7 +108,8 @@ const roleConfigs: Record<
     badgeBorder: "border-sky-500/30",
     badgeText: "text-sky-400",
     navItems: [
-      { id: "queue",        label: "Applicant Queue",         icon: LayoutDashboard, badge: "Pending" },
+      { id: "queue",         label: "Applicant Queue",         icon: LayoutDashboard, badge: "Pending" },
+      { id: "applications",  label: "All Applications",       icon: ClipboardList,   badge: "Records" },
       { id: "telehealth",   label: "Video Consultation",      icon: Video,           badge: "Live" },
       { id: "appointments", label: "Meetings",  icon: CalendarCheck,   badge: "Upcoming" },
       { id: "reports",      label: "Assessment Reports",      icon: FileTextIcon,        badge: "Stats" },
@@ -131,7 +133,7 @@ const roleConfigs: Record<
       { id: "inquiries",  label: "Contact Inquiries",       icon: Mail,        badge: "3 New" },
       { id: "clinics",    label: "Partner Clinic Network",  icon: Building2,   badge: "18 Active" },
       { id: "revenue",    label: "Financials & Revenue",    icon: DollarSign,  badge: "52.4M" },
-      { id: "security",   label: "HIPAA & Audit Logs",      icon: Lock },
+      { id: "security",   label: "Privacy & activity log",      icon: Lock },
       { id: "settings",   label: "Platform Governance",     icon: Settings },
     ],
   },
@@ -170,79 +172,7 @@ export default function DashboardShell({
   const profileImageSrc = userProfile.avatarUrl;
   const profileImageClass = "w-full h-full object-cover";
 
-  // Role-specific email notifications
-  const emailNotifications = {
-    user: [
-      {
-        id: "EM-U-01",
-        subject: "Medical Fitness Certificate Issued: FM-2024-88421",
-        from: "Dr. Telesphore Uwabera (FitMed Clinical)",
-        date: "Today, 10:18 AM",
-        snippet: "Your workplace medical fitness assessment is approved. Verifiable QR PDF is ready.",
-        unread: true,
-      },
-      {
-        id: "EM-U-02",
-        subject: "Payment Confirmed: 5,000 FRW",
-        from: "FitMed Billing (MTN MoMo)",
-        date: "Today, 10:14 AM",
-        snippet: "Official receipt for Medical Assessment Reference MC-FIT-4HCU.",
-        unread: false,
-      },
-      {
-        id: "EM-U-03",
-        subject: "Live Telehealth Room Link",
-        from: "FitMed Telehealth System",
-        date: "Today, 10:15 AM",
-        snippet: "Join Dr. Telesphore Uwabera in the encrypted consultation room.",
-        unread: false,
-      },
-    ],
-    doctor: [
-      {
-        id: "EM-D-01",
-        subject: "New Candidate Screening in Queue: Telesphore",
-        from: "FitMed Clinical Intake",
-        date: "Today, 10:14 AM",
-        snippet: "Low-Risk Workplace Fitness intake submitted. Vitals: BP 118/78, SpO2 98%.",
-        unread: true,
-      },
-      {
-        id: "EM-D-02",
-        subject: "Clinical Triage Alert: Eric Ndayishimiye",
-        from: "FitMed AI Triage Engine",
-        date: "Today, 01:15 PM",
-        snippet: "Elevated risk flagged: Vertigo at heights & Stage 1 BP (145/92).",
-        unread: true,
-      },
-      {
-        id: "EM-D-03",
-        subject: "Weekly Telehealth Slots Synced",
-        from: "FitMed Scheduling",
-        date: "Today, 08:00 AM",
-        snippet: "Your availability for Mon-Fri (08:00 AM - 05:00 PM) is published.",
-        unread: false,
-      },
-    ],
-    admin: [
-      {
-        id: "EM-A-01",
-        subject: "Doctor License Verification Pending: Dr. Divine Umutesi",
-        from: "Rwanda Medical Council Integration",
-        date: "Yesterday, 04:30 PM",
-        snippet: "New physician registration submitted with license #RW-RMDC-2024-9912.",
-        unread: true,
-      },
-      {
-        id: "EM-A-02",
-        subject: "Daily Financial Payout Summary: 52.4M FRW",
-        from: "FitMed Automated Settlements",
-        date: "Today, 06:00 AM",
-        snippet: "10,480 certificates verified. Payout allocations generated.",
-        unread: false,
-      },
-    ],
-  }[role];
+  const emailNotifications: { id: string; subject: string; from: string; date: string; snippet: string; unread: boolean }[] = [];
 
   if (!shellReady) {
     return <div className={`dashboard-app min-h-screen bg-[#f8fafc] ${theme === "dark" ? "dark" : ""}`} />;
@@ -481,7 +411,9 @@ export default function DashboardShell({
                 aria-label="View notifications & emails"
               >
                 <Mail className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#12B8B0]" />
+                {emailNotifications.some((em) => em.unread) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#12B8B0]" />
+                )}
               </button>
 
               {/* Email & Notifications Dropdown Drawer */}
@@ -500,6 +432,9 @@ export default function DashboardShell({
                   </div>
 
                   <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                    {emailNotifications.length === 0 && (
+                      <p className="text-xs text-slate-500 px-1 py-4">No notifications yet.</p>
+                    )}
                     {emailNotifications.map((em) => (
                       <div
                         key={em.id}
