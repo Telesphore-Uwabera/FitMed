@@ -245,11 +245,11 @@ export default function DashboardShell({
   }[role];
 
   if (!shellReady) {
-    return <div className="dashboard-app min-h-screen bg-[#f8fafc] dark:bg-[#071422]" />;
+    return <div className={`dashboard-app min-h-screen bg-[#f8fafc] ${theme === "dark" ? "dark" : ""}`} />;
   }
 
   return (
-    <div className="dashboard-app min-h-screen bg-[#f8fafc] dark:bg-[#071422] flex flex-col lg:flex-row text-slate-800 dark:text-slate-100 antialiased">
+    <div className={`dashboard-app min-h-screen bg-[#f8fafc] dark:bg-[#071422] flex flex-col lg:flex-row text-slate-800 dark:text-slate-100 antialiased ${theme === "dark" ? "dark" : ""}`}>
       {/* ── MOBILE BACKDROP ── */}
       {mobileSidebarOpen && (
         <div

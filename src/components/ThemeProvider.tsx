@@ -13,9 +13,12 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.classList.remove("dark");
   document.documentElement.style.colorScheme = "light";
   localStorage.setItem("fitmed_theme", theme);
+  document.querySelectorAll(".dashboard-app").forEach((el) => {
+    el.classList.toggle("dark", theme === "dark");
+  });
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

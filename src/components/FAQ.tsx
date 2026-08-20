@@ -2,6 +2,7 @@
 
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
 const faqs = [
@@ -116,12 +117,13 @@ export default function FAQ() {
           </h2>
           <p className="text-lg max-w-xl mx-auto leading-relaxed" style={{ color: "#5b6f86" }}>
             Everything you need to know about FitMed.{" "}
-            <a
-              href="mailto:hello@fitmed.rw"
-              className="text-sky-600 hover:text-sky-700 font-semibold underline underline-offset-4"
+            <Link
+              href="/contact"
+              className="font-semibold underline underline-offset-4"
+              style={{ color: "#12B8B0" }}
             >
               Contact us
-            </a>{" "}
+            </Link>{" "}
             if you can&apos;t find the answer.
           </p>
         </motion.div>
