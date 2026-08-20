@@ -135,7 +135,15 @@ export default function DoctorReportsPage() {
   };
 
   return (
-    <DashboardShell>
+    <DashboardShell
+      role="doctor"
+      activeNav="reports"
+      userProfile={{
+        name: "Dr. Telesphore Uwabera",
+        email: "uwaberatelesphore@gmail.com",
+        badgeLabel: "Licensed Physician",
+      }}
+    >
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

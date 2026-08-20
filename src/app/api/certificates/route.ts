@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await connectToDatabase();
-      savedCertificate = await Certificate.create(newCertificate);
+      savedCertificate = await Certificate.create(newCertificate as any);
     } catch (dbErr) {
       console.warn("MongoDB certificate save fallback:", dbErr);
       savedCertificate = saveCertificate(newCertificate);
