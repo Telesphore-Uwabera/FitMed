@@ -132,6 +132,46 @@ export function verifyIremboSignature(rawBody: string, signatureHeader: string) 
   }
 }
 
+export function rwandaMomoNumber(value: string) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.startsWith("250") && digits.length === 12) return `0${digits.slice(3)}`;
+  if (digits.length === 9 && digits.startsWith("7")) return `0${digits}`;
+  return digits;
+}
+
+export function momoUssdCode(provider: "MTN" | "AIRTEL", invoiceNumber: string) {
+  const invoice = String(invoiceNumber || "").trim();
+  if (provider === "AIRTEL") return `*182*4*5*1*${invoice}#`;
+  return `*182*3*7*${invoice}#`;
+}
+
+export async function initiateIremboMomo(opts: {
+  invoiceNumber: string;
+  paymentProvider: "MTN" | "AIRTEL";
+  accountIdentifier: string;
+  transactionReference?: string;
+}) {
+  const accountIdentifier = rwandaMomoNumber(opts.accountIdentifier);
+  if (!/^07\d{8}$/.test(accountIdentifier)) {
+    return { success: false, error: "Enter a valid Rwanda number, for example 078xxxxxxx." };
+  }
+
+  const { ok, data } = await iremboFetch("/payments/transactions/initiate", {
+    method: "POST",
+    body: JSON.stringify({
+      accountIdentifier,
+      paymentProvider: opts.paymentProvider,
+      invoiceNumber: opts.invoiceNumber,
+      transactionReference: opts.transactionReference || undefined,
+    }),
+  });
+  if (!ok) {
+    const detail = data?.errors?.[0]?.detail || data?.message || "Could not send the Mobile Money PIN prompt.";
+    return { success: false, error: String(detail) };
+  }
+  return { success: true, data: data?.data || data };
+}
+
 export function channelFromIremboMethod(method?: string) {
   const value = String(method || "").toUpperCase();
   if (value.includes("MTN") || value.includes("MOMO")) return "MTN Mobile Money";

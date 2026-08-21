@@ -8,7 +8,13 @@ const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "FitMed Rwanda";
 export const FITMED_APP_URL = (
   process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com"
 ).replace(/\/$/, "");
-export const FITMED_ADMIN_EMAIL = BREVO_SENDER_EMAIL;
+export const FITMED_ADMIN_EMAIL = (
+  process.env.FITMED_ADMIN_EMAIL ||
+  process.env.ADMIN_EMAIL ||
+  "info.teletech.rw@gmail.com"
+)
+  .trim()
+  .toLowerCase();
 export const FITMED_DOCTOR_EMAIL = "uwaberatelesphore@gmail.com";
 
 export interface SendEmailParams {
@@ -68,6 +74,17 @@ function button(href: string, label: string, invert = false): string {
   return `<p style="text-align:center;margin:24px 0 8px;"><a href="${href}" style="background:${bg};color:${color};padding:14px 26px;font-weight:800;text-decoration:none;border-radius:12px;display:inline-block;font-size:14px;">${label}</a></p>`;
 }
 
+function brevoRecipient(toEmail: string) {
+  const to = String(toEmail || "").trim();
+  const sender = BREVO_SENDER_EMAIL.trim().toLowerCase();
+  if (to.toLowerCase() !== sender) return to;
+  const at = to.indexOf("@");
+  if (at < 1) return to;
+  const local = to.slice(0, at).split("+")[0];
+  const domain = to.slice(at + 1);
+  return `${local}+fitmed-admin@${domain}`;
+}
+
 export async function sendBrevoEmail({
   toEmail,
   toName,
@@ -91,7 +108,8 @@ export async function sendBrevoEmail({
       },
       body: JSON.stringify({
         sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
-        to: [{ email: toEmail, name: toName }],
+        to: [{ email: brevoRecipient(toEmail), name: toName }],
+        replyTo: { email: BREVO_SENDER_EMAIL, name: BREVO_SENDER_NAME },
         subject,
         htmlContent,
         textContent: textContent || subject,
@@ -117,7 +135,7 @@ export const EmailTemplates = {
     brandedEmail(
       "Registration received — waiting for approval",
       `<p>Dear <strong>${name}</strong>,</p>
-       <p>Thank you for creating a FitMed applicant account. Your registration is now with our administration team for National ID verification.</p>
+       <p>Thank you for creating a FitMed applicant account. Your registration is now with our administration team for verification.</p>
        <p><strong>You cannot sign in or use the applicant dashboard until an administrator approves your account.</strong> Certificate applications, telehealth, and other features stay locked until then.</p>
        <p>This usually takes one business day. You will receive another email when your account is approved. After that, sign in with the email and password you used when you registered.</p>
        ${button(`${FITMED_APP_URL}/signin`, "Go to FitMed Sign In")}`
@@ -134,7 +152,7 @@ export const EmailTemplates = {
   adminNewApplicantNotification: (name: string, email: string, nationalId: string) =>
     brandedEmail(
       "New applicant to review",
-      `<p>A new applicant has submitted registration documents and is waiting for National ID verification.</p>
+      `<p>A new applicant has submitted registration documents and is waiting for verification.</p>
        <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
          <tr><td style="padding:6px 0;color:#64748b;">Name</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${name}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Email</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${email}</td></tr>
@@ -147,7 +165,7 @@ export const EmailTemplates = {
     brandedEmail(
       "Account approved",
       `<p>Dear <strong>${name}</strong>,</p>
-       <p>Your National ID has been verified and your FitMed account is now active. Sign in with the email and password you used when you registered.</p>
+       <p>Your registration has been verified and your FitMed account is now active. Sign in with the email and password you created when you registered.</p>
        ${button(loginLink, "Sign in to FitMed")}`
     ),
 
@@ -163,6 +181,16 @@ export const EmailTemplates = {
          <p style="margin:8px 0 0;font-family:Consolas,monospace;font-size:20px;font-weight:800;letter-spacing:1px;color:#0B2D5C;">${tempPassword}</p>
        </div>
        ${button(loginLink, "Sign in and set your password")}`
+    ),
+
+  applicantAccountRejected: (name: string, reason: string) =>
+    brandedEmail(
+      "Registration not approved",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>Thank you for registering with FitMed. After reviewing your application, we are unable to approve your applicant account at this time.</p>
+       <p style="margin:16px 0 8px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#64748b;">Reason for rejection</p>
+       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;color:#9f1239;font-size:14px;line-height:1.6;">${reason}</div>
+       <p>If you believe this is a mistake, reply to this email or contact FitMed with a clearer National ID document and we will review again.</p>`
     ),
 
   staffAccountCreated: (name: string, email: string, role: string, password: string) =>
@@ -227,7 +255,7 @@ export const EmailTemplates = {
       "Approved — payment required",
       `<p>Dear <strong>${candidateName}</strong>,</p>
        <p><strong>${doctorName}</strong> has approved your medical fitness certificate for <strong>${purpose}</strong>.</p>
-       <p>To unlock the digitally signed PDF and verifiable QR code, complete the government fee of <strong>5,000 FRW</strong> via IremboPay (MTN Mobile Money, Airtel Money, card, cash/agents, bank account, or bank transfer).</p>
+       <p>To unlock the digitally signed PDF and verifiable QR code, complete the government fee of <strong>5,000 FRW</strong> via IremboPay (MTN Mobile Money, Airtel Money, or debit/credit card).</p>
        <p><strong>Official Document No.:</strong> ${certId}</p>
        ${button(payLink, "Pay 5,000 FRW via IremboPay")}`
     ),

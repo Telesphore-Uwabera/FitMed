@@ -9,8 +9,8 @@ function blockedStatus(status?: string) {
   if (value === "pending" || value === "pending_approval") {
     return "Your account is waiting for administrator approval.";
   }
-  if (value === "suspended") {
-    return "This account has been paused.";
+  if (value === "rejected") {
+    return "This registration was not approved. Check your email for the reason.";
   }
   return null;
 }

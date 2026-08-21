@@ -341,9 +341,7 @@ export default function AdminDashboardPage() {
       }
       success(
         "Applicant approved",
-        data.usedOwnPassword
-          ? `${name} can now sign in with the password they created at registration.`
-          : `We emailed ${name} a first-time sign-in password. They will choose their own password after signing in.`
+        `${name} was emailed automatically. They can sign in with the password they created at registration.`
       );
       setAdminRefresh((n) => n + 1);
     } catch {
@@ -353,6 +351,51 @@ export default function AdminDashboardPage() {
 
   const [applicants, setApplicants] = useState<ApplicantRecord[]>([]);
   const [selectedApplicant, setSelectedApplicant] = useState<ApplicantRecord | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<ApplicantRecord | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectingApplicant, setRejectingApplicant] = useState(false);
+
+  const isPendingApplicant = (status?: string) => {
+    const value = String(status || "").toLowerCase();
+    return value === "pending" || value === "pending_approval";
+  };
+
+  const rejectApplicant = async () => {
+    if (!rejectTarget) return;
+    const reason = rejectReason.trim();
+    if (reason.length < 8) {
+      error("Reason required", "Write the rejection reason. It is included in the email to the applicant.");
+      return;
+    }
+    setRejectingApplicant(true);
+    try {
+      const res = await fetch("/api/admin/applicants", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: rejectTarget.id,
+          email: rejectTarget.email,
+          action: "reject",
+          reason,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Rejection failed", data.error || "Could not reject this applicant.");
+        return;
+      }
+      success("Applicant rejected", data.message || `We emailed ${rejectTarget.name} the reason.`);
+      setRejectTarget(null);
+      setRejectReason("");
+      setSelectedApplicant(null);
+      setAdminRefresh((n) => n + 1);
+    } catch {
+      error("Rejection failed", "Could not reach the server.");
+    } finally {
+      setRejectingApplicant(false);
+    }
+  };
 
   const toggleDoctorStatus = async (id: string, name: string, currentStatus: string) => {
     const action = currentStatus === "Active" ? "suspend" : "activate";
@@ -412,24 +455,6 @@ export default function AdminDashboardPage() {
       setAdminRefresh((n) => n + 1);
     } catch {
       error("Account not deleted", "Could not reach the server.");
-    }
-  };
-
-  const resetApplicantPassword = async (id: string, name: string, email?: string) => {
-    try {
-      const res = await fetch("/api/admin/applicants", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, email, action: "reset-password" }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        error("Password not reset", data.error || "Please try again.");
-        return;
-      }
-      success("Approval email sent", `${name} was emailed their FitMed sign-in details. The password was reset only after that email went out.`);
-    } catch {
-      error("Password not reset", "Could not reach the server.");
     }
   };
 
@@ -1349,6 +1374,17 @@ export default function AdminDashboardPage() {
                           <CheckCircle2 className="w-4 h-4" />
                           <span>Approve &amp; send sign-in details</span>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRejectTarget(applicant);
+                            setRejectReason("");
+                          }}
+                          className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-sm transition-all flex items-center gap-1.5 active:scale-95"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          <span>Reject</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1401,18 +1437,6 @@ export default function AdminDashboardPage() {
                       >
                         <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
                         View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          void resetApplicantPassword(p.id, p.name, p.email);
-                        }}
-                        className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-[11px] font-bold flex items-center gap-1.5"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5 text-[#12B8B0]" />
-                        Reset
                       </button>
                       <button
                         type="button"
@@ -1637,7 +1661,7 @@ export default function AdminDashboardPage() {
                         options={[
                           { value: "doctor", label: "Doctor" },
                           { value: "admin", label: "Administrator" },
-                          { value: "staff", label: "Team member (About Us)" },
+                          { value: "staff", label: "Team member" },
                         ]}
                       />
                     </div>
@@ -2806,19 +2830,72 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-slate-500">No ID document was uploaded.</p>
             )}
             <div className="flex flex-wrap gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => resetApplicantPassword(selectedApplicant.id, selectedApplicant.name, selectedApplicant.email)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                Email new password
-              </button>
+              {isPendingApplicant(selectedApplicant.status) && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      approveApplicant(selectedApplicant.id, selectedApplicant.name, selectedApplicant.email);
+                      setSelectedApplicant(null);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] text-xs font-black hover:bg-[#1dd9d0]"
+                  >
+                    Approve &amp; send sign-in details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectTarget(selectedApplicant);
+                      setRejectReason("");
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-black hover:bg-rose-700"
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedApplicant(null)}
                 className="px-4 py-2.5 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {portalReady && rejectTarget && createPortal(
+        <div className="fixed inset-0 z-[210] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => !rejectingApplicant && setRejectTarget(null)}>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-extrabold text-[#0B2D5C]">Reject {rejectTarget.name}</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              This sends an automatic email to <strong>{rejectTarget.email}</strong>. The reason you write here is included in that email.
+            </p>
+            <textarea
+              rows={5}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Example: The National ID photo is unclear. Please register again with a readable document."
+              className="w-full px-3 py-2.5 rounded-2xl border border-slate-200 text-sm text-[#0B2D5C] focus:outline-none focus:border-rose-400"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={rejectingApplicant}
+                onClick={() => setRejectTarget(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={rejectingApplicant}
+                onClick={() => void rejectApplicant()}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black disabled:opacity-60"
+              >
+                {rejectingApplicant ? "Sending email…" : "Reject and email reason"}
               </button>
             </div>
           </div>

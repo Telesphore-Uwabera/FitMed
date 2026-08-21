@@ -51,6 +51,12 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+    if (status === "rejected") {
+      return NextResponse.json(
+        { success: false, error: "This registration was not approved. Check your email for the reason, or contact FitMed to apply again." },
+        { status: 403 }
+      );
+    }
     if (status === "suspended") {
       return NextResponse.json({ success: false, error: "This account has been paused." }, { status: 403 });
     }

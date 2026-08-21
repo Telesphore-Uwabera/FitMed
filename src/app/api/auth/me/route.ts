@@ -4,6 +4,7 @@ import User from "@/models/User";
 import { COOKIE_NAME, verifySession, attachAuthCookie } from "@/lib/authCookie";
 import { isAdminRole, normalizeRole } from "@/lib/roles";
 import { findAccountByNationalId, normalizeNationalId } from "@/lib/applicantIdentity";
+import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
 import { ensureApplicantIds } from "@/lib/sequentialIds";
 
 function profileFromUser(user: Record<string, unknown> & { _id: unknown; fullName?: string; name?: string; email: string; role?: string }) {
@@ -77,12 +78,27 @@ export async function PATCH(request: NextRequest) {
 
     const update: Record<string, unknown> = {};
     if (body.name) {
+      const nameError = applicantRegistrationError({ name: String(body.name) });
+      if (nameError) {
+        return NextResponse.json({ success: false, error: nameError }, { status: 400 });
+      }
       update.name = body.name;
       update.fullName = body.name;
     }
-    if (body.phone !== undefined) update.phone = body.phone;
+    if (body.phone !== undefined) {
+      const phone = compactPhone(String(body.phone));
+      const phoneError = applicantRegistrationError({ phone });
+      if (phoneError) {
+        return NextResponse.json({ success: false, error: phoneError }, { status: 400 });
+      }
+      update.phone = phone;
+    }
     if (body.nationalId !== undefined) {
       const nextId = normalizeNationalId(body.nationalId);
+      const idError = applicantRegistrationError({ nationalId: nextId });
+      if (idError) {
+        return NextResponse.json({ success: false, error: idError }, { status: 400 });
+      }
       if (nextId) {
         const taken = await findAccountByNationalId(nextId, String(current._id));
         if (taken) {

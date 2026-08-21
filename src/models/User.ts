@@ -18,9 +18,10 @@ export interface IUser extends Document {
   jobTitle?: string;
   bio?: string;
   showOnAbout?: boolean;
+  rejectionReason?: string;
   avatarUrl: string;
   avatarPublicId?: string;
-  status: "Active" | "Suspended" | "Pending" | "pending_approval" | "active";
+  status: "Active" | "Suspended" | "Pending" | "pending_approval" | "active" | "rejected";
   emergencyContact?: {
     name: string;
     phone: string;
@@ -58,6 +59,7 @@ const UserSchema = new Schema<IUser>(
     jobTitle: { type: String, trim: true },
     bio: { type: String, trim: true },
     showOnAbout: { type: Boolean, default: true },
+    rejectionReason: { type: String, trim: true },
     avatarUrl: {
       type: String,
       default: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",

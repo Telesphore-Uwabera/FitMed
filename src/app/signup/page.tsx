@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
+import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
 import { useToast } from "@/components/ToastProvider";
 
 export default function SignUpPage() {
@@ -100,6 +101,16 @@ export default function SignUpPage() {
       warning("Passwords do not match", "Please confirm the same password in both fields.");
       return;
     }
+    const fieldError = applicantRegistrationError({
+      name: fullName,
+      email,
+      phone,
+      nationalId,
+    });
+    if (fieldError) {
+      warning("Check your details", fieldError);
+      return;
+    }
     if (!nationalIdImage && !idWebpResult) {
       warning("National ID Required", "Please upload your National ID or Passport document photo for doctor identity verification.");
       return;
@@ -134,7 +145,7 @@ export default function SignUpPage() {
         body: JSON.stringify({
           name: fullName,
           email,
-          phone,
+          phone: compactPhone(phone),
           nationalId,
           password,
           avatarUrl,
@@ -206,9 +217,9 @@ export default function SignUpPage() {
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2">
               <div className="font-extrabold text-[#0B2D5C]">What happens next?</div>
               <ul className="list-disc ml-4 space-y-1 text-slate-600">
-                <li>The administrator verifies your identity against Rwanda National ID records.</li>
-                <li>You will receive an email at <strong>{email}</strong> with a first-time sign-in password.</li>
-                <li>The first time you sign in, you will choose a password of your own and then open your dashboard.</li>
+                <li>The administrator reviews your registration.</li>
+                <li>You will receive an approval email at <strong>{email}</strong>.</li>
+                <li>Sign in with the email and password you created on this form.</li>
               </ul>
             </div>
 
@@ -403,7 +414,7 @@ export default function SignUpPage() {
                       type="text"
                       required
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => setFullName(e.target.value.replace(/\d/g, ""))}
                       placeholder="e.g. Jean Paul Habimana"
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                     />
@@ -424,11 +435,11 @@ export default function SignUpPage() {
                         autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@email.com"
+                        placeholder="name@email.com"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-slate-400">This email can be used for one FitMed account only.</p>
+                    <p className="mt-1.5 text-[11px] text-slate-400">Use a real email. The part before @ cannot contain numbers.</p>
                   </div>
 
                   <div>
@@ -441,31 +452,39 @@ export default function SignUpPage() {
                         type="tel"
                         required
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+250 788 000 000"
+                        onChange={(e) => {
+                          let next = e.target.value.replace(/[^\d+]/g, "");
+                          if (next && !next.startsWith("+")) next = `+${next.replace(/\+/g, "")}`;
+                          setPhone(next.slice(0, 13));
+                        }}
+                        placeholder="+250788000000"
+                        maxLength={13}
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                       />
                     </div>
+                    <p className="mt-1.5 text-[11px] text-slate-400">Format: +25xxxxxxxxxx</p>
                   </div>
                 </div>
 
                 {/* National ID */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    National ID / Passport Number
+                    National ID Number
                   </label>
                   <div className="relative">
                     <IdCard className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type="text"
                       required
+                      inputMode="numeric"
+                      maxLength={16}
                       value={nationalId}
-                      onChange={(e) => setNationalId(e.target.value)}
-                      placeholder="e.g. 1199580048123049"
+                      onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 16))}
+                      placeholder="16-digit National ID"
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] text-slate-400">Each National ID can be registered once.</p>
+                  <p className="mt-1.5 text-[11px] text-slate-400">Must be exactly 16 numbers. Each National ID can be registered once.</p>
                 </div>
 
                 {/* Password */}

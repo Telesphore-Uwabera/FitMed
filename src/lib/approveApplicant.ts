@@ -1,4 +1,3 @@
-import { hashPassword, generateTempPassword } from "@/lib/password";
 import User from "@/models/User";
 import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 import { normalizeRole } from "@/lib/roles";
@@ -6,22 +5,8 @@ import { normalizeRole } from "@/lib/roles";
 export async function sendApplicantApprovalEmail(opts: {
   email: string;
   name: string;
-  tempPassword?: string;
 }) {
   const loginLink = `${FITMED_APP_URL}/signin`;
-  if (opts.tempPassword) {
-    return sendBrevoEmail({
-      toEmail: opts.email,
-      toName: opts.name,
-      subject: "Your FitMed account is approved — sign-in details inside",
-      htmlContent: EmailTemplates.applicantAccountApprovedWithTempPassword(
-        opts.name,
-        opts.email,
-        opts.tempPassword,
-        loginLink
-      ),
-    });
-  }
   return sendBrevoEmail({
     toEmail: opts.email,
     toName: opts.name,
@@ -41,11 +26,9 @@ export async function resetApplicantPasswordWithApprovalEmail(user: {
   save: () => Promise<unknown>;
 }) {
   const name = user.fullName || user.name || "Applicant";
-  const oneTimePassword = generateTempPassword();
   const mail = await sendApplicantApprovalEmail({
     email: user.email,
     name,
-    tempPassword: oneTimePassword,
   });
   if (!mail.success) {
     return {
@@ -55,19 +38,18 @@ export async function resetApplicantPasswordWithApprovalEmail(user: {
     };
   }
 
-  user.password = hashPassword(oneTimePassword);
-  user.temporaryPassword = oneTimePassword;
-  user.requiresPasswordReset = true;
   const status = String(user.status || "").toLowerCase();
   if (status === "pending" || status === "pending_approval") {
     user.status = "Active";
   }
+  user.requiresPasswordReset = false;
+  user.temporaryPassword = undefined;
   await user.save();
 
   return {
     success: true as const,
     emailSent: true,
-    message: `Password reset. The approval email with sign-in details was sent to ${user.email}.`,
+    message: `Approval email sent to ${user.email}. They can sign in with the password they created at registration.`,
   };
 }
 
@@ -81,17 +63,9 @@ export async function approveApplicantAccount(email: string, nameHint = "") {
   }
 
   const name = user.fullName || user.name || nameHint || "Applicant";
-  const hasOwnPassword = Boolean(user.password);
-  let tempPassword = "";
-
-  if (!hasOwnPassword) {
-    tempPassword = generateTempPassword();
-  }
-
   const emailResult = await sendApplicantApprovalEmail({
     email: user.email,
     name,
-    tempPassword: hasOwnPassword ? undefined : tempPassword,
   });
   if (!emailResult.success) {
     return {
@@ -102,21 +76,66 @@ export async function approveApplicantAccount(email: string, nameHint = "") {
   }
 
   user.status = "Active";
-  if (hasOwnPassword) {
-    user.requiresPasswordReset = false;
-  } else {
-    user.password = hashPassword(tempPassword);
-    user.temporaryPassword = tempPassword;
-    user.requiresPasswordReset = true;
-  }
+  user.requiresPasswordReset = false;
+  user.temporaryPassword = undefined;
   await user.save();
 
   return {
     success: true as const,
-    usedOwnPassword: hasOwnPassword,
+    usedOwnPassword: true,
     emailSent: true,
-    message: hasOwnPassword
-      ? `Account approved. ${name} can sign in with the password they created at registration.`
-      : `Account approved and a first-time sign-in password was emailed to ${user.email}.`,
+    message: `Account approved. An email was sent to ${user.email}. ${name} can sign in with the password they created at registration.`,
+  };
+}
+
+function escapeEmailText(value: string) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/\n/g, "<br/>");
+}
+
+export async function rejectApplicantAccount(email: string, reason: string, nameHint = "") {
+  const user = await User.findOne({ email: String(email || "").trim().toLowerCase() });
+  if (!user) {
+    return { success: false as const, status: 404, error: "This applicant is not registered." };
+  }
+  if (normalizeRole(user.role) !== "user") {
+    return { success: false as const, status: 400, error: "Only applicant accounts can be rejected here." };
+  }
+  const status = String(user.status || "").toLowerCase();
+  if (status !== "pending" && status !== "pending_approval") {
+    return { success: false as const, status: 400, error: "Only pending registrations can be rejected." };
+  }
+  const cleanReason = String(reason || "").trim();
+  if (cleanReason.length < 8) {
+    return { success: false as const, status: 400, error: "Add a rejection reason of at least 8 characters. It is included in the email." };
+  }
+
+  const name = user.fullName || user.name || nameHint || "Applicant";
+  const emailResult = await sendBrevoEmail({
+    toEmail: user.email,
+    toName: name,
+    subject: "Your FitMed registration was not approved",
+    htmlContent: EmailTemplates.applicantAccountRejected(name, escapeEmailText(cleanReason)),
+  });
+  if (!emailResult.success) {
+    return {
+      success: false as const,
+      status: 502,
+      error: "The rejection email could not be sent. The account was not rejected. Check Brevo and try again.",
+    };
+  }
+
+  user.status = "rejected";
+  user.rejectionReason = cleanReason;
+  await user.save();
+
+  return {
+    success: true as const,
+    emailSent: true,
+    message: `Registration rejected. The reason was emailed to ${user.email}.`,
   };
 }

@@ -10,6 +10,7 @@ import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
 import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
+import IremboPayCheckoutModal from "@/components/IremboPayCheckoutModal";
 import CertificateQr from "@/components/CertificateQr";
 import { consultationRoomId, formatCertificateCard, formatChatMessages } from "@/lib/consultation";
 import { publicVerifyUrl, toOfficialCertificateData } from "@/lib/certificateDisplay";
@@ -63,6 +64,7 @@ import {
   Building2,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
+import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
 
 export default function UserDashboard() {
   const { success, error, warning, info } = useToast();
@@ -194,7 +196,6 @@ export default function UserDashboard() {
 
   const [showIremboModal, setShowIremboModal] = useState(false);
   const [certToPay, setCertToPay] = useState<any | null>(null);
-  const [isPayingIrembo, setIsPayingIrembo] = useState(false);
   const [paymentSuccessAlert, setPaymentSuccessAlert] = useState<string | null>(null);
 
   const [activeCerts, setActiveCerts] = useState<any[]>([]);
@@ -383,120 +384,33 @@ export default function UserDashboard() {
     }
   };
 
-  const handlePayIrembo = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const markCertificatePaidLocal = (txRef: string) => {
     if (!certToPay) return;
-    setIsPayingIrembo(true);
-    try {
-      const res = await fetch("/api/payments/irembo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ certificateId: certToPay.id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        error("IremboPay not started", data.error || "Could not open IremboPay checkout.");
-        setIsPayingIrembo(false);
-        return;
-      }
-      if (data.alreadyPaid) {
-        setActiveCerts((prev) =>
-          prev.map((c) =>
-            c.id === certToPay.id
-              ? { ...c, status: "VERIFIED FIT", paymentStatus: "PAID", iremboRef: data.invoice?.paymentReference }
-              : c
-          )
-        );
-        setShowIremboModal(false);
-        success("Already paid", "IremboPay already confirmed this certificate.");
-        setIsPayingIrembo(false);
-        return;
-      }
-
-      const invoiceNumber = data.invoice?.invoiceNumber;
-      const paymentLink = data.invoice?.paymentLinkUrl;
-      const publicKey = data.checkout?.publicKey;
-      const widgetSrc = data.checkout?.widgetSrc;
-
-      const applyPaid = async () => {
-        const confirmRes = await fetch("/api/payments/irembo/confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ certificateId: certToPay.id, invoiceNumber }),
-        });
-        const confirmData = await confirmRes.json().catch(() => ({}));
-        if (!confirmRes.ok || !confirmData.success) {
-          error("Payment pending", confirmData.error || "Complete payment in IremboPay, then return here.");
-          return false;
-        }
-        const txRef = String(confirmData.certificate?.iremboRef || invoiceNumber || "");
-        setActiveCerts((prev) =>
-          prev.map((c) => (c.id === certToPay.id ? { ...c, status: "VERIFIED FIT", paymentStatus: "PAID", iremboRef: txRef } : c))
-        );
-        setHistory((prev) =>
-          prev.map((h) => (h.id === certToPay.id ? { ...h, status: "Active (Paid)", outcome: "Fit for Activity" } : h))
-        );
-        setShowIremboModal(false);
-        setPaymentSuccessAlert(
-          `Payment of 5,000 FRW confirmed via IremboPay (${txRef}). Certificate ${certToPay.id} is now active.`
-        );
-        setTimeout(() => setPaymentSuccessAlert(null), 8000);
-        return true;
-      };
-
-      const startWidget = () => {
-        const pay = (window as typeof window & { IremboPay?: any }).IremboPay;
-        if (!pay || !publicKey || !invoiceNumber) {
-          if (paymentLink) window.location.href = paymentLink;
-          else error("IremboPay unavailable", "Checkout could not open.");
-          setIsPayingIrembo(false);
-          return;
-        }
-        pay.initiate({
-          publicKey,
-          invoiceNumber,
-          locale: pay.locale?.EN || "EN",
-          callback: async (err: unknown) => {
-            if (err) {
-              error("Payment not completed", "Finish the IremboPay checkout to unlock your certificate.");
-              setIsPayingIrembo(false);
-              return;
-            }
-            pay.closeModal?.();
-            await applyPaid();
-            setIsPayingIrembo(false);
-          },
-        });
-      };
-
-      if (typeof window !== "undefined" && (window as typeof window & { IremboPay?: unknown }).IremboPay) {
-        startWidget();
-        return;
-      }
-      if (!widgetSrc) {
-        if (paymentLink) window.location.href = paymentLink;
-        setIsPayingIrembo(false);
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = widgetSrc;
-      script.async = true;
-      script.onload = startWidget;
-      script.onerror = () => {
-        if (paymentLink) window.location.href = paymentLink;
-        else error("IremboPay unavailable", "Could not load the IremboPay checkout.");
-        setIsPayingIrembo(false);
-      };
-      document.body.appendChild(script);
-    } catch {
-      error("IremboPay not started", "Could not reach FitMed.");
-      setIsPayingIrembo(false);
-    }
+    setActiveCerts((prev) =>
+      prev.map((c) => (c.id === certToPay.id ? { ...c, status: "VERIFIED FIT", paymentStatus: "PAID", iremboRef: txRef } : c))
+    );
+    setHistory((prev) =>
+      prev.map((h) => (h.id === certToPay.id ? { ...h, status: "Active (Paid)", outcome: "Fit for Activity" } : h))
+    );
+    setShowIremboModal(false);
+    setPaymentSuccessAlert(
+      `Payment of 5,000 FRW confirmed via IremboPay (${txRef}). Certificate ${certToPay.id} is now active.`
+    );
+    setTimeout(() => setPaymentSuccessAlert(null), 8000);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (profileSaveStatus === "saving") return;
+    const fieldError = applicantRegistrationError({
+      name: profileData.name,
+      phone: compactPhone(profileData.phone),
+      nationalId: profileData.nationalId,
+    });
+    if (fieldError) {
+      error("Check your details", fieldError);
+      return;
+    }
     setProfileSaveStatus("saving");
     try {
       let avatarUrl = profileData.avatarUrl;
@@ -513,7 +427,7 @@ export default function UserDashboard() {
         body: JSON.stringify({
           email: profileData.email || session?.email,
           name: profileData.name,
-          phone: profileData.phone,
+          phone: compactPhone(profileData.phone),
           nationalId: profileData.nationalId,
           dateOfBirth: profileData.dob,
           address: profileData.address,
@@ -766,7 +680,7 @@ export default function UserDashboard() {
                         <div className="p-3 rounded-xl bg-amber-100/80 border border-amber-300 text-xs text-amber-950 font-medium flex items-center gap-2">
                           <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0" />
                           <span>
-                            This certificate was approved by the doctor. Complete payment of <strong>5,000 FRW via IremboPay</strong> to unlock high-res PDF download and official QR verification.
+                            This certificate was approved by the doctor. Complete payment of <strong>5,000 FRW via IremboPay</strong> (MTN, Airtel, or card) to unlock high-res PDF download and official QR verification.
                           </span>
                         </div>
                       )}
@@ -1559,7 +1473,7 @@ export default function UserDashboard() {
                     <input
                       type="text"
                       value={profileData.name}
-                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value.replace(/\d/g, "") })}
                       className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                     />
                   </div>
@@ -1588,8 +1502,10 @@ export default function UserDashboard() {
                     <label className="block text-slate-400 font-bold uppercase mb-1">National ID / Passport</label>
                     <input
                       type="text"
+                      maxLength={16}
+                      inputMode="numeric"
                       value={profileData.nationalId}
-                      onChange={(e) => setProfileData({ ...profileData, nationalId: e.target.value })}
+                      onChange={(e) => setProfileData({ ...profileData, nationalId: e.target.value.replace(/\D/g, "").slice(0, 16) })}
                       className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                     />
                   </div>
@@ -1598,8 +1514,14 @@ export default function UserDashboard() {
                     <label className="block text-slate-400 font-bold uppercase mb-1">Phone Number</label>
                     <input
                       type="tel"
+                      placeholder="+250788000000"
+                      maxLength={13}
                       value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      onChange={(e) => {
+                        let next = e.target.value.replace(/[^\d+]/g, "");
+                        if (next && !next.startsWith("+")) next = `+${next.replace(/\+/g, "")}`;
+                        setProfileData({ ...profileData, phone: next.slice(0, 13) });
+                      }}
                       className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                     />
                   </div>
@@ -1815,80 +1737,12 @@ export default function UserDashboard() {
 
       {/* Interactive IremboPay Checkout Modal (Pay-On-Approval) */}
       {showIremboModal && certToPay && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl relative border border-slate-200 text-slate-800 overflow-hidden">
-            <button
-              onClick={() => setShowIremboModal(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="p-6 sm:p-8 pb-4 space-y-2 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-extrabold uppercase tracking-wider border border-teal-200">
-                  Official Government Gateway
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 font-mono">Rwanda IremboPay</span>
-              </div>
-              <h3 className="text-2xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                Pay for Medical Certificate
-              </h3>
-              <p className="text-xs text-slate-500">
-                Approved by <strong>{certToPay.doctor}</strong> · Certificate ID: <strong>{certToPay.id}</strong>
-              </p>
-              <div className="flex justify-between items-center text-sm pt-2">
-                <span className="font-bold text-slate-600">Total amount due</span>
-                <span className="text-lg font-black text-emerald-600">5,000 FRW</span>
-              </div>
-            </div>
-
-            <form onSubmit={handlePayIrembo} className="grid md:grid-cols-[240px_1fr]">
-              <div className="bg-slate-50 p-5 sm:p-6 border-b md:border-b-0 md:border-r border-slate-200 space-y-4">
-                <h4 className="text-sm font-extrabold text-slate-800">IremboPay methods</h4>
-                <ul className="space-y-2 text-sm text-slate-600">
-                  <li>MTN Mobile Money</li>
-                  <li>Airtel Money</li>
-                  <li>Debit / Credit card</li>
-                  <li>Cash / Agents</li>
-                  <li>Bank Accounts</li>
-                  <li>Bank Transfer</li>
-                </ul>
-                <p className="text-[11px] font-black tracking-tight pt-4">
-                  <span className="text-[#0B2D5C]">irembo</span>
-                  <span className="text-sky-600">Pay</span>
-                </p>
-              </div>
-
-              <div className="p-5 sm:p-6 space-y-4">
-                <h4 className="text-sm font-extrabold text-slate-800">Pay with IremboPay</h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  FitMed uses the official IremboPay gateway. Continue to choose MTN Mobile Money, Airtel Money, card, cash/agent, or bank payment on the IremboPay page. Your certificate unlocks only after IremboPay confirms the 5,000 FRW payment.
-                </p>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-                  <div className="flex justify-between"><span className="text-slate-500">Service</span><span className="font-bold">{certToPay.purpose}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Amount</span><span className="font-black text-emerald-600">5,000 FRW</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Gateway</span><span className="font-bold">IremboPay</span></div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={isPayingIrembo}
-                  className="w-full py-3.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white font-black text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] disabled:opacity-50"
-                >
-                  {isPayingIrembo ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      <span>Opening IremboPay...</span>
-                    </>
-                  ) : (
-                    <span>Continue to IremboPay · RWF 5000</span>
-                  )}
-                </button>
-                <p className="text-center text-[10px] text-slate-400">PCI DSS compliant · processed by IremboPay</p>
-              </div>
-            </form>
-          </div>
-        </div>
+        <IremboPayCheckoutModal
+          cert={certToPay}
+          onClose={() => setShowIremboModal(false)}
+          onPaid={markCertificatePaidLocal}
+          onError={error}
+        />
       )}
 
       {/* QR Code Modal */}

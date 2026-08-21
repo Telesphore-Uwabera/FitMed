@@ -3,14 +3,16 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Certificate from "@/models/Certificate";
-import { approveApplicantAccount, resetApplicantPasswordWithApprovalEmail } from "@/lib/approveApplicant";
+import { approveApplicantAccount, rejectApplicantAccount, resetApplicantPasswordWithApprovalEmail } from "@/lib/approveApplicant";
 import { ensureApplicantIds } from "@/lib/sequentialIds";
 
 const PENDING = new Set(["pending", "Pending", "pending_approval"]);
 
 function displayStatus(raw: string) {
   if (PENDING.has(raw)) return raw;
-  if (raw.toLowerCase() === "suspended") return "Suspended";
+  const value = raw.toLowerCase();
+  if (value === "suspended") return "Suspended";
+  if (value === "rejected") return "Rejected";
   return "Active";
 }
 
@@ -111,6 +113,14 @@ export async function PATCH(request: NextRequest) {
 
     if (action === "approve") {
       const result = await approveApplicantAccount(user.email, user.fullName || user.name || "");
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: result.error }, { status: result.status });
+      }
+      return NextResponse.json(result);
+    }
+
+    if (action === "reject") {
+      const result = await rejectApplicantAccount(user.email, String(body.reason || ""), user.fullName || user.name || "");
       if (!result.success) {
         return NextResponse.json({ success: false, error: result.error }, { status: result.status });
       }

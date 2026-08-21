@@ -12,7 +12,7 @@ function sessionRole(role?: string): "admin" | "doctor" | "user" {
 
 function isBlocked(status?: string) {
   const value = String(status || "").toLowerCase();
-  return value === "pending" || value === "pending_approval" || value === "suspended";
+  return value === "pending" || value === "pending_approval" || value === "suspended" || value === "rejected";
 }
 
 export async function PATCH(request: NextRequest) {
