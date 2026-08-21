@@ -9,6 +9,7 @@ import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
 import { consultationRoomId, formatCertificateCard, formatChatMessages } from "@/lib/consultation";
+import { toOfficialCertificateData } from "@/lib/certificateDisplay";
 import { useToast } from "@/components/ToastProvider";
 import {
   FileCheck2,
@@ -1918,8 +1919,10 @@ export default function UserDashboard() {
 
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
               <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://fitmed.rw/verify/${selectedCert?.id || ""}`)}`}
-                alt="QR Verification Code"
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(
+                  `${typeof window !== "undefined" ? window.location.origin : ""}/verify/${selectedCert?.id || ""}`
+                )}`}
+                alt={`QR for Official Document No. ${selectedCert?.id || ""}`}
                 width={220}
                 height={220}
                 unoptimized
@@ -1946,16 +1949,13 @@ export default function UserDashboard() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in">
           <div className="max-w-4xl w-full my-auto">
             <OfficialMedicalCertificate
-              data={{
-                certificateId: selectedCert?.id || "",
+              data={toOfficialCertificateData(selectedCert || {}, {
                 candidateName: profileData.name,
                 applicantImageUrl: profileData.avatarUrl,
                 nationalId: profileData.nationalId,
-                purpose: selectedCert?.purpose || "",
-                doctorName: selectedCert?.doctor || "",
-                issueDate: selectedCert?.issueDate || "",
-                expiryDate: selectedCert?.expiryDate || "",
-              }}
+                doctorName: selectedCert?.doctor,
+                doctorLicense: selectedCert?.license,
+              })}
               onClose={() => setShowOfficialCertModal(false)}
             />
           </div>

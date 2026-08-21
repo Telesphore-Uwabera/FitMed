@@ -30,9 +30,39 @@ export async function GET(request: NextRequest) {
 
       const certificates = await Certificate.find(query)
         .sort({ appliedDate: -1, createdAt: -1 })
-        .limit(500);
+        .limit(500)
+        .lean();
 
-      return NextResponse.json({ success: true, certificates });
+      const doctors = await Doctor.find({}).select("_id fullName email licenseNumber specialty").lean();
+      const byId = new Map(doctors.map((d) => [String(d._id), d]));
+      const byEmail = new Map(doctors.map((d) => [String(d.email || "").toLowerCase(), d]));
+      const enriched = certificates.map((cert) => {
+        const doctor =
+          (cert.assignedDoctorId && byId.get(String(cert.assignedDoctorId))) ||
+          byEmail.get(String(cert.assignedDoctor || "").toLowerCase()) ||
+          doctors.find((d) =>
+            String(cert.assignedDoctor || "")
+              .toLowerCase()
+              .includes(String(d.fullName || "").replace(/\b(dr|md)\b\.?/gi, "").trim().toLowerCase().slice(0, 12))
+          );
+        const expiresAt = cert.expiresAt || (cert.issuedAt || cert.appliedDate
+          ? new Date(new Date(cert.issuedAt || cert.appliedDate).getTime() + 180 * 24 * 60 * 60 * 1000)
+          : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
+        return {
+          ...cert,
+          assignedDoctorLicense: cert.assignedDoctorLicense || doctor?.licenseNumber || "",
+          assignedDoctor: cert.assignedDoctor || doctor?.fullName || "",
+          category: cert.category && cert.category !== "General" ? cert.category : cert.jobType || cert.category || "Employment Fitness",
+          expiresAt,
+          qrCodeUrl:
+            cert.qrCodeUrl ||
+            `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(
+              `${FITMED_APP_URL}/verify/${cert.certificateId}`
+            )}`,
+        };
+      });
+
+      return NextResponse.json({ success: true, certificates: enriched });
     } catch (dbErr) {
       console.warn("MongoDB fetch certificates failed:", dbErr);
       return NextResponse.json({ success: true, certificates: [] });
@@ -113,10 +143,22 @@ export async function POST(request: NextRequest) {
       ? `${redFlagCount} Red Flag${redFlagCount > 1 ? 's' : ''}` 
       : "0 Red Flags";
 
-    // Generate certificate ID and hash
-    const certificateId = `FM-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-    const sha256Hash = crypto.createHash('sha256').update(JSON.stringify(wizardData)).digest('hex');
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/${certificateId}`;
+    // Official Document No. FM-YYYY-NNNNN, incrementing within the year
+    const year = new Date().getFullYear();
+    const prefix = `FM-${year}-`;
+    const existing = await Certificate.find({ certificateId: { $regex: `^${prefix}\\d+$` } })
+      .select("certificateId")
+      .lean();
+    let max = 10000;
+    for (const row of existing) {
+      const n = Number(String(row.certificateId).split("-").pop());
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    const certificateId = `${prefix}${String(max + 1).padStart(5, "0")}`;
+    const sha256Hash = crypto.createHash("sha256").update(JSON.stringify(wizardData)).digest("hex");
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(
+      `${FITMED_APP_URL}/verify/${certificateId}`
+    )}`;
 
     await connectToDatabase();
 
@@ -137,7 +179,7 @@ export async function POST(request: NextRequest) {
       gender,
       purpose,
       jobType,
-      category: jobType || "General",
+      category: jobType || "Employment Fitness",
       decision: "PENDING",
       restrictions: "",
       decisionNotes: "",

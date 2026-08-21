@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "api.qrserver.com",
+        hostname: "quickchart.io",
         pathname: "/**",
       },
       {

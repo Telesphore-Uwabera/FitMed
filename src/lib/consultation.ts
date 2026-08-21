@@ -44,5 +44,7 @@ export function formatCertificateCard(cert: any, existing: Record<string, any> =
     fee: existing.fee || "5,000 FRW",
     notes: existing.notes || cert.decisionNotes || cert.additionalNotes || "",
     qrUrl: cert.qrCodeUrl || existing.qrUrl,
+    category: cert.category || cert.jobType || existing.category,
+    fullCertificate: cert,
   };
 }

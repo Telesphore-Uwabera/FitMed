@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
@@ -10,15 +10,9 @@ import {
   Download,
   CheckCircle2,
   Lock,
-  Stethoscope,
-  Building2,
-  Calendar,
   User,
-  HeartPulse,
-  Activity,
-  FileCheck2,
-  Sparkles,
 } from "lucide-react";
+import { publicVerifyUrl, qrCodeFallbackUrl, qrCodeImageUrl } from "@/lib/certificateDisplay";
 
 export interface CertificateData {
   certificateId: string;
@@ -101,8 +95,15 @@ export default function OfficialMedicalCertificate({
     issueDate: data?.issueDate || "—",
     expiryDate: data?.expiryDate || "—",
     sha256Hash: data?.sha256Hash || "—",
-    qrUrl: data?.qrUrl || "",
+    qrUrl: data?.qrUrl || qrCodeImageUrl(data?.certificateId),
   };
+
+  const verifyUrl = publicVerifyUrl(cert.certificateId);
+  const [qrSrc, setQrSrc] = useState(cert.qrUrl || qrCodeImageUrl(cert.certificateId));
+
+  useEffect(() => {
+    setQrSrc(cert.qrUrl || qrCodeImageUrl(cert.certificateId));
+  }, [cert.certificateId, cert.qrUrl]);
 
   const handleDownload = async () => {
     if (!certRef.current || isDownloading) return;
@@ -201,7 +202,7 @@ export default function OfficialMedicalCertificate({
               <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
                 Official Document No.
               </div>
-              <div className="text-sm font-extrabold font-mono text-[#0B2D5C]">{cert.certificateId}</div>
+              <div className="text-sm font-extrabold font-mono text-[#0B2D5C]">{cert.certificateId || "Pending"}</div>
               <span className="inline-block mt-0.5 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                 FITMED RECORD · VALID
               </span>
@@ -300,13 +301,25 @@ export default function OfficialMedicalCertificate({
 
             {/* QR Code Verification Link */}
             <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
-              <div className="w-16 h-16 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center">
-                <img src={cert.qrUrl} alt="QR Seal" className="w-full h-full object-contain" />
+              <div className="w-20 h-20 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
+                {qrSrc ? (
+                  <img
+                    src={qrSrc}
+                    alt={`QR for Official Document No. ${cert.certificateId}`}
+                    className="w-full h-full object-contain"
+                    onError={() => {
+                      const fallback = qrCodeFallbackUrl(cert.certificateId);
+                      if (qrSrc !== fallback) setQrSrc(fallback);
+                    }}
+                  />
+                ) : (
+                  <QrCode className="w-10 h-10 text-[#0B2D5C]" />
+                )}
               </div>
               <div className="space-y-0.5 text-[10px] text-slate-600">
                 <div className="font-extrabold text-[#0B2D5C]">Scan to Verify</div>
-                <div className="font-mono text-[9px] text-sky-700 break-all">verify.fitmed.rw/{cert.certificateId}</div>
-                <div className="text-[9px] text-emerald-700 font-bold">Record integrity confirmed</div>
+                <div className="font-mono text-[9px] text-[#0B2D5C] break-all">Official Document No. {cert.certificateId}</div>
+                <div className="font-mono text-[8px] text-sky-700 break-all">{verifyUrl.replace(/^https?:\/\//, "")}</div>
               </div>
             </div>
           </div>

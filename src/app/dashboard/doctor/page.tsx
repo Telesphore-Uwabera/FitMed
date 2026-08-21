@@ -54,6 +54,7 @@ import DoctorAssessmentForm, { DoctorDecision } from "@/components/DoctorAssessm
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
 import { consultationRoomId, formatChatMessages } from "@/lib/consultation";
+import { toOfficialCertificateData } from "@/lib/certificateDisplay";
 import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessmentForm";
 import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
 import { useToast } from "@/components/ToastProvider";
@@ -414,6 +415,7 @@ export default function DoctorDashboardPage() {
             decision: String(cert.decision || cert.status || "ISSUED"),
             date: cert.issuedAt || cert.appliedDate ? new Date(String(cert.issuedAt || cert.appliedDate)).toLocaleDateString() : "—",
             avatarUrl: String(cert.avatarUrl || ""),
+            fullCertificate: cert,
           }))
         );
       } catch (err) {
@@ -1824,7 +1826,7 @@ export default function DoctorDashboardPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 font-extrabold uppercase">
-                    <th className="pb-3">Certificate Number</th>
+                    <th className="pb-3">Official Document No.</th>
                     <th className="pb-3">Candidate</th>
                     <th className="pb-3">Purpose</th>
                     <th className="pb-3">Decision</th>
@@ -2420,6 +2422,7 @@ export default function DoctorDashboardPage() {
                     decision: selectedApplication.decision,
                     date: selectedApplication.appliedDate ? new Date(selectedApplication.appliedDate).toLocaleDateString() : "—",
                     avatarUrl: selectedApplication.avatarUrl,
+                    fullCertificate: selectedApplication,
                   });
                   setSelectedApplication(null);
                   setShowOfficialCertModal(true);
@@ -2438,17 +2441,13 @@ export default function DoctorDashboardPage() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in">
           <div className="max-w-4xl w-full my-auto">
             <OfficialMedicalCertificate
-              data={{
-                certificateId: selectedCertForModal?.id || "",
-                candidateName: selectedCertForModal?.candidate || selectedCertForModal?.name || "",
+              data={toOfficialCertificateData(selectedCertForModal || selectedApplication || {}, {
+                doctorName: session?.name || doctorProfile.name,
+                doctorLicense: doctorProfile.licenseNumber,
+                doctorSpecialty: doctorProfile.specialty,
+                doctorId: doctorProfile.id || session?.email,
                 applicantImageUrl: selectedCertForModal?.avatarUrl || selectedCandidate?.avatarUrl,
-                purpose: selectedCertForModal?.purpose || "",
-                decision: (selectedCertForModal?.decision?.includes("RESTRICTIONS") ? "FIT_RESTRICTED" : "FIT") as any,
-                doctorName: session?.name || "Physician",
-                doctorLicense: "",
-                doctorId: session?.email || "",
-                issueDate: selectedCertForModal?.date || "",
-              }}
+              })}
               onClose={() => setShowOfficialCertModal(false)}
             />
           </div>
