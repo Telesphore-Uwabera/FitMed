@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { Brain, Watch, QrCode, Lock, Zap, Activity, Smartphone, Globe } from "lucide-react";
+import { Brain, Watch, QrCode, Lock, Zap, Activity } from "lucide-react";
 
 const features = [
   { icon: Brain,    badge: "Decision Support", title: "AI Decision Support",          color: "from-violet-500 to-violet-600", bg: "bg-violet-50", border: "border-violet-100", iconColor: "text-violet-600", desc: "Analyses questionnaire responses, flags red flags, calculates risk scores, and generates structured clinical summaries for the reviewing doctor." },
@@ -12,8 +12,6 @@ const features = [
   { icon: Zap,      badge: "Smart Routing",    title: "Fitness Rules Engine",         color: "from-amber-500 to-amber-600", bg: "bg-amber-50",  border: "border-amber-100",  iconColor: "text-amber-600",  desc: "A central rules engine determines the assessment pathway by certificate purpose — controlling history requirements and escalation criteria." },
   { icon: Activity, badge: "Remote Vitals",    title: "Digital Vital Measurements",   color: "from-rose-500 to-rose-600",   bg: "bg-rose-50",   border: "border-rose-100",   iconColor: "text-rose-600",   desc: "AI-estimated vitals via smartphone camera (remote-PPG). All AI-estimated values are clearly labelled as screening measurements." },
 ];
-
-const integrations = ["Apple Health", "Google Health Connect", "Fitbit", "Garmin", "Samsung Health", "Bluetooth BP Monitor", "Pulse Oximeter", "Smart Scale"];
 
 export default function TechFeatures() {
   const ref = useRef(null);
@@ -41,7 +39,7 @@ export default function TechFeatures() {
         </motion.div>
 
         {/* Feature grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mb-20">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f, i) => (
             <motion.div key={f.title}
               initial={{ opacity: 0, y: 40 }}
@@ -61,62 +59,6 @@ export default function TechFeatures() {
             </motion.div>
           ))}
         </div>
-
-        {/* Architecture flow */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.65 }}
-          className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-8 mb-14"
-        >
-          <div className="text-center mb-8">
-            <h3 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: "var(--font-primary)" }}>Platform Architecture</h3>
-            <p className="text-sm text-slate-500">Every assessment follows a verified, auditable pathway</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { label: "Applicant App",    icon: Smartphone, cls: "text-sky-700 border-sky-200 bg-white" },
-              { label: "AI Screening",     icon: Brain,      cls: "text-violet-700 border-violet-200 bg-white" },
-              { label: "Clinical Engine",  icon: Activity,   cls: "text-teal-700 border-teal-200 bg-white" },
-              { label: "Doctor Dashboard", icon: Lock,       cls: "text-emerald-700 border-emerald-200 bg-white" },
-              { label: "Video Consult",    icon: Globe,      cls: "text-amber-700 border-amber-200 bg-white" },
-              { label: "Digital Cert",     icon: QrCode,     cls: "text-rose-700 border-rose-200 bg-white" },
-            ].map((item, i) => (
-              <div key={item.label} className="relative">
-                <div className={`h-full flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-2xl border font-semibold text-center ${item.cls} shadow-sm`}>
-                  <span className="text-[10px] font-bold tracking-widest text-slate-400">{String(i + 1).padStart(2, "0")}</span>
-                  <item.icon className="w-4 h-4" />
-                  <span className="text-xs leading-tight">{item.label}</span>
-                </div>
-                {i < 5 && (
-                  <span className="hidden lg:flex absolute top-1/2 -right-2.5 z-10 -translate-y-1/2 text-slate-400 text-sm" aria-hidden>
-                    →
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Integrations */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ delay: 0.85 }}
-          className="text-center"
-        >
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-5">Compatible Devices & Platforms</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 max-w-4xl mx-auto">
-            {integrations.map((d) => (
-              <div
-                key={d}
-                className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-600 font-medium text-center hover:border-sky-300 hover:text-sky-700 transition-all cursor-default shadow-sm"
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </section>
   );
