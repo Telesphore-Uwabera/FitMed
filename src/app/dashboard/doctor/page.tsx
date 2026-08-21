@@ -2422,6 +2422,7 @@ export default function DoctorDashboardPage() {
               >
                 Open assessment
               </button>
+              {String(selectedApplication.paymentStatus || "").toUpperCase() === "PAID" && (
               <button
                 type="button"
                 onClick={() => {
@@ -2442,6 +2443,7 @@ export default function DoctorDashboardPage() {
               >
                 View certificate
               </button>
+              )}
             </div>
           </div>
         </div>

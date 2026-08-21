@@ -4,15 +4,16 @@ export function displayValue(value: unknown, fallback = "—") {
   return text || fallback;
 }
 
-export function isIssuedCertificate(cert: { status?: string; decision?: string } | null | undefined) {
+export function isIssuedCertificate(cert: { status?: string; decision?: string; paymentStatus?: string } | null | undefined) {
   if (!cert) return false;
   const status = String(cert.status || "").toLowerCase();
   const decision = String(cert.decision || "PENDING")
     .toUpperCase()
     .replace(/\s+/g, "_");
+  const paid = String(cert.paymentStatus || "").toUpperCase() === "PAID";
   const issuedStatus = ["valid", "approved", "issued", "signed"].includes(status);
   const fitDecision = decision === "FIT" || decision === "FIT_RESTRICTED";
-  return issuedStatus && fitDecision;
+  return issuedStatus && fitDecision && paid;
 }
 
 export function sameCalendarDay(value: unknown, day: Date) {
