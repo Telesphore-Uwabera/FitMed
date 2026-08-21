@@ -31,5 +31,13 @@ app.prepare().then(() => {
     })
     .listen(port, hostname, () => {
       console.log(`> Ready on http://${hostname}:${port}`);
+      const { get } = require("http");
+      const pingMeetingNotices = () => {
+        get(`http://127.0.0.1:${port}/api/meet/tick`, (res) => {
+          res.resume();
+        }).on("error", () => {});
+      };
+      setTimeout(pingMeetingNotices, 8000);
+      setInterval(pingMeetingNotices, 60 * 1000);
     });
 });

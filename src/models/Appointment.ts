@@ -20,6 +20,8 @@ export interface IAppointment extends Document {
   roomId: string;
   roomUrl: string;
   emailNotified: boolean;
+  reminder30Sent?: boolean;
+  startNoticeSent?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +51,8 @@ const AppointmentSchema = new Schema<IAppointment>(
     roomId: { type: String },
     roomUrl: { type: String, required: true },
     emailNotified: { type: Boolean, default: true },
+    reminder30Sent: { type: Boolean, default: false },
+    startNoticeSent: { type: Boolean, default: false },
   },
   { timestamps: true, collection: "appointments" }
 );

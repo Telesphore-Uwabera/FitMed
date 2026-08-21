@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
-import { EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
+import { EmailTemplates } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
 import { nextKey } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
+import { publicMeetUrl } from "@/lib/meetingTime";
+import { processDueMeetingNotices } from "@/lib/meetingReminders";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +18,7 @@ export async function GET(request: NextRequest) {
     const doctorName = searchParams.get("doctorName");
 
     await connectToDatabase();
+    void processDueMeetingNotices().catch(() => null);
     const query: Record<string, unknown> = {};
 
     if (applicantEmail) {
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
     const appointmentId = await nextKey("appointment");
     const roomId = body.roomId || appointmentId;
-    const roomUrl = `/dashboard/user?tab=consultation&room=${roomId}`;
+    const roomUrl = `/meet/${roomId}`;
 
     let savedAppointment: any = {
       appointmentId,
@@ -102,6 +105,8 @@ export async function POST(request: NextRequest) {
       roomId,
       roomUrl,
       emailNotified: true,
+      reminder30Sent: false,
+      startNoticeSent: false,
       createdAt: new Date(),
     };
 
@@ -113,8 +118,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Dispatch Brevo email notification to the applicant
-    const meetingLink = `${FITMED_APP_URL}${roomUrl}`;
-    const formattedTime = `${scheduledDate} at ${scheduledTime}`;
+    const meetingLink = publicMeetUrl(roomId);
+    const formattedTime = `${scheduledDate} at ${scheduledTime} (Africa/Kigali)`;
     const physician = doctorName || "FitMed Physician";
     await notifyPerson({
       toEmail: applicantEmail,
@@ -165,7 +170,7 @@ export async function PATCH(request: NextRequest) {
 
       if (action === "remind") {
         const time = `${appointment.scheduledDate || ""} ${appointment.scheduledTime || ""}`.trim() || "as scheduled";
-        const meetingLink = `${FITMED_APP_URL}${appointment.roomUrl || "/dashboard/user?tab=consultation"}`;
+        const meetingLink = publicMeetUrl(String(appointment.roomId || appointment.appointmentId));
         await notifyPerson({
           toEmail: appointment.applicantEmail,
           toName: appointment.applicantName,

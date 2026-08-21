@@ -175,23 +175,7 @@ export default function UserDashboard() {
       warning("No appointment", "Wait for your doctor to schedule a consultation, then join from this tab.");
       return;
     }
-    const roomId = consultationRoomId(appointment) || FITMED_LIVE_ROOM;
-    setActiveCallAppointment(appointment);
-    setVideoCallRoomId(roomId);
-    try {
-      const chatRes = await fetch(`/api/chat?consultationId=${encodeURIComponent(roomId)}`);
-      const chatData = await chatRes.json();
-      if (chatData.success && chatData.messages?.length) {
-        setChatMessages(formatChatMessages(chatData.messages));
-      } else {
-        setChatMessages([]);
-      }
-    } catch {
-      setChatMessages([]);
-    }
-    await persistAppointmentStatus(appointment.appointmentId, "in-progress");
-    localStorage.setItem(`fitmed_meeting:${roomId}`, "connected");
-    setIsCallActive(true);
+    window.location.href = `/meet/${encodeURIComponent(appointment.roomId || appointment.appointmentId)}`;
   };
 
   const handleEndCall = () => {
@@ -313,6 +297,10 @@ export default function UserDashboard() {
     }
 
     loadData();
+    const reminderTick = setInterval(() => {
+      void fetch("/api/meet/tick");
+    }, 60 * 1000);
+    return () => clearInterval(reminderTick);
   }, [session?.email]);
 
   const handleWizardComplete = async (data: any) => {
@@ -1052,7 +1040,9 @@ export default function UserDashboard() {
                       Reschedule
                     </button>
                     <button
-                      onClick={() => goToTab("consultation")}
+                      onClick={() => {
+                        window.location.href = `/meet/${encodeURIComponent(apt.roomId || apt.appointmentId)}`;
+                      }}
                       className="px-5 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95"
                     >
                       <Video className="w-4 h-4" />
@@ -1540,7 +1530,7 @@ export default function UserDashboard() {
 
                   <div>
                     <label className="block text-slate-400 font-bold uppercase mb-1">Date of Birth</label>
-                    <BrandDatePicker value={profileData.dob} onChange={(dob) => setProfileData({ ...profileData, dob })} />
+                    <BrandDatePicker value={profileData.dob} onChange={(dob) => setProfileData({ ...profileData, dob })} preset="birth" />
                   </div>
 
                   <div>

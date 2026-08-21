@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import DashboardShell from "@/components/DashboardShell";
 import BrandSelect from "@/components/BrandSelect";
 import BrandDatePicker from "@/components/BrandDatePicker";
+import BrandTimePicker from "@/components/BrandTimePicker";
 import {
   Stethoscope,
   ClipboardList,
@@ -101,6 +102,7 @@ export default function DoctorDashboardPage() {
     scheduledTime: "14:30",
     durationMinutes: 15,
     notes: "",
+    certificateDraftId: "",
   });
   useEffect(() => {
     setScheduleForm((prev) =>
@@ -462,10 +464,18 @@ export default function DoctorDashboardPage() {
     }
 
     loadData();
+    const reminderTick = setInterval(() => {
+      void fetch("/api/meet/tick");
+    }, 60 * 1000);
+    return () => clearInterval(reminderTick);
   }, [session?.email]);
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!scheduleForm.applicantName || !scheduleForm.applicantEmail) {
+      error("Select an applicant", "Choose an applicant with a certificate still in review.");
+      return;
+    }
     setIsScheduling(true);
     try {
       const res = await fetch("/api/appointments", {
@@ -525,6 +535,18 @@ export default function DoctorDashboardPage() {
     }
   };  const [queue, setQueue] = useState<any[]>([]);
   const [allApplications, setAllApplications] = useState<any[]>([]);
+  const pendingMeetingApplicants = useMemo(() => {
+    const seen = new Set<string>();
+    return allApplications.filter((cert) => {
+      const status = String(cert.status || "").toLowerCase();
+      if (["approved", "valid", "issued", "signed"].includes(status)) return false;
+      if (isIssuedCertificate(cert)) return false;
+      const email = String(cert.applicantEmail || "").toLowerCase();
+      if (!email || seen.has(email)) return false;
+      seen.add(email);
+      return true;
+    });
+  }, [allApplications]);
   const [appSearch, setAppSearch] = useState("");
   const [appStatus, setAppStatus] = useState("all");
   const [appDecision, setAppDecision] = useState("all");
@@ -1100,7 +1122,7 @@ export default function DoctorDashboardPage() {
               ))}
             </div>
 
-            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm grid md:grid-cols-2 xl:grid-cols-5 gap-3">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm grid md:grid-cols-2 xl:grid-cols-5 gap-3 overflow-visible">
               <div className="xl:col-span-2 relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
@@ -1111,33 +1133,53 @@ export default function DoctorDashboardPage() {
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0]"
                 />
               </div>
-              <select value={appStatus} onChange={(e) => setAppStatus(e.target.value)} className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs">
-                <option value="all">All statuses</option>
-                <option value="submitted">Submitted</option>
-                <option value="under-review">Under review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Declined</option>
-              </select>
-              <select value={appDecision} onChange={(e) => setAppDecision(e.target.value)} className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs">
-                <option value="all">All decisions</option>
-                <option value="PENDING">Waiting</option>
-                <option value="FIT">Fit</option>
-                <option value="RESTRICT">Fit with restrictions</option>
-                <option value="FURTHER">Needs more assessment</option>
-                <option value="NOT FIT">Not fit</option>
-              </select>
+              <BrandSelect
+                size="compact"
+                value={appStatus}
+                onChange={setAppStatus}
+                options={[
+                  { value: "all", label: "All statuses" },
+                  { value: "submitted", label: "Submitted" },
+                  { value: "under-review", label: "Under review" },
+                  { value: "approved", label: "Approved" },
+                  { value: "rejected", label: "Declined" },
+                ]}
+              />
+              <BrandSelect
+                size="compact"
+                value={appDecision}
+                onChange={setAppDecision}
+                options={[
+                  { value: "all", label: "All decisions" },
+                  { value: "PENDING", label: "Waiting" },
+                  { value: "FIT", label: "Fit" },
+                  { value: "RESTRICT", label: "Fit with restrictions" },
+                  { value: "FURTHER", label: "Needs more assessment" },
+                  { value: "NOT FIT", label: "Not fit" },
+                ]}
+              />
               <div className="grid grid-cols-2 gap-3">
-                <select value={appPayment} onChange={(e) => setAppPayment(e.target.value)} className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs">
-                  <option value="all">All payments</option>
-                  <option value="PAID">Paid</option>
-                  <option value="UNPAID">Unpaid</option>
-                </select>
-                <select value={appDate} onChange={(e) => setAppDate(e.target.value)} className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs">
-                  <option value="all">All dates</option>
-                  <option value="today">Today</option>
-                  <option value="week">This week</option>
-                  <option value="month">This month</option>
-                </select>
+                <BrandSelect
+                  size="compact"
+                  value={appPayment}
+                  onChange={setAppPayment}
+                  options={[
+                    { value: "all", label: "All payments" },
+                    { value: "PAID", label: "Paid" },
+                    { value: "UNPAID", label: "Unpaid" },
+                  ]}
+                />
+                <BrandSelect
+                  size="compact"
+                  value={appDate}
+                  onChange={setAppDate}
+                  options={[
+                    { value: "all", label: "All dates" },
+                    { value: "today", label: "Today" },
+                    { value: "week", label: "This week" },
+                    { value: "month", label: "This month" },
+                  ]}
+                />
               </div>
             </div>
 
@@ -1232,6 +1274,7 @@ export default function DoctorDashboardPage() {
                     scheduledTime: "09:00",
                     durationMinutes: 15,
                     notes: "",
+                    certificateDraftId: "",
                   });
                   setShowScheduleModal(true);
                 }}
@@ -1923,20 +1966,20 @@ export default function DoctorDashboardPage() {
               <input required placeholder="Applicant name" value={referralForm.applicantName} onChange={(e) => setReferralForm({ ...referralForm, applicantName: e.target.value })} className="text-xs" />
               <input placeholder="Applicant email" value={referralForm.applicantEmail} onChange={(e) => setReferralForm({ ...referralForm, applicantEmail: e.target.value })} className="text-xs" />
               {partnerClinics.length > 0 ? (
-              <select
-                required
+              <BrandSelect
+                size="compact"
+                placeholder="Select partner clinic"
                 value={referralForm.clinicName}
-                onChange={(e) => {
-                  const clinic = partnerClinics.find((c) => c.name === e.target.value);
-                  setReferralForm({ ...referralForm, clinicName: e.target.value, clinicCity: clinic?.city || "" });
+                onChange={(clinicName) => {
+                  const clinic = partnerClinics.find((c) => c.name === clinicName);
+                  setReferralForm({ ...referralForm, clinicName, clinicCity: clinic?.city || "" });
                 }}
-                className="text-xs"
-              >
-                <option value="">Select partner clinic</option>
-                {partnerClinics.map((c) => (
-                  <option key={c.id} value={c.name}>{c.name} — {c.city}</option>
-                ))}
-              </select>
+                options={partnerClinics.map((c) => ({
+                  value: c.name,
+                  label: c.name,
+                  desc: c.city,
+                }))}
+              />
               ) : (
                 <input
                   required
@@ -2802,17 +2845,34 @@ export default function DoctorDashboardPage() {
 
             <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
               <div className="grid sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
-                    Applicant Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={scheduleForm.applicantName}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, applicantName: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                <div className="sm:col-span-2">
+                  <BrandSelect
+                    label="Applicant Name"
+                    value={scheduleForm.certificateDraftId}
+                    placeholder="Select an applicant with a certificate still in review"
+                    onChange={(certificateId) => {
+                      const cert = pendingMeetingApplicants.find((row) => String(row.certificateId) === certificateId);
+                      if (!cert) return;
+                      setScheduleForm((prev) => ({
+                        ...prev,
+                        certificateDraftId: String(cert.certificateId || ""),
+                        applicantName: String(cert.candidateName || ""),
+                        applicantEmail: String(cert.applicantEmail || ""),
+                        applicantPhone: String(cert.applicantPhone || ""),
+                        purpose: String(cert.purpose || prev.purpose),
+                      }));
+                    }}
+                    options={pendingMeetingApplicants.map((cert) => ({
+                      value: String(cert.certificateId),
+                      label: String(cert.candidateName || "Applicant"),
+                      desc: `${cert.certificateId} · ${cert.purpose || "Fitness assessment"} · ${cert.status || "submitted"}`,
+                    }))}
                   />
+                  {pendingMeetingApplicants.length === 0 && (
+                    <p className="text-[11px] text-amber-700 mt-1">
+                      No applicants with unfinished certificates are in your list yet.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
@@ -2821,9 +2881,20 @@ export default function DoctorDashboardPage() {
                   <input
                     type="email"
                     required
+                    readOnly
                     value={scheduleForm.applicantEmail}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, applicantEmail: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={scheduleForm.applicantPhone}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-700"
                   />
                 </div>
               </div>
@@ -2835,9 +2906,9 @@ export default function DoctorDashboardPage() {
                 <input
                   type="text"
                   required
+                  readOnly
                   value={scheduleForm.purpose}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, purpose: e.target.value })}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-700"
                 />
               </div>
 
@@ -2846,18 +2917,15 @@ export default function DoctorDashboardPage() {
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
                     Date
                   </label>
-                  <BrandDatePicker value={scheduleForm.scheduledDate} onChange={(scheduledDate) => setScheduleForm({ ...scheduleForm, scheduledDate })} />
+                  <BrandDatePicker preset="future" value={scheduleForm.scheduledDate} onChange={(scheduledDate) => setScheduleForm({ ...scheduleForm, scheduledDate })} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
                     Time (GMT+2)
                   </label>
-                  <input
-                    type="time"
-                    required
+                  <BrandTimePicker
                     value={scheduleForm.scheduledTime}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, scheduledTime: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                    onChange={(scheduledTime) => setScheduleForm({ ...scheduleForm, scheduledTime })}
                   />
                 </div>
                 <div>
@@ -2891,7 +2959,7 @@ export default function DoctorDashboardPage() {
                   <span>Automatic email &amp; in-app notification</span>
                 </div>
                 <p className="text-slate-600">
-                  Saving this consultation sends a branded invitation email with an encrypted video room link and adds it to the applicant's <strong>My Appointments</strong> portal tab.
+                  Saving this consultation emails the applicant a join link. They do not need to sign in. The room opens only at the scheduled time. You will receive another email 30 minutes before, and again when the visit starts.
                 </p>
               </div>
 

@@ -378,7 +378,7 @@ export default function DoctorAssessmentForm({
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Date of Birth</label>
-                <BrandDatePicker value={patientDob} onChange={setPatientDob} />
+                <BrandDatePicker value={patientDob} onChange={setPatientDob} preset="birth" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Sex</label>

@@ -259,7 +259,7 @@ export const EmailTemplates = {
       "Video consultation",
       `<p>Hello <strong>${applicantName}</strong>,</p>
        <p><strong>${doctorName}</strong> has scheduled a secure live video assessment.</p>
-       <p><strong>When:</strong> ${time}<br/><strong>Join:</strong> please enter the room 5 minutes early and use a quiet, well-lit space with a valid ID ready.</p>
+       <p>You do not need to sign in. Open the join link at the scheduled time. If you open it early, FitMed will tell you when the meeting starts.</p>
        ${button(meetingLink, "Join telehealth room")}`
     ),
 
@@ -269,8 +269,26 @@ export const EmailTemplates = {
       `<p>Dear <strong>${applicantName}</strong>,</p>
        <p>This is a reminder of your FitMed video consultation with <strong>${doctorName}</strong>.</p>
        <p><strong>Scheduled time:</strong> ${time}</p>
-       <p>Have your National ID with you. Join a few minutes early so the doctor can start on time.</p>
+       <p>You do not need to sign in. Open the join link at the scheduled time. If you open it early, the page will wait until the meeting starts.</p>
        ${button(meetingLink, "Join consultation room")}`
+    ),
+
+  appointmentStartingSoon: (applicantName: string, doctorName: string, meetingLink: string, time: string, minutes: number) =>
+    brandedEmail(
+      `Your visit starts in ${minutes} minutes`,
+      `<p>Dear <strong>${applicantName}</strong>,</p>
+       <p>Your FitMed video consultation with <strong>${doctorName}</strong> begins in <strong>${minutes} minutes</strong> (${time}).</p>
+       <p>Use a quiet, well-lit space and have your National ID ready. Click the button at the start time — no FitMed login is required.</p>
+       ${button(meetingLink, "Join video meeting")}`
+    ),
+
+  appointmentStartingNow: (applicantName: string, doctorName: string, meetingLink: string, time: string) =>
+    brandedEmail(
+      "Your FitMed visit is starting now",
+      `<p>Dear <strong>${applicantName}</strong>,</p>
+       <p>Your video consultation with <strong>${doctorName}</strong> is starting now (${time}).</p>
+       <p>Click below to join. You do not need to sign in. Your doctor will be in the FitMed clinical room.</p>
+       ${button(meetingLink, "Join now")}`
     ),
 
   certificateStatusNotification: (

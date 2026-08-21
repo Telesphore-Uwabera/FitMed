@@ -97,7 +97,7 @@ export default function BrandSelect({
       {/* Brand Styled Menu */}
       {isOpen && (
         <div
-          className={`absolute z-50 left-0 right-0 mt-1.5 shadow-2xl overflow-hidden animate-in fade-in duration-150 max-h-64 overflow-y-auto ${
+          className={`absolute z-[90] left-0 right-0 mt-1.5 shadow-2xl overflow-hidden animate-in fade-in duration-150 max-h-64 overflow-y-auto ${
             compact ? "rounded-xl" : "rounded-2xl"
           } ${
             dark

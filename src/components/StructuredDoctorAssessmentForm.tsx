@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import BrandSelect from "@/components/BrandSelect";
+import BrandDatePicker from "@/components/BrandDatePicker";
 
 interface StructuredAssessmentData {
   // Section 1: Patient & Certificate Information
@@ -311,23 +313,20 @@ export default function StructuredDoctorAssessmentForm({
             </div>
             <div>
               <label className="block text-slate-600 font-bold mb-1">Date of Birth</label>
-              <input
-                type="text"
+              <BrandDatePicker
+                preset="birth"
                 value={assessment.dateOfBirth}
-                onChange={(e) => setAssessment({ ...assessment, dateOfBirth: e.target.value })}
-                className="w-full p-2 rounded-lg border border-slate-200"
+                onChange={(dateOfBirth) => setAssessment({ ...assessment, dateOfBirth })}
               />
             </div>
             <div>
               <label className="block text-slate-600 font-bold mb-1">Sex</label>
-              <select
+              <BrandSelect
+                size="compact"
                 value={assessment.sex}
-                onChange={(e) => setAssessment({ ...assessment, sex: e.target.value })}
-                className="w-full p-2 rounded-lg border border-slate-200"
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
+                onChange={(sex) => setAssessment({ ...assessment, sex })}
+                options={["Male", "Female"]}
+              />
             </div>
             <div>
               <label className="block text-slate-600 font-bold mb-1">Consultation Date</label>
@@ -435,15 +434,16 @@ export default function StructuredDoctorAssessmentForm({
               <p className="text-xs font-bold text-rose-900">⚠️ Significant red flag detected - Certification locked</p>
               <div>
                 <label className="block text-xs font-bold text-rose-800 mb-1">Action Required:</label>
-                <select
+                <BrandSelect
+                  size="compact"
+                  placeholder="Urgent assessment/referral"
                   value={assessment.redFlagAction}
-                  onChange={(e) => setAssessment({ ...assessment, redFlagAction: e.target.value })}
-                  className="w-full p-2 rounded-lg border border-rose-300 text-xs"
-                >
-                  <option value="">Urgent assessment/referral</option>
-                  <option value="same-day-physical">Same-day physical review</option>
-                  <option value="urgent-referral">Urgent referral</option>
-                </select>
+                  onChange={(redFlagAction) => setAssessment({ ...assessment, redFlagAction })}
+                  options={[
+                    { value: "same-day-physical", label: "Same-day physical review" },
+                    { value: "urgent-referral", label: "Urgent referral" },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-rose-800 mb-1">Red-flag details:</label>
@@ -748,17 +748,18 @@ export default function StructuredDoctorAssessmentForm({
           <div className="space-y-3 text-xs">
             <div>
               <label className="block text-slate-600 font-bold mb-1">Overall assessment:</label>
-              <select
+              <BrandSelect
+                size="compact"
                 value={assessment.overallAssessment}
-                onChange={(e) => setAssessment({ ...assessment, overallAssessment: e.target.value })}
-                className="w-full p-2 rounded-lg border border-slate-200"
-              >
-                <option value="No significant abnormality identified virtually">No significant abnormality identified virtually</option>
-                <option value="Abnormal finding requiring physical examination">Abnormal finding requiring physical examination</option>
-                <option value="Investigation required">Investigation required</option>
-                <option value="Specialist assessment required">Specialist assessment required</option>
-                <option value="Urgent medical assessment required">Urgent medical assessment required</option>
-              </select>
+                onChange={(overallAssessment) => setAssessment({ ...assessment, overallAssessment })}
+                options={[
+                  "No significant abnormality identified virtually",
+                  "Abnormal finding requiring physical examination",
+                  "Investigation required",
+                  "Specialist assessment required",
+                  "Urgent medical assessment required",
+                ]}
+              />
             </div>
             <div>
               <label className="block text-slate-600 font-bold mb-1">Clinical impression / relevant findings:</label>
