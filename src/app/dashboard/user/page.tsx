@@ -1955,8 +1955,6 @@ export default function UserDashboard() {
                 doctorName: selectedCert?.doctor,
                 doctorLicense: selectedCert?.license,
               })}
-                doctorLicense: selectedCert?.license,
-              })}
               onClose={() => setShowOfficialCertModal(false)}
             />
           </div>
