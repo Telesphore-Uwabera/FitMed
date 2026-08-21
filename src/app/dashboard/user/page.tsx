@@ -17,6 +17,7 @@ import { consultationRoomId, formatCertificateCard, formatChatMessages } from "@
 import { publicVerifyUrl, toOfficialCertificateData } from "@/lib/certificateDisplay";
 import { DEFAULT_FITMED_PURPOSE, FITMED_SERVICES } from "@/lib/fitmedServices";
 import { subscribeLiveRefresh, broadcastLiveRefresh } from "@/lib/liveRefresh";
+import { useToast } from "@/components/ToastProvider";
 import {
   FileCheck2,
   Clock,
