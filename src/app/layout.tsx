@@ -44,6 +44,9 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
   category: "health",
+  verification: {
+    google: "P7tFxJLbr0ugu0-lq5ZXBX_JsIwzoc0q6iFGN0AN9A8",
+  },
   alternates: { canonical: SITE_URL },
   openGraph: {
     title: `${SITE_NAME} — Medical Fitness Certificate Online`,

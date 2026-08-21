@@ -255,7 +255,7 @@ export const EmailTemplates = {
       "Approved — payment required",
       `<p>Dear <strong>${candidateName}</strong>,</p>
        <p><strong>${doctorName}</strong> has approved your medical fitness certificate for <strong>${purpose}</strong>.</p>
-       <p>To unlock the digitally signed PDF and verifiable QR code, complete the government fee of <strong>5,000 FRW</strong> via IremboPay (MTN Mobile Money, Airtel Money, or debit/credit card).</p>
+       <p>To unlock the digitally signed PDF and verifiable QR code, complete the service fee of <strong>5,000 FRW</strong> via IremboPay (MTN Mobile Money, Airtel Money, or debit/credit card).</p>
        <p><strong>Official Document No.:</strong> ${certId}</p>
        ${button(payLink, "Pay 5,000 FRW via IremboPay")}`
     ),
@@ -264,7 +264,7 @@ export const EmailTemplates = {
     brandedEmail(
       "Payment reminder",
       `<p>Dear <strong>${candidateName}</strong>,</p>
-       <p>This is a reminder that your approved FitMed certificate for <strong>${purpose}</strong> is waiting for payment of <strong>5,000 FRW</strong>.</p>
+       <p>This is a reminder that your approved FitMed certificate for <strong>${purpose}</strong> is waiting for the <strong>5,000 FRW</strong> service fee.</p>
        <p><strong>Official Document No.:</strong> ${certId}</p>
        <p>Please complete payment so we can release the signed PDF and QR verification.</p>
        ${button(payLink, "Pay 5,000 FRW now")}`

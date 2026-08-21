@@ -698,7 +698,7 @@ export default function UserDashboard() {
                         <div className="p-3 rounded-xl bg-amber-100/80 border border-amber-300 text-xs text-amber-950 font-medium flex items-center gap-2">
                           <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0" />
                           <span>
-                            This certificate was approved by the doctor. Complete payment of <strong>5,000 FRW via IremboPay</strong> (MTN, Airtel, or card) to unlock high-res PDF download and official QR verification.
+                            This certificate was approved by the doctor. Complete the <strong>5,000 FRW service fee via IremboPay</strong> (MTN, Airtel, or card) to unlock high-res PDF download and official QR verification.
                           </span>
                         </div>
                       )}
