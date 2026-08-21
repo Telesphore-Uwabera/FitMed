@@ -43,6 +43,7 @@ import {
   X,
   CreditCard,
   Download,
+  Calendar,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
@@ -89,9 +90,9 @@ export default function AdminDashboardPage() {
   const [activeNav, setActiveNav] = useState("overview");
   const [settingsSection, setSettingsSection] = useState<"profile" | "password" | "settings">("settings");
   const [adminProfile, setAdminProfile] = useState({
-    name: "FitMed Admin",
-    email: "info.teletech.rw@gmail.com",
-    avatarUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80&auto=format&fit=crop",
+    name: "",
+    email: "",
+    avatarUrl: "",
   });
   const [adminAvatarWebp, setAdminAvatarWebp] = useState<WebPConversionResult | null>(null);
   const [governanceSettings, setGovernanceSettings] = useState({
@@ -114,7 +115,7 @@ export default function AdminDashboardPage() {
     if (!session) return;
     setAdminProfile((prev) => ({
       ...prev,
-      name: prev.name === "FitMed Admin" ? session.name : prev.name,
+      name: session.name || prev.name,
       email: session.email || prev.email,
     }));
   }, [session]);
@@ -178,9 +179,22 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const saveGovernanceSettings = () => {
-    localStorage.setItem("fitmed_admin_governance", JSON.stringify(governanceSettings));
-    success("Settings saved", "Governance rules are now active for new assessments.");
+  const saveGovernanceSettings = async () => {
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(governanceSettings),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Settings not saved", data.error || "Please try again.");
+        return;
+      }
+      success("Settings saved", "Governance rules are now stored in FitMed.");
+    } catch {
+      error("Settings not saved", "Could not reach the server.");
+    }
   };
 
   const goToNav = (id: string) => {
@@ -202,7 +216,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   const [adminRefresh, setAdminRefresh] = useState(0);
-  const [auditDate, setAuditDate] = useState("—");
+  const [auditLogs, setAuditLogs] = useState<{ id: string; action: string; detail: string; actor?: string; time: string }[]>([]);
   useEffect(() => {
     setAuditDate(new Date().toLocaleDateString("en-GB"));
   }, []);
@@ -217,8 +231,22 @@ export default function AdminDashboardPage() {
   >([]);
 
   const [showAddClinic, setShowAddClinic] = useState(false);
-  const [clinicForm, setClinicForm] = useState({ name: "", city: "", status: "Active Partner", capacity: "Medium" });
-  const [clinics, setClinics] = useState<{ id: string; name: string; city: string; status: string; capacity: string }[]>([]);
+  const [clinicForm, setClinicForm] = useState({
+    name: "",
+    city: "",
+    status: "Active Partner",
+    capacity: "Medium",
+    phone: "",
+    type: "",
+  });
+  const [clinics, setClinics] = useState<
+    { id: string; name: string; city: string; status: string; capacity: string; phone?: string; type?: string }[]
+  >([]);
+  const [platformAppointments, setPlatformAppointments] = useState<any[]>([]);
+  const [doctorSchedules, setDoctorSchedules] = useState<any[]>([]);
+  const [subscribers, setSubscribers] = useState<{ id: string; email: string; name: string; date: string }[]>([]);
+  const [broadcastForm, setBroadcastForm] = useState({ subject: "", message: "" });
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
 
   const approveDoctor = async (id: string, name: string) => {
     try {
@@ -256,7 +284,9 @@ export default function AdminDashboardPage() {
       }
       success(
         "Applicant approved",
-        `We emailed ${name} a first-time sign-in password. They will choose their own password after signing in.`
+        data.usedOwnPassword
+          ? `${name} can now sign in with the password they created at registration.`
+          : `We emailed ${name} a first-time sign-in password. They will choose their own password after signing in.`
       );
       setAdminRefresh((n) => n + 1);
     } catch {
@@ -530,7 +560,11 @@ export default function AdminDashboardPage() {
       try {
         const certRes = await fetch("/api/certificates");
         const certData = await certRes.json();
-        if (certData.success && Array.isArray(certData.certificates)) {
+        const payRes = await fetch("/api/payments");
+        const payData = await payRes.json();
+        if (payData.success && Array.isArray(payData.payments) && payData.payments.length > 0) {
+          setTransactions(payData.payments);
+        } else if (certData.success && Array.isArray(certData.certificates)) {
           setTransactions(
             certData.certificates.map((c: Record<string, unknown>) => {
               const amount = Number(c.amount) || 5000;
@@ -585,6 +619,48 @@ export default function AdminDashboardPage() {
         }
       } catch {
         setInquiries([]);
+      }
+
+      try {
+        const clinicRes = await fetch("/api/clinics");
+        const clinicData = await clinicRes.json();
+        setClinics(clinicData.success ? clinicData.clinics || [] : []);
+      } catch {
+        setClinics([]);
+      }
+
+      try {
+        const scheduleRes = await fetch("/api/schedules");
+        const scheduleData = await scheduleRes.json();
+        setDoctorSchedules(scheduleData.success ? scheduleData.schedules || [] : []);
+        setPlatformAppointments(scheduleData.success ? scheduleData.appointments || [] : []);
+      } catch {
+        setDoctorSchedules([]);
+        setPlatformAppointments([]);
+      }
+
+      try {
+        const newsRes = await fetch("/api/admin/newsletter");
+        const newsData = await newsRes.json();
+        setSubscribers(newsData.success ? newsData.subscribers || [] : []);
+      } catch {
+        setSubscribers([]);
+      }
+
+      try {
+        const settingsRes = await fetch("/api/admin/settings");
+        const settingsData = await settingsRes.json();
+        if (settingsData.success && settingsData.settings) {
+          setGovernanceSettings((prev) => ({
+            ...prev,
+            assessmentRate: settingsData.settings.assessmentRate || prev.assessmentRate,
+            requireLiveConsultation: settingsData.settings.requireLiveConsultation,
+            qrValidation: settingsData.settings.qrValidation,
+          }));
+          setAuditLogs(settingsData.logs || []);
+        }
+      } catch {
+        setAuditLogs([]);
       }
     };
 
@@ -681,8 +757,7 @@ export default function AdminDashboardPage() {
                   <Activity className="w-5 h-5 text-[#12B8B0]" />
                 </div>
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
-                  <TrendingUp className="w-2.5 h-2.5" />
-                  +8.3%
+                  Live
                 </span>
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Certificates</div>
@@ -760,11 +835,11 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-xs font-bold text-emerald-300/80 uppercase tracking-wider mb-1">Security Status</div>
               <div className="text-2xl font-extrabold text-emerald-400" style={{ fontFamily: "var(--font-primary)" }}>
-                99.9% Uptime
+                Protected
               </div>
               <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
                 <ShieldAlert className="w-3 h-3 text-emerald-400" />
-                Privacy & records protected
+                Signed sessions and role access
               </div>
             </div>
           </div>
@@ -780,6 +855,8 @@ export default function AdminDashboardPage() {
             { id: "payments",  label: `Payments (${transactions.length})` },
             { id: "inquiries", label: `Contact Inquiries (${inquiries.filter(i => i.status === 'New').length} New)` },
             { id: "clinics",   label: `Partner Clinics (${clinics.length})` },
+            { id: "schedules", label: `Schedules (${platformAppointments.length})` },
+            { id: "newsletter", label: `News (${subscribers.length})` },
             { id: "revenue",   label: "Revenue & Payouts" },
             { id: "security",  label: "Privacy & activity log" },
             { id: "settings",  label: "Governance Settings" },
@@ -831,7 +908,7 @@ export default function AdminDashboardPage() {
                 </p>
                 <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-[#12B8B0]">
                   System status: Online<br />
-                  Last check: {auditDate}
+                  Last check: {auditLogs[0]?.time || "—"}
                 </div>
               </div>
             </div>
@@ -1254,7 +1331,7 @@ export default function AdminDashboardPage() {
                       <input
                         required
                         type="email"
-                        placeholder="name@fitmed.rw"
+                        placeholder="Email address"
                         value={addDoctorForm.email}
                         onChange={(e) => setAddDoctorForm({ ...addDoctorForm, email: e.target.value })}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
@@ -1544,16 +1621,26 @@ export default function AdminDashboardPage() {
 
             {showAddClinic && (
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
-                  const newId = `CLN-${String(clinics.length + 1).padStart(2, "0")}`;
-                  setClinics((prev) => [
-                    ...prev,
-                    { id: newId, name: clinicForm.name, city: clinicForm.city, status: clinicForm.status, capacity: clinicForm.capacity },
-                  ]);
-                  success("Clinic added", `${clinicForm.name} is now in the referral network.`);
-                  setClinicForm({ name: "", city: "", status: "Active Partner", capacity: "Medium" });
-                  setShowAddClinic(false);
+                  try {
+                    const res = await fetch("/api/clinics", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(clinicForm),
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                      error("Clinic not saved", data.error || "Please try again.");
+                      return;
+                    }
+                    setClinics((prev) => [data.clinic, ...prev]);
+                    success("Clinic added", `${clinicForm.name} is now in the referral network.`);
+                    setClinicForm({ name: "", city: "", status: "Active Partner", capacity: "Medium", phone: "", type: "" });
+                    setShowAddClinic(false);
+                  } catch {
+                    error("Clinic not saved", "Could not reach the server.");
+                  }
                 }}
                 className="p-4 rounded-2xl bg-slate-50 border border-slate-200 grid sm:grid-cols-2 gap-3"
               >
@@ -1562,14 +1649,14 @@ export default function AdminDashboardPage() {
                   placeholder="Clinic name"
                   value={clinicForm.name}
                   onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })}
-                  className="p-2.5 rounded-xl border border-slate-200 text-xs font-semibold"
+                  className="p-2.5 text-xs font-semibold"
                 />
                 <input
                   required
                   placeholder="City / district"
                   value={clinicForm.city}
                   onChange={(e) => setClinicForm({ ...clinicForm, city: e.target.value })}
-                  className="p-2.5 rounded-xl border border-slate-200 text-xs font-semibold"
+                  className="p-2.5 text-xs font-semibold"
                 />
                 <input
                   placeholder="Partnership status"
@@ -1584,17 +1671,129 @@ export default function AdminDashboardPage() {
             )}
 
             <div className="divide-y divide-slate-100 text-xs">
+              {clinics.length === 0 && (
+                <div className="py-6 text-slate-400">No partner clinics in the database yet.</div>
+              )}
               {clinics.map((c) => (
                 <div key={c.id} className="py-3.5 flex items-center justify-between">
                   <div>
                     <div className="font-bold text-[#0B2D5C]">{c.name}</div>
-                    <div className="text-slate-400">{c.city}</div>
+                    <div className="text-slate-400">{c.city}{c.phone ? ` · ${c.phone}` : ""}</div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 font-bold border border-teal-200 text-[10px]">
                     {c.status}
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeNav === "schedules" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>Schedules</h2>
+              <p className="text-xs text-slate-500 mt-1">Doctor weekly availability and booked applicant appointments from the database.</p>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-3">
+                <h3 className="text-sm font-extrabold text-[#0B2D5C]">Doctor availability</h3>
+                {doctorSchedules.length === 0 && <p className="text-xs text-slate-400">No saved doctor schedules yet. Doctors publish hours from My Availability.</p>}
+                {doctorSchedules.map((row) => (
+                  <div key={row.id} className="p-4 rounded-2xl bg-slate-50 text-xs">
+                    <div className="font-bold text-[#0B2D5C]">{row.doctorName}</div>
+                    <div className="text-slate-500">{row.doctorEmail} · {row.status}</div>
+                    <div className="mt-2 space-y-1 text-slate-600">
+                      {(row.weeklySchedule || []).filter((d: { dayEnabled?: boolean; nightEnabled?: boolean }) => d.dayEnabled || d.nightEnabled).map((d: { day: string; dayEnabled?: boolean; dayStart?: string; dayEnd?: string; nightEnabled?: boolean; nightStart?: string; nightEnd?: string }) => (
+                        <div key={d.day}>
+                          {d.day}: {d.dayEnabled ? `Day ${d.dayStart}–${d.dayEnd}` : ""}{d.nightEnabled ? ` Night ${d.nightStart}–${d.nightEnd}` : ""}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-3">
+                <h3 className="text-sm font-extrabold text-[#0B2D5C]">Booked appointments</h3>
+                {platformAppointments.length === 0 && <p className="text-xs text-slate-400">No appointments in the database yet.</p>}
+                {platformAppointments.map((apt: any) => (
+                  <div key={apt.appointmentId || apt._id} className="p-4 rounded-2xl border border-slate-100 text-xs">
+                    <div className="font-bold text-[#0B2D5C]">{apt.applicantName}</div>
+                    <div className="text-slate-500">{apt.scheduledDate} · {apt.scheduledTime} · {apt.doctorName || "Unassigned"}</div>
+                    <div className="text-slate-400 mt-1">{apt.purpose} · {apt.status}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeNav === "newsletter" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>News broadcast</h2>
+              <p className="text-xs text-slate-500 mt-1">Email everyone who subscribed from the public footer.</p>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setBroadcastBusy(true);
+                try {
+                  const res = await fetch("/api/admin/newsletter", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(broadcastForm),
+                  });
+                  const data = await res.json();
+                  if (!data.success) {
+                    error("Broadcast not sent", data.error || "Please try again.");
+                    return;
+                  }
+                  success("Broadcast sent", data.message);
+                  setBroadcastForm({ subject: "", message: "" });
+                } catch {
+                  error("Broadcast not sent", "Could not reach the server.");
+                } finally {
+                  setBroadcastBusy(false);
+                }
+              }}
+              className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4"
+            >
+              <label className="block text-xs font-bold text-slate-600">
+                Subject
+                <input
+                  required
+                  value={broadcastForm.subject}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, subject: e.target.value })}
+                  className="mt-1 w-full text-sm"
+                  placeholder="FitMed update"
+                />
+              </label>
+              <label className="block text-xs font-bold text-slate-600">
+                Message
+                <textarea
+                  required
+                  value={broadcastForm.message}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, message: e.target.value })}
+                  className="mt-1 w-full text-sm"
+                  placeholder="Write the news you want subscribers to receive…"
+                />
+              </label>
+              <button type="submit" disabled={broadcastBusy} className="px-5 py-2.5 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold disabled:opacity-60">
+                {broadcastBusy ? "Sending…" : `Send to ${subscribers.length} subscriber${subscribers.length === 1 ? "" : "s"}`}
+              </button>
+            </form>
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+              <h3 className="text-sm font-extrabold text-[#0B2D5C] mb-3">Subscribers</h3>
+              {subscribers.length === 0 && <p className="text-xs text-slate-400">No subscribers yet.</p>}
+              <div className="divide-y divide-slate-100 text-xs">
+                {subscribers.map((s) => (
+                  <div key={s.id} className="py-2.5 flex justify-between gap-3">
+                    <span className="font-semibold text-[#0B2D5C]">{s.email}</span>
+                    <span className="text-slate-400">{s.name || "—"} · {s.date}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1854,12 +2053,12 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-lg font-bold text-[#0B2D5C]">Privacy & activity log</h3>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs font-mono text-slate-700">
-              {transactions.length === 0 ? (
-                <div>No audit events yet. Certificate activity will appear here.</div>
+              {auditLogs.length === 0 ? (
+                <div>No audit events yet. Assignments and certificate activity will appear here.</div>
               ) : (
-                transactions.slice(0, 8).map((t) => (
-                  <div key={t.certId + t.date}>
-                    [{t.date}] {t.status}: {t.certId} · {t.applicantName} · {t.doctorName}
+                auditLogs.map((log) => (
+                  <div key={log.id}>
+                    [{log.time}] {log.action}: {log.detail}
                   </div>
                 ))
               )}

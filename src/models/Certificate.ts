@@ -104,6 +104,7 @@ export interface ICertificate extends Document {
   iremboRef?: string;
   assignedDoctor?: string;
   assignedDoctorId?: string;
+  assignedDoctorLicense?: string;
   riskLevel?: string;
   riskColor?: string;
   appliedDate?: Date;
@@ -222,6 +223,7 @@ const CertificateSchema = new Schema<ICertificate>(
     iremboRef: { type: String },
     assignedDoctor: { type: String },
     assignedDoctorId: { type: String },
+    assignedDoctorLicense: { type: String },
     riskLevel: { type: String },
     riskColor: { type: String },
     appliedDate: { type: Date, default: Date.now },

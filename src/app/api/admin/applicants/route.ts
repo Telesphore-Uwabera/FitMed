@@ -15,7 +15,7 @@ function displayStatus(raw: string) {
 }
 
 async function findApplicant(id: string, email?: string) {
-  const roleFilter = { role: { $in: ["user", "applicant"] } };
+  const roleFilter = { $nor: [{ role: "admin" }, { role: "doctor" }] };
   if (email) {
     const byEmail = await User.findOne({ ...roleFilter, email: email.trim().toLowerCase() });
     if (byEmail) return byEmail;
@@ -53,7 +53,9 @@ function mapApplicant(u: Record<string, unknown>, certCount = 0) {
 export async function GET() {
   try {
     await connectToDatabase();
-    const users = await User.find({ role: { $in: ["user", "applicant"] } })
+    const users = await User.find({
+      $nor: [{ role: "admin" }, { role: "doctor" }],
+    })
       .select("fullName name email phone nationalId nationalIdImageUrl avatarUrl status createdAt dateOfBirth gender address")
       .sort({ createdAt: -1 })
       .lean();

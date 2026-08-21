@@ -1,8 +1,9 @@
 "use client";
 
-import { Mail, Phone, MapPin, Globe, Share2, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Globe, Share2, MessageCircle, Send } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 
 const footerLinks = {
   Platform: [
@@ -41,6 +42,35 @@ const socials = [
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const [newsEmail, setNewsEmail] = useState("");
+  const [newsName, setNewsName] = useState("");
+  const [newsNote, setNewsNote] = useState("");
+  const [newsBusy, setNewsBusy] = useState(false);
+
+  const subscribe = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setNewsBusy(true);
+    setNewsNote("");
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newsEmail, name: newsName }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setNewsNote(data.error || "Could not subscribe. Please try again.");
+      } else {
+        setNewsNote("You are subscribed. FitMed will email platform news to this address.");
+        setNewsEmail("");
+        setNewsName("");
+      }
+    } catch {
+      setNewsNote("Could not reach FitMed. Check your connection and try again.");
+    } finally {
+      setNewsBusy(false);
+    }
+  };
 
   return (
     <footer className="bg-[#0B2D5C]">
@@ -123,6 +153,53 @@ export default function Footer() {
               </ul>
             </div>
           ))}
+        </div>
+
+        <div className="mb-16 rounded-3xl border border-white/10 bg-[#082247] p-6 sm:p-8">
+          <div className="grid lg:grid-cols-[1.1fr_1fr] gap-8 items-end">
+            <div>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#12B8B0] mb-2">FitMed news</p>
+              <h3 className="text-2xl font-extrabold text-white mb-2" style={{ fontFamily: "var(--font-primary)" }}>
+                Subscribe for platform updates
+              </h3>
+              <p className="text-sm text-slate-400 max-w-md">
+                Get notices about certificate processing, doctor availability, and FitMed announcements. Administrators send these broadcasts from the admin console.
+              </p>
+            </div>
+            <form onSubmit={subscribe} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Name</span>
+                  <input
+                    value={newsName}
+                    onChange={(e) => setNewsName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full mt-1 text-sm text-white placeholder:text-slate-500"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Email</span>
+                  <input
+                    type="email"
+                    required
+                    value={newsEmail}
+                    onChange={(e) => setNewsEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    className="w-full mt-1 text-sm text-white placeholder:text-slate-500"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                disabled={newsBusy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] text-xs font-black disabled:opacity-60"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {newsBusy ? "Saving…" : "Subscribe"}
+              </button>
+              {newsNote ? <p className="text-xs text-[#8ff3e8]">{newsNote}</p> : null}
+            </form>
+          </div>
         </div>
 
         {/* ── Divider ─────────────────────────────────────────── */}

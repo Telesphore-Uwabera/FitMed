@@ -21,12 +21,8 @@ export async function GET(request: NextRequest) {
       const appointments = await Appointment.find(query).sort({ scheduledDate: 1, scheduledTime: 1 });
       return NextResponse.json({ success: true, appointments });
     } catch (dbErr) {
-      console.warn("MongoDB fetch appointments fallback:", dbErr);
-      return NextResponse.json({
-        success: true,
-        appointments: listAppointments({ doctorId, applicantEmail, status }),
-        source: "memory",
-      });
+      console.warn("MongoDB fetch appointments failed:", dbErr);
+      return NextResponse.json({ success: true, appointments: [] });
     }
   } catch (error: any) {
     console.error("GET appointments error:", error);
@@ -65,9 +61,9 @@ export async function POST(request: NextRequest) {
       applicantName,
       applicantEmail: String(applicantEmail).toLowerCase(),
       applicantPhone: applicantPhone || "",
-      doctorId: doctorId || "DOC-RW-4091",
-      doctorName: doctorName || "Dr. Telesphore Uwabera, MD",
-      doctorSpecialty: doctorSpecialty || "Telehealth Physician",
+      doctorId: doctorId || "",
+      doctorName: doctorName || "",
+      doctorSpecialty: doctorSpecialty || "",
       purpose: purpose || "Medical Fitness Review",
       certificateDraftId: certificateDraftId || "",
       scheduledDate,
@@ -92,7 +88,7 @@ export async function POST(request: NextRequest) {
     // Dispatch Brevo email notification to the applicant
     const meetingLink = `${FITMED_APP_URL}${roomUrl}`;
     const formattedTime = `${scheduledDate} at ${scheduledTime}`;
-    const physician = doctorName || "Dr. Telesphore Uwabera, MD";
+    const physician = doctorName || "FitMed Physician";
     await sendBrevoEmail({
       toEmail: applicantEmail,
       toName: applicantName,

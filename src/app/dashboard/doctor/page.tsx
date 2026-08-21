@@ -58,6 +58,7 @@ import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessm
 import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
 import { useToast } from "@/components/ToastProvider";
 import { useDialog } from "@/components/DialogProvider";
+import { displayValue, isIssuedCertificate, sameCalendarDay, todayShift } from "@/lib/records";
 
 export default function DoctorDashboardPage() {
   const { success, error, warning, info } = useToast();
@@ -108,8 +109,19 @@ export default function DoctorDashboardPage() {
   const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
 
   // Doctor Availability & Weekly Schedule State
-  const [doctorStatus, setDoctorStatus] = useState<"ONLINE" | "BUSY" | "OFF">("ONLINE");
-  const [doctorAvatar, setDoctorAvatar] = useState("https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop");
+  const [doctorStatus, setDoctorStatus] = useState<"ONLINE" | "BUSY" | "OFF">("OFF");
+  const [doctorAvatar, setDoctorAvatar] = useState("");
+  const [avatarWebpResult, setAvatarWebpResult] = useState<WebPConversionResult | null>(null);
+  const [doctorProfile, setDoctorProfile] = useState({
+    id: "",
+    name: "",
+    email: "",
+    licenseNumber: "",
+    specialty: "",
+    avatarUrl: "",
+    isVerified: false,
+    status: "OFF" as "ONLINE" | "BUSY" | "OFF",
+  });
   const [doctorNewPassword, setDoctorNewPassword] = useState("");
   const [doctorConfirmPassword, setDoctorConfirmPassword] = useState("");
   const [doctorCurrentPassword, setDoctorCurrentPassword] = useState("");
@@ -130,15 +142,9 @@ export default function DoctorDashboardPage() {
     }
   };
 
-  const [weeklySchedule, setWeeklySchedule] = useState([
-    { day: "Monday",    dayEnabled: true,  dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: false, nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-    { day: "Tuesday",   dayEnabled: true,  dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: false, nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-    { day: "Wednesday", dayEnabled: true,  dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: true,  nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-    { day: "Thursday",  dayEnabled: true,  dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: false, nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-    { day: "Friday",    dayEnabled: true,  dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: true,  nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-    { day: "Saturday",  dayEnabled: true,  dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: false, nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-    { day: "Sunday",    dayEnabled: false, dayStart: "08:00 AM", dayEnd: "05:00 PM", nightEnabled: false, nightStart: "05:00 PM", nightEnd: "11:00 PM" },
-  ]);
+  const [weeklySchedule, setWeeklySchedule] = useState<
+    { day: string; dayEnabled: boolean; dayStart: string; dayEnd: string; nightEnabled: boolean; nightStart: string; nightEnd: string }[]
+  >([]);
   const [savedScheduleAlert, setSavedScheduleAlert] = useState(false);
 
   const calcSlots = (start: string, end: string): string => {
@@ -170,7 +176,7 @@ export default function DoctorDashboardPage() {
   const [meetingStatus, setMeetingStatus] = useState<"idle" | "waiting" | "connected">("idle");
   const [meetingRoomId, setMeetingRoomId] = useState(FITMED_LIVE_ROOM);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("telesphore91073@gmail.com");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [inviteSentAlert, setInviteSentAlert] = useState<string | null>(null);
   
   // WebRTC video call state
@@ -203,8 +209,8 @@ export default function DoctorDashboardPage() {
             applicantName: selectedCandidate.name,
             applicantEmail: selectedCandidate.applicantEmail,
             applicantPhone: selectedCandidate.phone || "",
-            doctorId: "DOC-RW-4091",
-            doctorName: session?.name || "Dr. Telesphore Uwabera, MD",
+            doctorId: doctorProfile.id || session?.email || "",
+            doctorName: session?.name || doctorProfile.name || "Physician",
             purpose: selectedCandidate.purpose || "Medical fitness review",
             scheduledDate: new Date().toISOString().split("T")[0],
             scheduledTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -268,7 +274,7 @@ export default function DoctorDashboardPage() {
 
     const newMsg = {
       sender: "doctor",
-      name: "Dr. Telesphore Uwabera, MD",
+      name: session?.name || doctorProfile.name || "Physician",
       text: chatInput,
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
@@ -296,49 +302,87 @@ export default function DoctorDashboardPage() {
 
   // Load chat messages, appointments, and applicant queue from MongoDB
   useEffect(() => {
+    if (!session?.email) return;
+
+    const mapQueueItem = (cert: Record<string, any>) => ({
+      id: cert.certificateId,
+      name: displayValue(cert.candidateName, "Applicant"),
+      applicantEmail: cert.applicantEmail,
+      phone: displayValue(cert.applicantPhone),
+      age: cert.age || "—",
+      gender: displayValue(cert.gender),
+      nationalId: displayValue(cert.candidateIdNumber),
+      avatarUrl: cert.avatarUrl || "",
+      nationalIdImageUrl: cert.nationalIdImageUrl || "",
+      purpose: displayValue(cert.purpose),
+      appliedDate: cert.appliedDate ? new Date(cert.appliedDate).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "—",
+      riskLevel: displayValue(cert.riskLevel),
+      riskColor: cert.riskColor || "bg-slate-100 text-slate-700 border-slate-200",
+      vitals: {
+        bp: displayValue(cert.vitals?.bloodPressure),
+        hr: displayValue(cert.vitals?.heartRate),
+        bmi: displayValue(cert.vitals?.bmi),
+        spo2: displayValue(cert.vitals?.spo2),
+      },
+      flags: cert.redFlags ? `${Object.values(cert.redFlags).filter(Boolean).length} flags` : "None recorded",
+      history: displayValue(cert.additionalNotes, "No additional notes provided."),
+      assignedDoctor: displayValue(cert.assignedDoctor),
+      assignedDoctorId: cert.assignedDoctorId || "",
+      fullCertificate: cert,
+    });
+
     async function loadData() {
+      let doctorId = "";
+      let doctorEmail = session?.email || "";
       try {
-        const aptRes = await fetch("/api/appointments", { signal: AbortSignal.timeout(8000) });
+        const meRes = await fetch("/api/doctors/me", { credentials: "include" });
+        const meData = await meRes.json();
+        if (meData.success && meData.doctor) {
+          const d = meData.doctor;
+          doctorId = d.id || "";
+          doctorEmail = d.email || doctorEmail;
+          setDoctorProfile(d);
+          if (d.avatarUrl) setDoctorAvatar(d.avatarUrl);
+          if (d.status === "ONLINE" || d.status === "BUSY" || d.status === "OFF") setDoctorStatus(d.status);
+          const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+          if (Array.isArray(d.weeklySchedule) && d.weeklySchedule.length) {
+            setWeeklySchedule(d.weeklySchedule);
+          } else {
+            setWeeklySchedule(
+              days.map((day) => ({
+                day,
+                dayEnabled: false,
+                dayStart: "",
+                dayEnd: "",
+                nightEnabled: false,
+                nightStart: "",
+                nightEnd: "",
+              }))
+            );
+          }
+        }
+      } catch {
+        // Profile stays empty until the doctor record loads.
+      }
+
+      try {
+        const aptRes = await fetch(`/api/appointments?doctorId=${encodeURIComponent(doctorEmail)}`, { signal: AbortSignal.timeout(8000) });
         const aptData = await aptRes.json();
         if (aptData.success) {
           setDoctorAppointments(aptData.appointments || []);
         }
       } catch (err) {
         console.warn("Could not load doctor appointments:", err);
+        setDoctorAppointments([]);
       }
 
+      const assignedQuery = doctorId ? `&assignedDoctorId=${encodeURIComponent(doctorId)}` : "";
       try {
-        const certRes = await fetch("/api/certificates?status=submitted", { signal: AbortSignal.timeout(15000) });
+        const certRes = await fetch(`/api/certificates?status=submitted${assignedQuery}`, { signal: AbortSignal.timeout(15000) });
         const certData = await certRes.json();
-        if (certData.success && certData.certificates?.length > 0) {
-          const formattedQueue = certData.certificates.map((cert: any) => ({
-            id: cert.certificateId,
-            name: cert.candidateName,
-            applicantEmail: cert.applicantEmail,
-            phone: cert.applicantPhone,
-            age: cert.age || 30,
-            gender: cert.gender || "Male",
-            nationalId: cert.candidateIdNumber,
-            avatarUrl: cert.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
-            nationalIdImageUrl: cert.nationalIdImageUrl || "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop",
-            purpose: cert.purpose,
-            appliedDate: cert.appliedDate ? new Date(cert.appliedDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "Just now",
-            riskLevel: cert.riskLevel || "Low Risk",
-            riskColor: cert.riskColor || "bg-emerald-100 text-emerald-800 border-emerald-300",
-            vitals: {
-              bp: cert.vitals?.bloodPressure || "—",
-              hr: cert.vitals?.heartRate || "—",
-              bmi: cert.vitals?.bmi || "—",
-              spo2: cert.vitals?.spo2 || "—",
-            },
-            flags: cert.redFlags ? `${Object.values(cert.redFlags).filter(Boolean).length} Red Flags` : "0 Red Flags",
-            history: cert.additionalNotes || "No additional notes provided.",
-            assignedDoctor: cert.assignedDoctor || "Dr. Telesphore Uwabera (You)",
-            assignedDoctorId: cert.assignedDoctorId || "DOC-RW-4091",
-            fullCertificate: cert,
-          }));
-          setQueue(formattedQueue);
-        } else if (certData.success) {
+        if (certData.success) {
+          setQueue((certData.certificates || []).map(mapQueueItem));
+        } else {
           setQueue([]);
         }
       } catch (err) {
@@ -347,25 +391,20 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const issuedRes = await fetch("/api/certificates", { signal: AbortSignal.timeout(15000) });
+        const issuedRes = await fetch(`/api/certificates${doctorId ? `?assignedDoctorId=${encodeURIComponent(doctorId)}` : ""}`, { signal: AbortSignal.timeout(15000) });
         const issuedData = await issuedRes.json();
         if (issuedData.success && Array.isArray(issuedData.certificates)) {
           setAllApplications(issuedData.certificates);
           setIssuedCertificates(
-            issuedData.certificates
-              .filter((cert: { status?: string; decision?: string }) => {
-                const status = String(cert.status || "").toLowerCase();
-                return status === "approved" || status === "issued" || status === "signed" || Boolean(cert.decision && cert.decision !== "PENDING");
-              })
-              .map((cert: Record<string, unknown>) => ({
-                id: String(cert.certificateId || ""),
-                name: String(cert.candidateName || "Applicant"),
-                candidate: String(cert.candidateName || "Applicant"),
-                purpose: String(cert.purpose || "—"),
-                decision: String(cert.decision || cert.status || "ISSUED"),
-                date: cert.appliedDate ? new Date(String(cert.appliedDate)).toLocaleDateString() : "—",
-                avatarUrl: String(cert.avatarUrl || ""),
-              }))
+            issuedData.certificates.filter(isIssuedCertificate).map((cert: Record<string, unknown>) => ({
+              id: String(cert.certificateId || ""),
+              name: String(cert.candidateName || "Applicant"),
+              candidate: String(cert.candidateName || "Applicant"),
+              purpose: String(cert.purpose || "—"),
+              decision: String(cert.decision || cert.status || "ISSUED"),
+              date: cert.issuedAt || cert.appliedDate ? new Date(String(cert.issuedAt || cert.appliedDate)).toLocaleDateString() : "—",
+              avatarUrl: String(cert.avatarUrl || ""),
+            }))
           );
         } else {
           setAllApplications([]);
@@ -382,22 +421,38 @@ export default function DoctorDashboardPage() {
         if (staffData.success && Array.isArray(staffData.doctors)) {
           setActiveDoctorsOnDuty(
             staffData.doctors
-              .filter((d: { status?: string }) => d.status === "Active")
-              .map((d: { id: string; name: string; role?: string }) => ({
+              .filter((d: { presence?: string }) => d.presence === "ONLINE")
+              .map((d: { id: string; name: string; specialty?: string; role?: string; presence?: string }) => ({
                 id: d.id,
                 name: d.name,
-                specialty: d.role || "Physician",
-                status: "Online",
+                specialty: d.specialty || d.role || "Physician",
+                status: d.presence === "ONLINE" ? "Online" : "On file",
               }))
           );
         }
       } catch {
         setActiveDoctorsOnDuty([]);
       }
+
+      try {
+        const clinicRes = await fetch("/api/clinics");
+        const clinicData = await clinicRes.json();
+        setPartnerClinics(clinicData.success ? clinicData.clinics || [] : []);
+      } catch {
+        setPartnerClinics([]);
+      }
+
+      try {
+        const refRes = await fetch("/api/referrals");
+        const refData = await refRes.json();
+        setPhysicalReferrals(refData.success ? refData.referrals || [] : []);
+      } catch {
+        setPhysicalReferrals([]);
+      }
     }
 
     loadData();
-  }, []);
+  }, [session?.email]);
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -436,10 +491,10 @@ export default function DoctorDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicantEmail: inviteEmail,
-          applicantName: selectedCandidate?.name || "Telesphore",
+          applicantName: selectedCandidate?.name || "",
           patientEmail: inviteEmail,
-          patientName: selectedCandidate?.name || "Telesphore",
-          doctorName: "Dr. Telesphore Uwabera, MD",
+          patientName: selectedCandidate?.name || "",
+          doctorName: session?.name || doctorProfile.name || "Physician",
           scheduledTime: "Live Now (Consultation Active)",
           roomUrl: `/dashboard/user?tab=consultation&room=${meetingRoomId}`,
         }),
@@ -464,6 +519,9 @@ export default function DoctorDashboardPage() {
   const [issuedCertificates, setIssuedCertificates] = useState<
     { id: string; name: string; candidate: string; purpose: string; decision: string; date: string; avatarUrl?: string }[]
   >([]);
+  const [partnerClinics, setPartnerClinics] = useState<{ id: string; name: string; city: string; phone?: string; type?: string; status?: string }[]>([]);
+  const [physicalReferrals, setPhysicalReferrals] = useState<any[]>([]);
+  const [referralForm, setReferralForm] = useState({ applicantName: "", applicantEmail: "", clinicName: "", clinicCity: "", reason: "" });
   const [activeDoctorsOnDuty, setActiveDoctorsOnDuty] = useState<
     { id: string; name: string; specialty: string; status: string }[]
   >([]);
@@ -475,13 +533,46 @@ export default function DoctorDashboardPage() {
     info("Case Reassigned", `Request re-routed & load-balanced to ${targetDoctor}.`);
   };
 
-  const handleSaveSchedule = (e: React.FormEvent) => {
+  const persistDoctorStatus = async (status: "ONLINE" | "BUSY" | "OFF") => {
+    setDoctorStatus(status);
+    try {
+      await fetch("/api/doctors/me", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch {
+      // Keep the local status even if the save fails.
+    }
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedScheduleAlert(true);
-    setTimeout(() => setSavedScheduleAlert(false), 3000);
+    try {
+      const res = await fetch("/api/doctors/me", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weeklySchedule }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Schedule not saved", data.error || "Could not save availability.");
+        return;
+      }
+      setSavedScheduleAlert(true);
+      setTimeout(() => setSavedScheduleAlert(false), 3000);
+    } catch {
+      error("Schedule not saved", "Could not reach the server.");
+    }
   };
 
   const issuedCount = issuedCertificates.length;
+  const issuedTodayCount = allApplications.filter(
+    (cert) => isIssuedCertificate(cert) && sameCalendarDay(cert.issuedAt || cert.updatedAt, new Date())
+  ).length;
+  const shiftToday = todayShift(weeklySchedule);
   const estimatedPayout = issuedCount * 4000;
   const filteredApplications = allApplications.filter((cert) => {
     const query = appSearch.trim().toLowerCase();
@@ -667,8 +758,7 @@ export default function DoctorDashboardPage() {
                   <FileCheck className="w-5 h-5 text-sky-600" />
                 </div>
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
-                  <TrendingUp className="w-2.5 h-2.5" />
-                  Today
+                  Database
                 </span>
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Certs Issued</div>
@@ -678,7 +768,7 @@ export default function DoctorDashboardPage() {
               </div>
               <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
                 <Award className="w-3 h-3 text-sky-500" />
-                From issued records
+                {issuedTodayCount} issued today
               </div>
             </div>
           </div>
@@ -702,11 +792,11 @@ export default function DoctorDashboardPage() {
               </div>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Shift</div>
               <div className="text-lg font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                Day Shift
+                {shiftToday.label}
               </div>
               <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-violet-500" />
-                08:00 AM – 05:00 PM
+                {shiftToday.hours}
               </div>
             </div>
           </div>
@@ -720,16 +810,16 @@ export default function DoctorDashboardPage() {
                   <ShieldCheck className="w-5 h-5 text-[#12B8B0]" />
                 </div>
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#12B8B0]/20 border border-[#12B8B0]/30 text-[#12B8B0] text-[10px] font-bold uppercase tracking-wider">
-                  Verified
+                  {doctorProfile.isVerified ? "Verified" : "On file"}
                 </span>
               </div>
               <div className="text-xs font-bold text-sky-300/80 uppercase tracking-wider mb-1">License ID</div>
               <div className="text-lg font-extrabold text-white font-mono" style={{ fontFamily: "var(--font-primary)" }}>
-                RW-RMDC-4091
+                {displayValue(doctorProfile.licenseNumber)}
               </div>
               <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
                 <Stethoscope className="w-3 h-3 text-[#12B8B0]" />
-                Occupational Health · MD
+                {displayValue(doctorProfile.specialty, "Physician")}
               </div>
             </div>
           </div>
@@ -752,7 +842,7 @@ export default function DoctorDashboardPage() {
               <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1.5 font-extrabold text-[#0B2D5C]">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Dr. Telesphore Online:</span>
+                  <span>{session?.name || doctorProfile.name || "Physician"} {doctorStatus === "ONLINE" ? "online" : doctorStatus.toLowerCase()}:</span>
                 </div>
                 <div className="flex gap-1.5 text-[11px] font-bold text-slate-600">
                   <span className="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200">Pending: {queue.length}</span>
@@ -775,7 +865,7 @@ export default function DoctorDashboardPage() {
                       <div className="flex items-start gap-4 flex-shrink-0">
                         <div className="relative w-14 h-14 rounded-xl overflow-hidden border-2 border-[#12B8B0] flex-shrink-0 shadow-sm">
                           <img
-                            src={candidate.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop"}
+                            src={candidate.avatarUrl || "/logo-1.webp"}
                             alt={candidate.name}
                             className="w-full h-full object-cover"
                           />
@@ -1110,14 +1200,14 @@ export default function DoctorDashboardPage() {
               <button
                 onClick={() => {
                   setScheduleForm({
-                    applicantName: "Telesphore Uwabera",
-                    applicantEmail: "telesphore91073@gmail.com",
-                    applicantPhone: "+250 788 123 456",
-                    purpose: "Workplace & Office Fitness Certification",
+                    applicantName: "",
+                    applicantEmail: "",
+                    applicantPhone: "",
+                    purpose: "",
                     scheduledDate: new Date().toISOString().split("T")[0],
-                    scheduledTime: "16:00",
+                    scheduledTime: "09:00",
                     durationMinutes: 15,
-                    notes: "Telehealth clinical review and vital symptom check.",
+                    notes: "",
                   });
                   setShowScheduleModal(true);
                 }}
@@ -1233,7 +1323,7 @@ export default function DoctorDashboardPage() {
               {/* Live Status Selector */}
               <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
                 <button
-                  onClick={() => setDoctorStatus("ONLINE")}
+                  onClick={() => persistDoctorStatus("ONLINE")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     doctorStatus === "ONLINE"
                       ? "bg-emerald-600 text-white shadow-sm"
@@ -1245,7 +1335,7 @@ export default function DoctorDashboardPage() {
                 </button>
 
                 <button
-                  onClick={() => setDoctorStatus("BUSY")}
+                  onClick={() => persistDoctorStatus("BUSY")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     doctorStatus === "BUSY"
                       ? "bg-amber-500 text-slate-950 shadow-sm font-black"
@@ -1257,7 +1347,7 @@ export default function DoctorDashboardPage() {
                 </button>
 
                 <button
-                  onClick={() => setDoctorStatus("OFF")}
+                  onClick={() => persistDoctorStatus("OFF")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     doctorStatus === "OFF"
                       ? "bg-slate-800 text-white shadow-sm"
@@ -1280,6 +1370,7 @@ export default function DoctorDashboardPage() {
             <form onSubmit={handleSaveSchedule} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-[#0B2D5C]">Weekly Operating Hours (Rwanda Time / GMT+2)</h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">Saved to your doctor record and the schedules collection. New certificate applications are routed only to doctors who are ONLINE during these hours, alternating in order.</p>
                 <div className="flex items-center gap-3 text-xs text-slate-500">
                   <span className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-sky-100 border border-sky-400 inline-block" />
@@ -1297,7 +1388,7 @@ export default function DoctorDashboardPage() {
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Day</span>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-600 flex items-center gap-1.5">
                   <Sun className="w-3.5 h-3.5" />
-                  Day Shift (08:00 AM – 05:00 PM)
+                  Day / night hours from your saved schedule
                 </span>
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
                   <Moon className="w-3.5 h-3.5" />
@@ -1476,7 +1567,7 @@ export default function DoctorDashboardPage() {
                   </h2>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Active Candidate: <strong>{selectedCandidate?.name || "Telesphore (Candidate)"}</strong> · Category: {selectedCandidate?.purpose || "Workplace & Office Fitness"}
+                  Active Candidate: <strong>{selectedCandidate?.name || "No applicant selected"}</strong> · Category: {selectedCandidate?.purpose || "—"}
                 </p>
               </div>
 
@@ -1533,7 +1624,7 @@ export default function DoctorDashboardPage() {
             ) : (
               <WebRTCVideoCall
                 roomId={webRTCRoomId || meetingRoomId}
-                userName={session?.name || "Dr. Telesphore Uwabera, MD"}
+                userName={session?.name || doctorProfile.name || "Physician"}
                 role="doctor"
                 remoteName={selectedCandidate?.name || "Applicant"}
                 purpose={selectedCandidate?.purpose || "Medical fitness consultation"}
@@ -1590,7 +1681,7 @@ export default function DoctorDashboardPage() {
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="applicant@example.com"
+                    placeholder="Applicant email"
                     className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                   />
                 </div>
@@ -1777,25 +1868,64 @@ export default function DoctorDashboardPage() {
         {activeNav === "referrals" && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-lg sm:text-xl font-bold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-              Physical Clinic Referrals Issued (4)
+              Physical Clinic Referrals ({physicalReferrals.length})
             </h3>
             <p className="text-xs text-slate-500">
-              Candidates requiring auscultation, ECG, audiometry, or specialist clearance routed to partner facilities.
+              Candidates requiring in-person examination are recorded here and stored in the referrals collection.
             </p>
-
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const res = await fetch("/api/referrals", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(referralForm),
+                  });
+                  const data = await res.json();
+                  if (!data.success) {
+                    error("Referral not saved", data.error || "Please try again.");
+                    return;
+                  }
+                  setPhysicalReferrals((prev) => [data.referral, ...prev]);
+                  setReferralForm({ applicantName: "", applicantEmail: "", clinicName: "", clinicCity: "", reason: "" });
+                  success("Referral saved", "The in-person referral is now in FitMed records.");
+                } catch {
+                  error("Referral not saved", "Could not reach the server.");
+                }
+              }}
+              className="grid sm:grid-cols-2 gap-4"
+            >
+              <input required placeholder="Applicant name" value={referralForm.applicantName} onChange={(e) => setReferralForm({ ...referralForm, applicantName: e.target.value })} className="text-xs" />
+              <input placeholder="Applicant email" value={referralForm.applicantEmail} onChange={(e) => setReferralForm({ ...referralForm, applicantEmail: e.target.value })} className="text-xs" />
+              <select
+                required
+                value={referralForm.clinicName}
+                onChange={(e) => {
+                  const clinic = partnerClinics.find((c) => c.name === e.target.value);
+                  setReferralForm({ ...referralForm, clinicName: e.target.value, clinicCity: clinic?.city || "" });
+                }}
+                className="text-xs"
+              >
+                <option value="">Select partner clinic</option>
+                {partnerClinics.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name} — {c.city}</option>
+                ))}
+              </select>
+              <input required placeholder="Clinical reason" value={referralForm.reason} onChange={(e) => setReferralForm({ ...referralForm, reason: e.target.value })} className="text-xs" />
+              <button type="submit" className="sm:col-span-2 px-4 py-2 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold">Save referral</button>
+            </form>
             <div className="space-y-3">
-              {[
-                { name: "Eric Ndayishimiye", clinic: "CHUK - Physical Exam Unit", reason: "Height work vertigo & Stage 1 BP", date: "Today" },
-                { name: "Jean Bosco Kamanzi", clinic: "King Faisal Hospital", reason: "Cardiovascular evaluation & stress test", date: "Yesterday" },
-              ].map((r) => (
-                <div key={r.name} className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
+              {physicalReferrals.length === 0 && <p className="text-xs text-slate-400">No physical referrals in the database yet.</p>}
+              {physicalReferrals.map((r) => (
+                <div key={r.id} className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
                   <div className="space-y-1">
-                    <div className="text-xs font-bold text-[#0B2D5C]">{r.name}</div>
-                    <div className="text-[11px] text-slate-600">Referred to: <strong>{r.clinic}</strong></div>
+                    <div className="text-xs font-bold text-[#0B2D5C]">{r.applicantName}</div>
+                    <div className="text-[11px] text-slate-600">Referred to: <strong>{r.clinicName}</strong></div>
                     <div className="text-[11px] text-amber-800">Reason: {r.reason}</div>
                   </div>
                   <span className="px-3 py-1 bg-amber-200 text-amber-900 rounded-full text-[10px] font-bold">
-                    Pending In-Person Visit
+                    {r.status || "Pending in-person visit"}
                   </span>
                 </div>
               ))}
@@ -1890,7 +2020,15 @@ export default function DoctorDashboardPage() {
                   <button
                     onClick={async () => {
                       const res = await uploadToCloudinary(avatarWebpResult.file, "fitmed/doctors");
-                      if (res.url) setDoctorAvatar(res.url);
+                      if (res.url) {
+                        setDoctorAvatar(res.url);
+                        await fetch("/api/doctors/me", {
+                          method: "PATCH",
+                          credentials: "include",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ avatarUrl: res.url }),
+                        });
+                      }
                       success("Photo saved", "Your new profile photo is ready.");
                       setAvatarWebpResult(null);
                     }}
@@ -1924,7 +2062,7 @@ export default function DoctorDashboardPage() {
               <div>
                 <label className="block text-slate-400 font-bold uppercase mb-1">RMDC License (Immutable)</label>
                 <div className="relative">
-                  <input type="text" defaultValue="Assigned by FitMed admin" disabled className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 font-semibold text-emerald-700 cursor-not-allowed" />
+                  <input type="text" value={doctorProfile.licenseNumber || "—"} disabled className="w-full p-3 rounded-xl border border-slate-200 bg-slate-100 font-semibold text-emerald-700 cursor-not-allowed" />
                   <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3.5" />
                 </div>
               </div>
@@ -2003,8 +2141,8 @@ export default function DoctorDashboardPage() {
       {showSignModal && (
         <DoctorAssessmentForm
           candidate={selectedCandidate || queue[0]}
-          doctorName="Dr. Telesphore Uwabera, MD"
-          doctorLicense="RW-RMDC-4091"
+          doctorName={session?.name || doctorProfile.name || "Physician"}
+          doctorLicense={doctorProfile.licenseNumber || "—"}
           onDecision={async ({ decision, notes, restrictions }) => {
             const candidate = selectedCandidate || queue[0];
             const candidateName = candidate?.name;
@@ -2339,7 +2477,9 @@ export default function DoctorDashboardPage() {
                     <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
                       <div className="flex items-center gap-2">
                         <FileCheck className="w-4 h-4 text-[#12B8B0]" />
-                        <span className="text-xs font-medium text-slate-700">{doc.name}</span>
+                      <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#0B2D5C] hover:underline">
+                        {doc.name}
+                      </a>
                       </div>
                       <button
                         onClick={() => setDoctorDocuments(documents => documents.filter((_, i) => i !== idx))}
@@ -2364,13 +2504,22 @@ export default function DoctorDashboardPage() {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      // In production, upload to Cloudinary or similar
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      formData.append("folder", "fitmed/doctor-documents");
+                      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+                      const uploadData = await uploadRes.json();
+                      if (!uploadData.url) {
+                        error("Document not saved", uploadData.error || "Upload failed.");
+                        return;
+                      }
                       const newDoc = {
                         name: file.name,
-                        url: URL.createObjectURL(file),
-                        type: file.type,
+                        url: uploadData.url,
+                        type: file.type || "file",
                       };
                       setDoctorDocuments([...doctorDocuments, newDoc]);
+                      success("Document uploaded", `${file.name} is stored with this certificate.`);
                     }
                   }}
                   className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0]"
@@ -2428,8 +2577,8 @@ export default function DoctorDashboardPage() {
       {showStructuredAssessmentModal && selectedCandidate && (
         <StructuredDoctorAssessmentForm
           candidate={selectedCandidate}
-          doctorName="Dr. Telesphore Uwabera, MD"
-          doctorLicense="RW-RMDC-4091"
+          doctorName={session?.name || doctorProfile.name || "Physician"}
+          doctorLicense={doctorProfile.licenseNumber || "—"}
           onComplete={async (assessmentData) => {
             try {
               const certificateId = selectedCandidate.id;
@@ -2452,23 +2601,28 @@ export default function DoctorDashboardPage() {
               const data = await res.json();
               if (data.success) {
                 const formattedQueue = data.certificates
-                  .filter((c: any) => c.status === "submitted" && c.assignedDoctorId === "DOC-RW-4091")
+                  .filter((c: any) => String(c.status || "").toLowerCase() === "submitted")
                   .map((c: any) => ({
                     id: c.certificateId,
-                    name: c.candidateName,
-                    nationalId: c.candidateIdNumber,
-                    age: c.age,
-                    gender: c.gender,
-                    purpose: c.purpose,
+                    name: displayValue(c.candidateName, "Applicant"),
+                    nationalId: displayValue(c.candidateIdNumber),
+                    age: c.age || "—",
+                    gender: displayValue(c.gender),
+                    purpose: displayValue(c.purpose),
                     jobType: c.jobType,
-                    vitals: c.vitals,
-                    flags: c.riskLevel || "No significant flags",
-                    history: c.additionalNotes || "No additional notes",
-                    riskLevel: c.riskLevel || "Low Risk",
-                    riskColor: c.riskColor || "bg-emerald-100 text-emerald-800 border-emerald-300",
-                    assignedDoctor: c.assignedDoctor || "Dr. Telesphore Uwabera",
+                    vitals: {
+                      bp: displayValue(c.vitals?.bloodPressure),
+                      hr: displayValue(c.vitals?.heartRate),
+                      bmi: displayValue(c.vitals?.bmi),
+                      spo2: displayValue(c.vitals?.spo2),
+                    },
+                    flags: c.redFlags ? `${Object.values(c.redFlags).filter(Boolean).length} flags` : "None recorded",
+                    history: displayValue(c.additionalNotes, "No additional notes"),
+                    riskLevel: displayValue(c.riskLevel),
+                    riskColor: c.riskColor || "bg-slate-100 text-slate-700 border-slate-200",
+                    assignedDoctor: displayValue(c.assignedDoctor),
                     appliedDate: c.appliedDate,
-                    avatarUrl: c.avatarUrl,
+                    avatarUrl: c.avatarUrl || "",
                     fullCertificate: c,
                   }));
                 setQueue(formattedQueue);
@@ -2516,7 +2670,7 @@ export default function DoctorDashboardPage() {
                 </div>
                 <div className="relative w-28 h-28 mx-auto rounded-2xl overflow-hidden border-2 border-[#12B8B0] shadow-md">
                   <img
-                    src={idCandidate.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop"}
+                    src={idCandidate.avatarUrl || "/logo-1.webp"}
                     alt={idCandidate.name}
                     className="w-full h-full object-cover"
                   />
@@ -2534,7 +2688,7 @@ export default function DoctorDashboardPage() {
                 </div>
                 <div className="relative w-full h-28 rounded-2xl overflow-hidden border-2 border-slate-300 bg-slate-200 shadow-inner">
                   <img
-                    src={idCandidate.nationalIdImageUrl || "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800&q=80&auto=format&fit=crop"}
+                    src={idCandidate.nationalIdImageUrl || "/logo-1.webp"}
                     alt="National ID Card"
                     className="w-full h-full object-cover"
                   />
@@ -2570,7 +2724,7 @@ export default function DoctorDashboardPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  success("Identity Confirmed", `${idCandidate.name}'s National ID verified & logged by Dr. Telesphore Uwabera.`);
+                  success("Identity Confirmed", `${idCandidate.name}'s National ID was verified and logged.`);
                   setShowIdModal(false);
                 }}
                 className="flex-1 py-3.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center justify-center gap-2 shadow-md transition-colors"

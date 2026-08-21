@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import DashboardShell from "@/components/DashboardShell";
+import { useSession } from "@/lib/useSession";
 import { useToast } from "@/components/ToastProvider";
 import {
   FileText,
@@ -19,6 +20,7 @@ import {
 
 export default function DoctorReportsPage() {
   const { success, error } = useToast();
+  const { session, loading: sessionLoading } = useSession("doctor");
   const [certificates, setCertificates] = useState<any[]>([]);
   const [filteredCertificates, setFilteredCertificates] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,8 +28,9 @@ export default function DoctorReportsPage() {
   const [dateFilter, setDateFilter] = useState<string>("all");
 
   useEffect(() => {
+    if (!session?.email) return;
     loadCertificates();
-  }, []);
+  }, [session?.email]);
 
   useEffect(() => {
     filterCertificates();
@@ -35,7 +38,10 @@ export default function DoctorReportsPage() {
 
   const loadCertificates = async () => {
     try {
-      const res = await fetch("/api/certificates");
+      const meRes = await fetch("/api/doctors/me", { credentials: "include" });
+      const meData = await meRes.json();
+      const doctorId = meData.success ? meData.doctor?.id : "";
+      const res = await fetch(doctorId ? `/api/certificates?assignedDoctorId=${encodeURIComponent(doctorId)}` : "/api/certificates");
       const data = await res.json();
       if (data.success) {
         setCertificates(data.certificates);
@@ -134,13 +140,21 @@ export default function DoctorReportsPage() {
     success("Export", "Report exported successfully");
   };
 
+  if (sessionLoading || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Loading reports…
+      </div>
+    );
+  }
+
   return (
     <DashboardShell
       role="doctor"
       activeNav="reports"
       userProfile={{
-        name: "Dr. Telesphore Uwabera",
-        email: "uwaberatelesphore@gmail.com",
+        name: session.name,
+        email: session.email,
         badgeLabel: "Licensed Physician",
       }}
     >

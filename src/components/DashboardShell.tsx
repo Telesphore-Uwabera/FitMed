@@ -35,6 +35,7 @@ import {
   User as UserIcon,
   KeyRound,
   Mail,
+  Send,
   Calendar,
   CalendarCheck,
   CreditCard,
@@ -92,11 +93,11 @@ const roleConfigs: Record<
     badgeText: "text-[#12B8B0]",
     navItems: [
       { id: "overview", label: "Overview", icon: LayoutDashboard },
-      { id: "services", label: "All FitMed Services", icon: Sparkles, badge: "7 Available" },
-      { id: "request", label: "Request Certificate", icon: PlusCircle, badge: "5,000 FRW" },
-      { id: "appointments", label: "My Appointments", icon: Calendar, badge: "Upcoming" },
-      { id: "consultation", label: "Doctor Telehealth & Chat", icon: Video, badge: "Live" },
-      { id: "certificates", label: "My Certificates", icon: FileCheck2, badge: "1 Active" },
+      { id: "services", label: "All FitMed Services", icon: Sparkles },
+      { id: "request", label: "Request Certificate", icon: PlusCircle },
+      { id: "appointments", label: "My Appointments", icon: Calendar },
+      { id: "consultation", label: "Doctor Telehealth & Chat", icon: Video },
+      { id: "certificates", label: "My Certificates", icon: FileCheck2 },
       { id: "history", label: "Assessment History", icon: Activity },
       { id: "referrals", label: "Clinic Referrals", icon: MapPin },
       { id: "settings", label: "Account & Settings", icon: Settings },
@@ -108,14 +109,14 @@ const roleConfigs: Record<
     badgeBorder: "border-sky-500/30",
     badgeText: "text-sky-400",
     navItems: [
-      { id: "queue",         label: "Applicant Queue",         icon: LayoutDashboard, badge: "Pending" },
-      { id: "applications",  label: "All Applications",       icon: ClipboardList,   badge: "Records" },
-      { id: "telehealth",   label: "Video Consultation",      icon: Video,           badge: "Live" },
-      { id: "appointments", label: "Meetings",  icon: CalendarCheck,   badge: "Upcoming" },
-      { id: "reports",      label: "Assessment Reports",      icon: FileTextIcon,        badge: "Stats" },
-      { id: "signed",       label: "Issued Certificates",     icon: FileSignature,   badge: "History" },
-      { id: "schedule",     label: "My Availability",         icon: Calendar,        badge: "Active" },
-      { id: "referrals",    label: "Physical Referrals",      icon: Building2,       badge: "Referrals" },
+      { id: "queue",         label: "Applicant Queue",         icon: LayoutDashboard },
+      { id: "applications",  label: "All Applications",       icon: ClipboardList },
+      { id: "telehealth",   label: "Video Consultation",      icon: Video },
+      { id: "appointments", label: "Meetings",  icon: CalendarCheck },
+      { id: "reports",      label: "Assessment Reports",      icon: FileTextIcon },
+      { id: "signed",       label: "Issued Certificates",     icon: FileSignature },
+      { id: "schedule",     label: "My Availability",         icon: Calendar },
+      { id: "referrals",    label: "Physical Referrals",      icon: Building2 },
       { id: "settings",     label: "Profile Settings",        icon: Settings },
     ],
   },
@@ -126,13 +127,15 @@ const roleConfigs: Record<
     badgeText: "text-amber-400",
     navItems: [
       { id: "overview",   label: "System Analytics",       icon: LayoutDashboard },
-      { id: "reports",    label: "Reports & History",       icon: Activity,    badge: "New" },
-      { id: "doctors",    label: "Doctor Accounts",         icon: UserCheck,   badge: "Live" },
-      { id: "users",      label: "Users Management",        icon: Users,       badge: "Active" },
-      { id: "payments",   label: "Payment Transactions",    icon: CreditCard,  badge: "Irembo" },
-      { id: "inquiries",  label: "Contact Inquiries",       icon: Mail,        badge: "3 New" },
-      { id: "clinics",    label: "Partner Clinic Network",  icon: Building2,   badge: "18 Active" },
-      { id: "revenue",    label: "Financials & Revenue",    icon: DollarSign,  badge: "52.4M" },
+      { id: "reports",    label: "Reports & History",       icon: Activity },
+      { id: "doctors",    label: "Doctor Accounts",         icon: UserCheck },
+      { id: "users",      label: "Users Management",        icon: Users },
+      { id: "payments",   label: "Payment Transactions",    icon: CreditCard },
+      { id: "inquiries",  label: "Contact Inquiries",       icon: Mail },
+      { id: "clinics",    label: "Partner Clinic Network",  icon: Building2 },
+      { id: "schedules",  label: "Schedules",               icon: Calendar },
+      { id: "newsletter", label: "News Broadcast",          icon: Send },
+      { id: "revenue",    label: "Financials & Revenue",    icon: DollarSign },
       { id: "security",   label: "Privacy & activity log",      icon: Lock },
       { id: "settings",   label: "Platform Governance",     icon: Settings },
     ],
@@ -161,7 +164,12 @@ export default function DashboardShell({
     setShellReady(true);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {
+      // Continue signing out locally even if the request fails.
+    }
     localStorage.removeItem("fitmed_session");
     router.push("/signin");
   };

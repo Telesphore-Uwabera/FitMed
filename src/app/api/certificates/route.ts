@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Certificate from "@/models/Certificate";
+import Doctor from "@/models/Doctor";
+import Payment from "@/models/Payment";
+import AuditLog from "@/models/AuditLog";
 import { runClinicalEngine, WizardData } from "@/lib/clinicalEngine";
+import { pickOnDutyDoctor } from "@/lib/assignDoctor";
 import crypto from "crypto";
-import { listCertificates, patchCertificate, saveCertificate } from "@/lib/memoryStore";
 import {
   sendBrevoEmail,
   EmailTemplates,
   FITMED_APP_URL,
   FITMED_ADMIN_EMAIL,
-  FITMED_DOCTOR_EMAIL,
 } from "@/lib/brevo";
 
 export async function GET(request: NextRequest) {
@@ -32,12 +34,8 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ success: true, certificates });
     } catch (dbErr) {
-      console.warn("MongoDB fetch certificates fallback:", dbErr);
-      return NextResponse.json({
-        success: true,
-        certificates: listCertificates({ status, applicantEmail, assignedDoctorId }),
-        source: "memory",
-      });
+      console.warn("MongoDB fetch certificates failed:", dbErr);
+      return NextResponse.json({ success: true, certificates: [] });
     }
   } catch (error: any) {
     console.error("GET certificates error:", error);
@@ -120,9 +118,12 @@ export async function POST(request: NextRequest) {
     const sha256Hash = crypto.createHash('sha256').update(JSON.stringify(wizardData)).digest('hex');
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://fitmed.rw/verify/${certificateId}`;
 
-    // Assign doctor (simple round-robin for now)
-    const assignedDoctor = "Dr. Telesphore Uwabera (You)";
-    const assignedDoctorId = "DOC-RW-4091";
+    await connectToDatabase();
+
+    const assignment = await pickOnDutyDoctor();
+    const assignedDoctor = assignment.assignedDoctor;
+    const assignedDoctorId = assignment.assignedDoctorId;
+    const assignedDoctorLicense = assignment.assignedDoctorLicense;
 
     const newCertificate = {
       certificateId,
@@ -162,6 +163,7 @@ export async function POST(request: NextRequest) {
       paymentStatus: "UNPAID",
       assignedDoctor,
       assignedDoctorId,
+      assignedDoctorLicense,
       riskLevel,
       riskColor,
       appliedDate: new Date(),
@@ -170,11 +172,10 @@ export async function POST(request: NextRequest) {
     let savedCertificate: any = newCertificate;
 
     try {
-      await connectToDatabase();
       savedCertificate = await Certificate.create(newCertificate as any);
     } catch (dbErr) {
-      console.warn("MongoDB certificate save fallback:", dbErr);
-      savedCertificate = saveCertificate(newCertificate);
+      console.warn("MongoDB certificate save failed:", dbErr);
+      return NextResponse.json({ success: false, error: "Could not save the application to the database." }, { status: 500 });
     }
 
     const doctorName = assignedDoctor.replace(/\s*\(You\)\s*$/, "") || "FitMed Physician";
@@ -184,18 +185,20 @@ export async function POST(request: NextRequest) {
       subject: `FitMed received your application ${certificateId}`,
       htmlContent: EmailTemplates.applicationReceived(candidateName, certificateId, purpose),
     });
-    void sendBrevoEmail({
-      toEmail: FITMED_DOCTOR_EMAIL,
-      toName: doctorName,
-      subject: `New FitMed queue case ${certificateId}`,
-      htmlContent: EmailTemplates.doctorNewQueueApplication(
-        doctorName,
-        candidateName,
-        certificateId,
-        purpose,
-        riskLevel
-      ),
-    });
+    if (assignment.assignedDoctorEmail) {
+      void sendBrevoEmail({
+        toEmail: assignment.assignedDoctorEmail,
+        toName: doctorName,
+        subject: `New FitMed queue case ${certificateId}`,
+        htmlContent: EmailTemplates.doctorNewQueueApplication(
+          doctorName,
+          candidateName,
+          certificateId,
+          purpose,
+          riskLevel
+        ),
+      });
+    }
     void sendBrevoEmail({
       toEmail: FITMED_ADMIN_EMAIL,
       toName: "FitMed Admin",
@@ -260,27 +263,42 @@ export async function PATCH(request: NextRequest) {
       );
 
       if (updated) {
+        if (String(status || "").toLowerCase() === "approved" && updated.assignedDoctorId) {
+          await Doctor.findByIdAndUpdate(updated.assignedDoctorId, { $inc: { totalCertificatesIssued: 1 } }).catch(() => null);
+        }
+        await AuditLog.create({
+          action: status ? `certificate_${String(status).toLowerCase()}` : paymentStatus ? `payment_${String(paymentStatus).toLowerCase()}` : "certificate_updated",
+          detail: `${certKey} · ${updated.candidateName} · ${updated.assignedDoctor || "Unassigned"}`,
+          actor: updated.assignedDoctor || "doctor",
+          meta: { certificateId: certKey, status, paymentStatus },
+        }).catch(() => null);
+        if (String(paymentStatus || "").toUpperCase() === "PAID") {
+          await Payment.findOneAndUpdate(
+            { certificateId: certKey },
+            {
+              certificateId: certKey,
+              applicantName: updated.candidateName,
+              applicantEmail: updated.applicantEmail,
+              applicantPhone: updated.applicantPhone || "",
+              purpose: updated.purpose,
+              amount: 5000,
+              currency: "FRW",
+              channel: String(body.channel || updated.paymentChannel || "Irembo"),
+              iremboRef: String(iremboRef || updated.iremboRef || certKey),
+              status: "PAID",
+              doctorName: updated.assignedDoctor || "",
+              paidAt: new Date(),
+            },
+            { upsert: true, new: true }
+          ).catch(() => null);
+        }
         await notifyCertificateEmails(updated.toObject(), { status, paymentStatus, decision, decisionNotes });
       }
 
       return NextResponse.json({ success: true, certificate: updated });
     } catch (dbErr) {
-      console.warn("MongoDB patch certificate fallback:", dbErr);
-      const updated = patchCertificate(certificateId, {
-        ...(decision && { decision }),
-        ...(restrictions !== undefined && { restrictions }),
-        ...(decisionNotes !== undefined && { decisionNotes }),
-        ...(status && { status }),
-        ...(paymentStatus && { paymentStatus }),
-        ...(iremboRef && { iremboRef }),
-        ...(doctorNotes !== undefined && { doctorNotes }),
-        ...(doctorDocuments && { doctorDocuments }),
-        ...(structuredAssessment && { structuredAssessment }),
-      });
-      if (updated) {
-        await notifyCertificateEmails(updated, { status, paymentStatus, decision, decisionNotes });
-      }
-      return NextResponse.json({ success: true, certificate: updated, source: "memory" });
+      console.warn("MongoDB patch certificate failed:", dbErr);
+      return NextResponse.json({ success: false, error: "Could not update the certificate in the database." }, { status: 500 });
     }
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

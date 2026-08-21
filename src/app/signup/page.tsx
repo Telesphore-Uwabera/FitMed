@@ -107,8 +107,8 @@ export default function SignUpPage() {
     setIsSubmitting(true);
 
     try {
-      let avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop";
-      let idDocUrl = "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&q=80&auto=format&fit=crop";
+      let avatarUrl = "";
+      let idDocUrl = "";
 
       if (webpResult) {
         const uploadRes = await uploadToCloudinary(webpResult.file, "fitmed/applicants");
@@ -117,10 +117,18 @@ export default function SignUpPage() {
 
       if (idWebpResult) {
         const uploadIdRes = await uploadToCloudinary(idWebpResult.file, "fitmed/national_ids");
-        if (uploadIdRes.url) idDocUrl = uploadIdRes.url;
+        idDocUrl = uploadIdRes.url || idWebpResult.dataUrl || nationalIdImage || "";
+      } else if (nationalIdImage) {
+        idDocUrl = nationalIdImage;
       }
 
-      await fetch("/api/auth/register", {
+      if (!idDocUrl) {
+        warning("National ID Required", "Please upload your National ID or Passport document photo.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -133,13 +141,17 @@ export default function SignUpPage() {
           idDocUrl,
         }),
       });
+      const data = await res.json().catch(() => ({ success: false }));
+      if (!res.ok || !data.success) {
+        warning("Registration not saved", data.error || "Please try again. Your account was not created.");
+        return;
+      }
 
-      success("Registration Received!", "Admin notified. Your account is being verified.");
+      success("Registration Received!", "An administrator will review your details. You can sign in after approval.");
       setRegistrationSubmitted(true);
     } catch (err) {
       console.error("Registration error:", err);
-      success("Registration Received!", "Admin notified. Your account is being verified.");
-      setRegistrationSubmitted(true);
+      warning("Registration not saved", "Could not reach FitMed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -411,7 +423,7 @@ export default function SignUpPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="name@example.com"
+                        placeholder="Email address"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                       />
                     </div>

@@ -15,7 +15,9 @@ export async function GET() {
       .select("fullName name email role status createdAt")
       .sort({ createdAt: -1 })
       .lean();
-    const doctors = await Doctor.find({}).select("fullName email licenseNumber specialty status isVerified").lean();
+    const doctors = await Doctor.find({})
+      .select("fullName email licenseNumber specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued")
+      .lean();
     const userByEmail = new Map(users.map((u) => [String(u.email || "").toLowerCase(), u]));
 
     return NextResponse.json({
@@ -30,6 +32,11 @@ export async function GET() {
           email: d.email,
           license: d.licenseNumber,
           role: d.specialty,
+          specialty: d.specialty,
+          avatarUrl: d.avatarUrl || "",
+          presence: d.status,
+          weeklySchedule: d.weeklySchedule || [],
+          totalCertificatesIssued: d.totalCertificatesIssued || 0,
           status: suspended ? "Suspended" : d.isVerified ? "Active" : "Pending",
         };
       }),

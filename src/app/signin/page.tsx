@@ -25,6 +25,9 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "1";
+  const unauthorized = searchParams.get("unauthorized") === "1";
+  const pendingAccess = searchParams.get("pending") === "1";
+  const nextPath = searchParams.get("next") || "";
   const { success, error: toastError, warning, info } = useToast();
 
   const [email, setEmail] = useState("");
@@ -69,6 +72,7 @@ function SignInContent() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email: cleanEmail, password }),
       });
       const data = await res.json();
@@ -88,7 +92,14 @@ function SignInContent() {
 
       persistSession(data.user.role, data.user.name, data.user.email);
       success("Sign In Successful", `Welcome back, ${data.user.name}!`);
-      if (data.user.role === "doctor") {
+      const allowedNext =
+        nextPath.startsWith("/dashboard/") &&
+        ((data.user.role === "admin" && nextPath.startsWith("/dashboard/admin")) ||
+          (data.user.role === "doctor" && nextPath.startsWith("/dashboard/doctor")) ||
+          (data.user.role === "user" && nextPath.startsWith("/dashboard/user")));
+      if (allowedNext) {
+        router.push(nextPath);
+      } else if (data.user.role === "doctor") {
         router.push("/dashboard/doctor");
       } else if (data.user.role === "admin") {
         router.push("/dashboard/admin");
@@ -113,6 +124,7 @@ function SignInContent() {
         const res = await fetch("/api/auth/password", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             email: pendingAccount.email,
             currentPassword: password,
@@ -253,6 +265,16 @@ function SignInContent() {
               <span>Your session has expired. Please sign in again to continue.</span>
             </div>
           )}
+          {unauthorized && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold shadow-sm">
+              You do not have access to that area. Please sign in with the correct account.
+            </div>
+          )}
+          {pendingAccess && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold shadow-sm">
+              Your account is waiting for administrator approval. You can sign in after it is approved.
+            </div>
+          )}
 
           {/* Form */}
           <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl space-y-6">
@@ -268,7 +290,7 @@ function SignInContent() {
                     required
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                    placeholder="your-email@gmail.com"
+                    placeholder="Email address"
                     className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm focus:outline-none text-slate-800 transition-colors ${
                       error
                         ? "border-rose-400 focus:border-rose-500 bg-rose-50"
@@ -389,7 +411,7 @@ function SignInContent() {
                     required
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="e.g. telesphore91073@gmail.com"
+                    placeholder="Email address"
                     className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                   />
                 </div>

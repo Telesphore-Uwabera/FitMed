@@ -114,6 +114,7 @@ export default function UserDashboard() {
     phone: "",
     nationalId: "",
     dob: "",
+    gender: "",
     address: "",
     emergencyName: "",
     emergencyPhone: "",
@@ -204,13 +205,14 @@ export default function UserDashboard() {
   const [showIremboModal, setShowIremboModal] = useState(false);
   const [certToPay, setCertToPay] = useState<any | null>(null);
   const [iremboChannel, setIremboChannel] = useState<"momo" | "airtel" | "card">("momo");
-  const [momoNumber, setMomoNumber] = useState("0788123456");
+  const [momoNumber, setMomoNumber] = useState("");
   const [isPayingIrembo, setIsPayingIrembo] = useState(false);
   const [paymentSuccessAlert, setPaymentSuccessAlert] = useState<string | null>(null);
 
   const [activeCerts, setActiveCerts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [partnerClinics, setPartnerClinics] = useState<{ name: string; city: string; phone?: string; type?: string; status?: string }[]>([]);
 
   // Load profile, appointments, and certificates from MongoDB
   useEffect(() => {
@@ -235,6 +237,7 @@ export default function UserDashboard() {
             phone: u.phone || prev.phone,
             nationalId: u.nationalId || prev.nationalId,
             dob: u.dateOfBirth || prev.dob,
+            gender: u.gender || prev.gender,
             address: u.address || prev.address,
             avatarUrl: u.avatarUrl || prev.avatarUrl,
           }));
@@ -264,6 +267,14 @@ export default function UserDashboard() {
         }
       } catch (err) {
         console.warn("Could not load appointments:", err);
+      }
+
+      try {
+        const clinicRes = await fetch("/api/clinics", { signal: AbortSignal.timeout(8000) });
+        const clinicData = await clinicRes.json();
+        setPartnerClinics(clinicData.success ? clinicData.clinics || [] : []);
+      } catch {
+        setPartnerClinics([]);
       }
 
       try {
@@ -301,7 +312,7 @@ export default function UserDashboard() {
         candidateIdNumber: profileData.nationalId,
         avatarUrl: profileData.avatarUrl,
         age: new Date().getFullYear() - new Date(profileData.dob).getFullYear(),
-        gender: "Male", // You may want to add this to profileData
+        gender: profileData.gender || "",
         purpose: data.purpose,
         jobType: data.jobType,
         height: data.height,
@@ -332,15 +343,15 @@ export default function UserDashboard() {
           id: cert.certificateId,
           purpose: cert.purpose,
           doctor: cert.assignedDoctor,
-          license: "RW-RMDC-4091",
-          issueDate: "Today",
-          expiryDate: "—",
+          license: cert.assignedDoctorLicense || "—",
+          issueDate: cert.appliedDate ? new Date(cert.appliedDate).toLocaleDateString() : "—",
+          expiryDate: cert.expiresAt ? new Date(cert.expiresAt).toLocaleDateString() : "—",
           status: cert.status,
           statusLabel: "SUBMITTED - AWAITING DOCTOR REVIEW",
           paymentStatus: cert.paymentStatus,
           iremboRef: null,
           fee: "5,000 FRW",
-          notes: "Your responses have been securely submitted and routed to Dr. Telesphore Uwabera for clinical evaluation.",
+          notes: cert.additionalNotes || "Your application was saved and is waiting for a doctor to review it.",
           qrUrl: cert.qrCodeUrl,
         };
 
@@ -356,7 +367,7 @@ export default function UserDashboard() {
         };
 
         setHistory((prev) => [newEntry, ...prev]);
-        success("Application Submitted", `Your fitness certificate application for "${data.purpose}" is now in review with Dr. Telesphore.`);
+        success("Application Submitted", `Your fitness certificate application for "${data.purpose}" is now in review.`);
         goToTab("certificates");
       } else {
         error("Submission Failed", result.error || "Failed to submit application");
@@ -382,6 +393,7 @@ export default function UserDashboard() {
             certificateId: certToPay.id,
             paymentStatus: "PAID",
             iremboRef: txRef,
+            channel: iremboChannel === "momo" ? "MTN Mobile Money" : iremboChannel === "airtel" ? "Airtel Money" : "Card",
             status: certToPay.status === "submitted" ? "approved" : certToPay.status,
           }),
         });
@@ -528,11 +540,11 @@ export default function UserDashboard() {
                   </div>
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned Doctor</div>
                   <div className="text-sm font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                    Dr. Telesphore Uwabera
+                    {activeCerts[0]?.doctor || appointments[0]?.doctorName || "Not assigned yet"}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
                     <Video className="w-3 h-3 text-sky-500" />
-                    Available for telehealth
+                    From your FitMed records
                   </div>
                 </div>
               </div>
@@ -770,7 +782,7 @@ export default function UserDashboard() {
                 </div>
                 <h3 className="text-xl font-bold text-white">Join Doctor Telehealth Room & Messaging</h3>
                 <p className="text-xs text-slate-300 max-w-xl">
-                  Connect with Dr. Telesphore Uwabera for identity verification, vital symptom discussion, and real-time clinical assessment.
+                  Connect with your assigned FitMed physician for identity verification, vital symptom discussion, and real-time clinical assessment.
                 </p>
               </div>
               <button
@@ -1324,35 +1336,20 @@ export default function UserDashboard() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  name: "Centre Hospitalier Universitaire de Kigali (CHUK)",
-                  district: "Nyarugenge, Kigali",
-                  phone: "+250 788 382 000",
-                  type: "Tertiary Teaching Hospital",
-                },
-                {
-                  name: "King Faisal Hospital Rwanda",
-                  district: "Kacyiru, Gasabo",
-                  phone: "+250 788 123 200",
-                  type: "Occupational & Specialized Medicine",
-                },
-                {
-                  name: "Kigali Independent Polyclinic",
-                  district: "Remera, Kicukiro",
-                  phone: "+250 788 440 112",
-                  type: "Rapid Occupational Health & Lab Panel",
-                },
-              ].map((c) => (
+              {partnerClinics.length === 0 && (
+                <div className="md:col-span-3 text-xs text-slate-400">No partner clinics have been added yet.</div>
+              )}
+              {partnerClinics.map((c) => (
                 <div key={c.name} className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-3">
                   <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-[#12B8B0] flex items-center justify-center font-bold">
                     <Hospital className="w-5 h-5" />
                   </div>
                   <h4 className="text-sm font-bold text-[#0B2D5C]">{c.name}</h4>
                   <div className="text-xs text-slate-500 space-y-1">
-                    <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" />{c.district}</div>
-                    <div>Type: <strong>{c.type}</strong></div>
-                    <div>Contact: <strong>{c.phone}</strong></div>
+                    <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" />{c.city}</div>
+                    {c.type ? <div>Type: <strong>{c.type}</strong></div> : null}
+                    {c.phone ? <div>Contact: <strong>{c.phone}</strong></div> : null}
+                    {c.status ? <div>{c.status}</div> : null}
                   </div>
                 </div>
               ))}
@@ -1945,7 +1942,7 @@ export default function UserDashboard() {
           roomId={videoCallRoomId}
           userName={profileData.name}
           role="applicant"
-          remoteName={activeCallAppointment?.doctorName || "Dr. Telesphore Uwabera, MD"}
+          remoteName={activeCallAppointment?.doctorName || "FitMed Physician"}
           purpose={activeCallAppointment?.purpose || "Medical Fitness Consultation"}
           appointmentId={activeCallAppointment?.appointmentId || videoCallRoomId}
           variant="overlay"

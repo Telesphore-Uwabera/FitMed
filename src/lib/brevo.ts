@@ -115,10 +115,11 @@ export async function sendBrevoEmail({
 export const EmailTemplates = {
   welcomeApplicantPending: (name: string) =>
     brandedEmail(
-      "Registration received",
+      "Registration received — waiting for approval",
       `<p>Dear <strong>${name}</strong>,</p>
        <p>Thank you for creating a FitMed applicant account. Your registration is now with our administration team for National ID verification.</p>
-       <p>You will receive a second email with sign-in details once your identity has been confirmed. This usually takes one business day.</p>
+       <p><strong>You cannot sign in or use the applicant dashboard until an administrator approves your account.</strong> Certificate applications, telehealth, and other features stay locked until then.</p>
+       <p>This usually takes one business day. You will receive another email when your account is approved. After that, sign in with the email and password you used when you registered.</p>
        ${button(`${FITMED_APP_URL}/signin`, "Go to FitMed Sign In")}`
     ),
 
@@ -140,6 +141,14 @@ export const EmailTemplates = {
          <tr><td style="padding:6px 0;color:#64748b;">National ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${nationalId}</td></tr>
        </table>
        ${button(`${FITMED_APP_URL}/dashboard/admin`, "Review in admin console", true)}`
+    ),
+
+  applicantAccountApprovedOwnPassword: (name: string, loginLink: string) =>
+    brandedEmail(
+      "Account approved",
+      `<p>Dear <strong>${name}</strong>,</p>
+       <p>Your National ID has been verified and your FitMed account is now active. Sign in with the email and password you used when you registered.</p>
+       ${button(loginLink, "Sign in to FitMed")}`
     ),
 
   applicantAccountApprovedWithTempPassword: (name: string, email: string, tempPassword: string, loginLink: string) =>
@@ -304,5 +313,13 @@ export const EmailTemplates = {
        </table>
        <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #12B8B0;background:#f8fafc;color:#475569;">${message}</blockquote>
        ${button(`${FITMED_APP_URL}/dashboard/admin`, "Open admin console", true)}`
+    ),
+
+  newsletterBroadcast: (name: string, message: string) =>
+    brandedEmail(
+      "FitMed news",
+      `<p>Hello <strong>${name}</strong>,</p>
+       <p>${String(message || "").replace(/\n/g, "<br/>")}</p>
+       <p>You received this because you subscribed to FitMed updates. Reply to this email if you have questions.</p>`
     ),
 };

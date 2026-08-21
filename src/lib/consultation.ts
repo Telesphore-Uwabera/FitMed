@@ -34,7 +34,7 @@ export function formatCertificateCard(cert: any, existing: Record<string, any> =
     id: cert.certificateId,
     purpose: cert.purpose || existing.purpose,
     doctor: cert.assignedDoctor || existing.doctor || "FitMed Physician",
-    license: existing.license || "RW-RMDC-4091",
+    license: cert.assignedDoctorLicense || existing.license || "—",
     issueDate: issued ? new Date(issued).toLocaleDateString() : existing.issueDate || "Today",
     expiryDate: expires ? new Date(expires).toLocaleDateString() : existing.expiryDate || "—",
     status,

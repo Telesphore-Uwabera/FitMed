@@ -313,7 +313,7 @@ export default function ContactPage() {
                       <input
                         required
                         type="email"
-                        placeholder="name@example.com"
+                        placeholder="Email address"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
@@ -342,6 +342,7 @@ export default function ContactPage() {
                         "Employer Corporate Account (5,000 FRW)",
                         "In-Person Partner Clinic Referral",
                         "Technical / API Integration Inquiry",
+                        "Others",
                       ]}
                       className="text-xs"
                     />

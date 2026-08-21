@@ -25,53 +25,45 @@ export async function POST(request: NextRequest) {
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET;
 
+    const isDocument = folder.includes("document") || folder.includes("clinical");
+    const uploadOptions = isDocument
+      ? { folder, resource_type: "auto" as const }
+      : { folder, format: "webp" as const, resource_type: "image" as const };
+
     if (!hasCloudinary) {
-      // In local dev without credentials, gracefully process the WebP image and return valid mock response
       let base64String = "";
+      let mime = "application/octet-stream";
       if (typeof file === "string") {
         base64String = file;
       } else if (file instanceof Blob) {
+        mime = file.type || mime;
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        base64String = `data:image/webp;base64,${buffer.toString("base64")}`;
+        base64String = `data:${mime};base64,${buffer.toString("base64")}`;
       }
 
       return NextResponse.json({
         success: true,
-        url: base64String || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",
-        publicId: `fitmed-webp-${Date.now()}`,
-        format: "webp",
-        message: "Image converted to WebP successfully (Local dev mode). Set Cloudinary env vars for production CDN.",
+        url: base64String,
+        publicId: `fitmed-file-${Date.now()}`,
+        format: isDocument ? "file" : "webp",
       });
     }
 
     let uploadData: any;
 
     if (typeof file === "string") {
-      // Data URL or remote URL
-      uploadData = await cloudinary.uploader.upload(file, {
-        folder,
-        format: "webp",
-        resource_type: "image",
-      });
+      uploadData = await cloudinary.uploader.upload(file, uploadOptions);
     } else if (file instanceof Blob) {
-      // Convert Blob to Buffer for Node.js upload
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
       uploadData = await new Promise((resolve, reject) => {
         cloudinary.uploader
-          .upload_stream(
-            {
-              folder,
-              format: "webp",
-              resource_type: "image",
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          )
+          .upload_stream(uploadOptions, (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          })
           .end(buffer);
       });
     }

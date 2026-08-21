@@ -21,10 +21,10 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendBrevoEmail({
       toEmail: email,
       toName: name,
-      subject: `Live Telehealth Video Assessment Invitation with ${doctorName || "Dr. Telesphore Uwabera"}`,
+      subject: `Live Telehealth Video Assessment Invitation with ${doctorName || "your FitMed physician"}`,
       htmlContent: EmailTemplates.telehealthInvite(
         name,
-        doctorName || "Dr. Telesphore Uwabera, MD",
+        doctorName || "your FitMed physician",
         meetingLink,
         scheduledTime || "Immediately (Active Room)"
       ),

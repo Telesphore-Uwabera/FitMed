@@ -4,6 +4,13 @@ import Certificate from "@/models/Certificate";
 import Appointment from "@/models/Appointment";
 import Message from "@/models/Message";
 import ContactMessage from "@/models/ContactMessage";
+import Clinic from "@/models/Clinic";
+import Schedule from "@/models/Schedule";
+import Referral from "@/models/Referral";
+import NewsletterSubscriber from "@/models/NewsletterSubscriber";
+import Payment from "@/models/Payment";
+import PlatformSettings from "@/models/PlatformSettings";
+import AuditLog from "@/models/AuditLog";
 import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword } from "@/lib/password";
 
@@ -14,6 +21,13 @@ export const FITMED_COLLECTIONS = [
   "appointments",
   "messages",
   "contactmessages",
+  "clinics",
+  "schedules",
+  "referrals",
+  "newslettersubscribers",
+  "payments",
+  "platformsettings",
+  "auditlogs",
 ] as const;
 
 const SEED_PASSWORD = "91073@Tecy";
@@ -59,6 +73,13 @@ export async function ensureFitMedCollections(): Promise<string[]> {
   void Appointment;
   void Message;
   void ContactMessage;
+  void Clinic;
+  void Schedule;
+  void Referral;
+  void NewsletterSubscriber;
+  void Payment;
+  void PlatformSettings;
+  void AuditLog;
 
   const existing = new Set((await db.listCollections().toArray()).map((c) => c.name));
   const created: string[] = [];

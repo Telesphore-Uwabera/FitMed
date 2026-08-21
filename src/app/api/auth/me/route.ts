@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
+import { COOKIE_NAME, verifySession } from "@/lib/authCookie";
 
-function profileFromUser(user: any) {
+function profileFromUser(user: Record<string, unknown> & { _id: unknown; fullName?: string; name?: string; email: string; role?: string }) {
   return {
     id: String(user._id),
     name: user.fullName || user.name || "",
@@ -19,12 +20,20 @@ function profileFromUser(user: any) {
   };
 }
 
+async function sessionUser(request: NextRequest) {
+  return verifySession(request.cookies.get(COOKIE_NAME)?.value);
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const email = String(request.nextUrl.searchParams.get("email") || "").trim().toLowerCase();
-    if (!email) {
-      return NextResponse.json({ success: false, error: "email is required" }, { status: 400 });
+    const session = await sessionUser(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
     }
+
+    const requested = String(request.nextUrl.searchParams.get("email") || "").trim().toLowerCase();
+    const email = session.role === "admin" && requested ? requested : session.email;
+
     await connectToDatabase();
     const user = await User.findOne({ email });
     if (!user) {
@@ -39,11 +48,15 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const email = String(body.email || "").trim().toLowerCase();
-    if (!email) {
-      return NextResponse.json({ success: false, error: "email is required" }, { status: 400 });
+    const session = await sessionUser(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
     }
+
+    const body = await request.json();
+    const requested = String(body.email || "").trim().toLowerCase();
+    const email = session.role === "admin" && requested ? requested : session.email;
+
     await connectToDatabase();
     const update: Record<string, unknown> = {};
     if (body.name) {
