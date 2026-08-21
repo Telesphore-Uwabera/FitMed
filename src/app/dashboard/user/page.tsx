@@ -394,19 +394,20 @@ export default function UserDashboard() {
     setIsPayingIrembo(true);
 
       setTimeout(async () => {
-      const txRef = `IREMBO-RW-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+      let txRef = `IREMBO-RW-${new Date().getFullYear()}-00001`;
       try {
-        await fetch("/api/certificates", {
+        const res = await fetch("/api/certificates", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             certificateId: certToPay.id,
             paymentStatus: "PAID",
-            iremboRef: txRef,
             channel: iremboChannel === "momo" ? "MTN Mobile Money" : iremboChannel === "airtel" ? "Airtel Money" : "Card",
             status: certToPay.status === "submitted" ? "approved" : certToPay.status,
           }),
         });
+        const paid = await res.json().catch(() => ({}));
+        if (paid?.certificate?.iremboRef) txRef = paid.certificate.iremboRef;
       } catch {
         /* local dashboard state still updates below */
       }

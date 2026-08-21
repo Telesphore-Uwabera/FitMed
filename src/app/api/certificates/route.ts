@@ -13,6 +13,7 @@ import {
   FITMED_APP_URL,
   FITMED_ADMIN_EMAIL,
 } from "@/lib/brevo";
+import { nextKey, normalizeCertificateKeys } from "@/lib/sequentialIds";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
 
     try {
       await connectToDatabase();
+      await normalizeCertificateKeys();
       const query: any = {};
       if (status) query.status = status;
       if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
@@ -143,24 +145,13 @@ export async function POST(request: NextRequest) {
       ? `${redFlagCount} Red Flag${redFlagCount > 1 ? 's' : ''}` 
       : "0 Red Flags";
 
-    // Official Document No. FM-YYYY-NNNNN, incrementing within the year
-    const year = new Date().getFullYear();
-    const prefix = `FM-${year}-`;
-    const existing = await Certificate.find({ certificateId: { $regex: `^${prefix}\\d+$` } })
-      .select("certificateId")
-      .lean();
-    let max = 10000;
-    for (const row of existing) {
-      const n = Number(String(row.certificateId).split("-").pop());
-      if (Number.isFinite(n) && n > max) max = n;
-    }
-    const certificateId = `${prefix}${String(max + 1).padStart(5, "0")}`;
+    await connectToDatabase();
+
+    const certificateId = await nextKey("certificate");
     const sha256Hash = crypto.createHash("sha256").update(JSON.stringify(wizardData)).digest("hex");
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(
       `${FITMED_APP_URL}/verify/${certificateId}`
     )}`;
-
-    await connectToDatabase();
 
     const assignment = await pickOnDutyDoctor();
     const assignedDoctor = assignment.assignedDoctor;
@@ -293,7 +284,10 @@ export async function PATCH(request: NextRequest) {
       if (decisionNotes !== undefined) updateData.decisionNotes = decisionNotes;
       if (status) updateData.status = status;
       if (paymentStatus) updateData.paymentStatus = paymentStatus;
-      if (iremboRef) updateData.iremboRef = iremboRef;
+      if (String(paymentStatus || "").toUpperCase() === "PAID") {
+        updateData.iremboRef = await nextKey("irembo");
+      }
+      if (iremboRef && String(paymentStatus || "").toUpperCase() !== "PAID") updateData.iremboRef = iremboRef;
       if (doctorNotes !== undefined) updateData.doctorNotes = doctorNotes;
       if (doctorDocuments) updateData.doctorDocuments = doctorDocuments;
       if (structuredAssessment) updateData.structuredAssessment = structuredAssessment;
@@ -326,7 +320,7 @@ export async function PATCH(request: NextRequest) {
               amount: 5000,
               currency: "FRW",
               channel: String(body.channel || updated.paymentChannel || "Irembo"),
-              iremboRef: String(iremboRef || updated.iremboRef || certKey),
+              iremboRef: String(updated.iremboRef || iremboRef || certKey),
               status: "PAID",
               doctorName: updated.assignedDoctor || "",
               paidAt: new Date(),

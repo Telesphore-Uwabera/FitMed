@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ICertificate extends Document {
-  certificateId: string; // e.g. FM-2026-88421
+  certificateId: string; // e.g. FM-2026-00001
   applicant: mongoose.Types.ObjectId;
   doctor: mongoose.Types.ObjectId;
   candidateName: string;

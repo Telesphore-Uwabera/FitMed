@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
 import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
+import { nextKey, normalizeAppointmentKeys } from "@/lib/sequentialIds";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
 
     try {
       await connectToDatabase();
+      await normalizeAppointmentKeys();
       const query: any = {};
       const doctorEmail = searchParams.get("doctorEmail");
       const doctorName = searchParams.get("doctorName");
@@ -73,7 +75,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required appointment fields" }, { status: 400 });
     }
 
-    const appointmentId = `APT-${Date.now().toString().slice(-6)}`;
+    await connectToDatabase();
+    const appointmentId = await nextKey("appointment");
     const roomId = body.roomId || appointmentId;
     const roomUrl = `/dashboard/user?tab=consultation&room=${roomId}`;
 
@@ -100,7 +103,6 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      await connectToDatabase();
       savedAppointment = await Appointment.create(savedAppointment);
     } catch (dbErr) {
       console.warn("MongoDB appointment save fallback:", dbErr);
