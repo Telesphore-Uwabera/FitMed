@@ -54,6 +54,7 @@ import { displayDoctorName } from "@/lib/certificateDisplay";
 
 type ApplicantRecord = {
   id: string;
+  applicantId?: string;
   name: string;
   email: string;
   phone: string;
@@ -72,6 +73,17 @@ type ApplicantRecord = {
 function isActiveAccount(status?: string) {
   return String(status || "").toLowerCase() === "active";
 }
+
+const PURPOSE_BAR_COLORS = [
+  "bg-[#12B8B0]",
+  "bg-[#0B2D5C]",
+  "bg-sky-500",
+  "bg-amber-500",
+  "bg-indigo-500",
+  "bg-emerald-500",
+  "bg-rose-500",
+  "bg-violet-500",
+];
 
 function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]) {
   const escape = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
@@ -552,6 +564,7 @@ export default function AdminDashboardPage() {
     (p) =>
       p.name.toLowerCase().includes(userSearch.toLowerCase()) ||
       p.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+      (p.applicantId || "").toLowerCase().includes(userSearch.toLowerCase()) ||
       (p.nationalId || "").includes(userSearch)
   );
 
@@ -754,10 +767,11 @@ export default function AdminDashboardPage() {
       counts.set(key, (counts.get(key) || 0) + 1);
     }
     const max = Math.max(1, ...counts.values());
-    return [...counts.entries()].map(([purpose, count]) => ({
+    return [...counts.entries()].map(([purpose, count], index) => ({
       purpose,
       count,
       pct: Math.round((count / max) * 100),
+      barClass: PURPOSE_BAR_COLORS[index % PURPOSE_BAR_COLORS.length],
     }));
   })();
   const recentEvents = [
@@ -810,10 +824,10 @@ export default function AdminDashboardPage() {
     }
     if (reportTab === "applicants") {
       return applicants
-        .filter((row) => statusOk(row.status) && matches([row.name, row.email, row.nationalId, row.phone]))
+        .filter((row) => statusOk(row.status) && matches([row.applicantId, row.name, row.email, row.nationalId, row.phone]))
         .map((row) => ({
           key: row.id,
-          cells: [row.name, row.email, row.phone, row.nationalId || "—", row.status, String(row.certs), row.joined],
+          cells: [row.applicantId || row.id, row.name, row.email, row.phone, row.nationalId || "—", row.status, String(row.certs), row.joined],
         }));
     }
     if (reportTab === "meetings") {
@@ -846,7 +860,7 @@ export default function AdminDashboardPage() {
       : reportTab === "payments"
         ? ["Certificate", "Applicant", "Email", "Purpose", "Doctor", "Status", "Amount", "Date"]
         : reportTab === "applicants"
-          ? ["Name", "Email", "Phone", "National ID", "Status", "Certificates", "Joined"]
+          ? ["Applicant ID", "Name", "Email", "Phone", "National ID", "Status", "Certificates", "Joined"]
           : reportTab === "meetings"
             ? ["Meeting ID", "Applicant", "Doctor", "Purpose", "When", "Status", "Duration"]
             : ["Event", "Detail", "Time"];
@@ -1110,14 +1124,17 @@ export default function AdminDashboardPage() {
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
                 <h3 className="text-sm font-extrabold text-[#0B2D5C]">Certificate volume by purpose</h3>
-                {(purposeRows.length > 0 ? purposeRows : [{ purpose: "No certificates yet", count: 0, pct: 0 }]).map((row) => (
+                {(purposeRows.length > 0 ? purposeRows : [{ purpose: "No certificates yet", count: 0, pct: 0, barClass: "bg-slate-300" }]).map((row) => (
                   <div key={row.purpose} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700">{row.purpose}</span>
+                      <span className="font-semibold text-slate-700 flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${row.barClass}`} />
+                        {row.purpose}
+                      </span>
                       <span className="font-bold text-[#0B2D5C]">{row.count}</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full rounded-full bg-[#12B8B0]" style={{ width: `${row.pct}%` }} />
+                      <div className={`h-full rounded-full ${row.barClass}`} style={{ width: `${row.pct}%` }} />
                     </div>
                   </div>
                 ))}
@@ -1277,7 +1294,7 @@ export default function AdminDashboardPage() {
                       <div className="space-y-1 text-xs">
                         <div className="flex items-center gap-2">
                           <span className="font-extrabold text-[#0B2D5C] text-sm">{applicant.name}</span>
-                          <span className="font-mono text-[10px] text-slate-500 font-bold">{applicant.id}</span>
+                          <span className="font-mono text-[10px] text-slate-500 font-bold">{applicant.applicantId || applicant.id}</span>
                         </div>
                         <div className="text-slate-600 flex flex-wrap items-center gap-3">
                           <span>Email: <strong>{applicant.email}</strong></span>
@@ -1332,7 +1349,7 @@ export default function AdminDashboardPage() {
                         <img src={p.avatarUrl} alt={p.name} className="w-full h-full object-cover" />
                       </div>
                       <div>
-                        <div className="font-bold text-[#0B2D5C]">{p.name} <span className="text-slate-400 font-normal">({p.id})</span></div>
+                        <div className="font-bold text-[#0B2D5C]">{p.name} <span className="text-slate-400 font-normal font-mono">({p.applicantId || p.id})</span></div>
                         <div className="text-slate-500 flex items-center gap-2 mt-0.5 flex-wrap">
                           <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{p.email}</span>
                           <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{p.phone}</span>
@@ -1779,11 +1796,18 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {inq.lastReply && (
-                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 leading-relaxed whitespace-pre-wrap">
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 leading-relaxed">
                       <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 mb-1.5">
                         Completed — reply sent
                       </div>
-                      {inq.lastReply}
+                      {/<(p|div|br|strong|em|u|h[1-6]|ul|ol|li|a)\b/i.test(inq.lastReply) ? (
+                        <div
+                          className="rich-email-editor"
+                          dangerouslySetInnerHTML={{ __html: inq.lastReply }}
+                        />
+                      ) : (
+                        <div className="whitespace-pre-wrap">{inq.lastReply}</div>
+                      )}
                     </div>
                   )}
 
@@ -1799,6 +1823,7 @@ export default function AdminDashboardPage() {
                             title: "Reply by email",
                             message: `Send a secure email reply to ${inq.name} (${inq.email}).`,
                             inputLabel: "Message",
+                            richText: true,
                             defaultValue: `Dear ${inq.name},\n\nThank you for contacting FitMed Rwanda. We have reviewed your inquiry.\n\nKind regards,\nFitMed Clinical Support`,
                             confirmLabel: "Send reply",
                             cancelLabel: "Cancel",
@@ -2629,7 +2654,7 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <h3 className="text-xl font-extrabold text-[#0B2D5C]">{selectedApplicant.name}</h3>
-                <p className="text-xs text-slate-500 mt-1">Applicant record</p>
+                <p className="text-xs text-slate-500 mt-1">{selectedApplicant.applicantId || "Applicant record"}</p>
                 <span className={`mt-2 inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
                   selectedApplicant.status === "Active"
                     ? "bg-emerald-100 text-emerald-800"
@@ -2641,6 +2666,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-3 text-xs">
               {[
+                ["Applicant ID", selectedApplicant.applicantId || "—"],
                 ["Email", selectedApplicant.email],
                 ["Phone", selectedApplicant.phone],
                 ["National ID", selectedApplicant.nationalId],

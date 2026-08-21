@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Info, CheckCircle2, XCircle, X } from "lucide-react";
+import RichTextEditor, { isVisuallyEmpty } from "@/components/RichTextEditor";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface ConfirmModalProps {
   inputLabel?: string;
   inputPlaceholder?: string;
   defaultValue?: string;
+  richText?: boolean;
   onConfirm: (value?: string) => void;
   onCancel: () => void;
 }
@@ -60,6 +62,7 @@ export default function ConfirmModal({
   inputLabel,
   inputPlaceholder,
   defaultValue = "",
+  richText = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -79,7 +82,9 @@ export default function ConfirmModal({
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
 
       <div
-        className={`relative z-10 w-full max-w-md bg-white dark:bg-[#10243f] rounded-3xl shadow-2xl border ${cfg.border} animate-in zoom-in-95 duration-200`}
+        className={`relative z-10 w-full bg-white dark:bg-[#10243f] rounded-3xl shadow-2xl border ${cfg.border} animate-in zoom-in-95 duration-200 ${
+          richText ? "max-w-4xl" : "max-w-md"
+        }`}
       >
         <button
           onClick={onCancel}
@@ -88,9 +93,9 @@ export default function ConfirmModal({
           <X className="w-4 h-4 text-slate-500" />
         </button>
 
-        <div className="p-8 space-y-5">
-          <div className={`w-14 h-14 rounded-2xl ${cfg.iconBg} flex items-center justify-center`}>
-            <Icon className={`w-7 h-7 ${cfg.iconColor}`} />
+        <div className={`${richText ? "p-6 sm:p-8" : "p-8"} space-y-5`}>
+          <div className={`${richText ? "w-11 h-11 rounded-xl" : "w-14 h-14 rounded-2xl"} ${cfg.iconBg} flex items-center justify-center`}>
+            <Icon className={`${richText ? "w-5 h-5" : "w-7 h-7"} ${cfg.iconColor}`} />
           </div>
 
           <div className="space-y-2">
@@ -110,14 +115,18 @@ export default function ConfirmModal({
                   {inputLabel}
                 </label>
               )}
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder={inputPlaceholder}
-                rows={6}
-                autoFocus
-                className="w-full p-3 rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#0c1c33] text-sm text-slate-800 dark:text-slate-100 font-medium leading-relaxed focus:outline-none focus:border-[#12B8B0] resize-y min-h-[120px]"
-              />
+              {richText ? (
+                <RichTextEditor defaultValue={defaultValue} onChange={setInputValue} minHeight={320} />
+              ) : (
+                <textarea
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={inputPlaceholder}
+                  rows={6}
+                  autoFocus
+                  className="w-full p-3 rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#0c1c33] text-sm text-slate-800 dark:text-slate-100 font-medium leading-relaxed focus:outline-none focus:border-[#12B8B0] resize-y min-h-[120px]"
+                />
+              )}
             </div>
           )}
 
@@ -130,7 +139,7 @@ export default function ConfirmModal({
             </button>
             <button
               onClick={() => onConfirm(showInput ? inputValue : undefined)}
-              disabled={showInput && !inputValue.trim()}
+              disabled={showInput && (richText ? isVisuallyEmpty(inputValue) : !inputValue.trim())}
               className={`flex-1 py-3 rounded-xl font-extrabold text-sm transition-colors shadow-sm active:scale-95 disabled:opacity-50 ${cfg.confirmBtn}`}
             >
               {confirmLabel}

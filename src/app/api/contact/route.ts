@@ -71,12 +71,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await sendBrevoEmail({
+    const confirmation = await sendBrevoEmail({
       toEmail: email,
       toName: fullName,
-      subject: `We received your inquiry: ${subject}`,
+      subject: "We received your FitMed request",
       htmlContent: EmailTemplates.contactConfirmation(fullName, subject, message),
     });
+    if (!confirmation.success) {
+      console.error("Contact confirmation email failed:", confirmation.error);
+    }
     await sendBrevoEmail({
       toEmail: FITMED_ADMIN_EMAIL,
       toName: "FitMed Admin",

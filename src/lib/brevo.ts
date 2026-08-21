@@ -359,11 +359,12 @@ export const EmailTemplates = {
 
   contactConfirmation: (fullName: string, subject: string, message: string) =>
     brandedEmail(
-      "We received your message",
+      "We received your request",
       `<p>Dear <strong>${fullName}</strong>,</p>
-       <p>Thank you for contacting FitMed. Our team will reply within 1–2 business hours regarding <strong>${subject}</strong>.</p>
+       <p>Thank you for writing to FitMed. We have received your request and our team will reach out to you.</p>
+       <p>This is to confirm we have seen your message about <strong>${subject}</strong>. Please keep this email for your records. A FitMed team member will contact you using the details you provided.</p>
        <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #12B8B0;background:#f8fafc;color:#475569;">${message}</blockquote>
-       <p>If this is urgent, write to <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;">hello@fitmed.rw</a>.</p>`
+       <p>Kind regards,<br/>FitMed Support<br/>Kigali, Rwanda</p>`
     ),
 
   contactAdminCopy: (fullName: string, email: string, phone: string, subject: string, message: string, category: string) =>
@@ -397,11 +398,18 @@ export const EmailTemplates = {
        <p>If you did not subscribe, reply to this message and we will remove your address.</p>`
     ),
 
-  contactReply: (fullName: string, reply: string) =>
-    brandedEmail(
+  contactReply: (fullName: string, reply: string) => {
+    const raw = String(reply || "");
+    const isHtml = /<(p|div|br|strong|em|u|h[1-6]|ul|ol|li|a)\b/i.test(raw);
+    const body = isHtml
+      ? raw
+          .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+          .replace(/\son\w+=(["']).*?\1/gi, "")
+      : `<p>Dear <strong>${fullName}</strong>,</p><p>${raw.replace(/\n/g, "<br/>")}</p>`;
+    return brandedEmail(
       "Reply from FitMed",
-      `<p>Dear <strong>${fullName}</strong>,</p>
-       <p>${String(reply || "").replace(/\n/g, "<br/>")}</p>
+      `${body}
        <p>You can reply to this email, or write to <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;">hello@fitmed.rw</a>.</p>`
-    ),
+    );
+  },
 };

@@ -17,6 +17,7 @@ export interface PromptOptions extends ConfirmOptions {
   defaultValue?: string;
   placeholder?: string;
   inputLabel?: string;
+  richText?: boolean;
 }
 
 interface DialogState extends PromptOptions {
@@ -54,8 +55,11 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     resolverRef.current = null;
     setDialog(null);
     window.setTimeout(() => {
-      if (showInput) resolve?.(value?.trim() ? value : null);
-      else resolve?.(true);
+      if (showInput) {
+        const text = String(value || "");
+        const empty = !text.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").trim();
+        resolve?.(empty ? null : text);
+      } else resolve?.(true);
     }, 40);
   };
 
@@ -83,6 +87,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         inputLabel={dialog?.inputLabel}
         inputPlaceholder={dialog?.placeholder}
         defaultValue={dialog?.defaultValue}
+        richText={dialog?.richText}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

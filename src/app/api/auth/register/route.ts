@@ -3,14 +3,23 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword } from "@/lib/password";
 import User from "@/models/User";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { nextApplicantId } from "@/lib/sequentialIds";
+import {
+  duplicateKeyMessage,
+  findAccountByEmail,
+  findAccountByNationalId,
+  isMongoDuplicateKey,
+  normalizeEmail,
+  normalizeNationalId,
+} from "@/lib/applicantIdentity";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, email, phone, nationalId, password, avatarUrl, idDocUrl } = body;
-    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanEmail = normalizeEmail(email);
     const cleanName = String(name || "").trim();
-    const cleanNationalId = String(nationalId || "").trim();
+    const cleanNationalId = normalizeNationalId(nationalId);
     const cleanPassword = String(password || "");
 
     if (!cleanName || !cleanEmail || !cleanNationalId) {
@@ -27,11 +36,24 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
-    const existing = await User.findOne({ email: cleanEmail });
-    if (existing) {
+    const existingEmail = await findAccountByEmail(cleanEmail);
+    if (existingEmail) {
       return NextResponse.json(
-        { success: false, error: "An account with this email already exists." },
-        { status: 400 }
+        {
+          success: false,
+          error: "An account with this email already exists. Please sign in, or use a different email.",
+        },
+        { status: 409 }
+      );
+    }
+    const existingId = await findAccountByNationalId(cleanNationalId);
+    if (existingId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "An account with this National ID already exists. Each applicant may have only one FitMed account.",
+        },
+        { status: 409 }
       );
     }
 
@@ -41,6 +63,7 @@ export async function POST(request: NextRequest) {
       email: cleanEmail,
       phone: phone || "",
       nationalId: cleanNationalId,
+      applicantId: await nextApplicantId(),
       password: hashPassword(cleanPassword),
       avatarUrl: avatarUrl || undefined,
       nationalIdImageUrl: idDocUrl || "",
@@ -68,6 +91,9 @@ export async function POST(request: NextRequest) {
         "Registration submitted successfully. Your account will be activated once an administrator verifies your National ID.",
     });
   } catch (error: unknown) {
+    if (isMongoDuplicateKey(error)) {
+      return NextResponse.json({ success: false, error: duplicateKeyMessage(error) }, { status: 409 });
+    }
     const message = error instanceof Error ? error.message : "Registration failed.";
     console.error("Register error:", error);
     return NextResponse.json({ success: false, error: message }, { status: 500 });

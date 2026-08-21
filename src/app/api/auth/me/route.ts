@@ -3,6 +3,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import { COOKIE_NAME, verifySession, attachAuthCookie } from "@/lib/authCookie";
 import { isAdminRole, normalizeRole } from "@/lib/roles";
+import { findAccountByNationalId, normalizeNationalId } from "@/lib/applicantIdentity";
+import { ensureApplicantIds } from "@/lib/sequentialIds";
 
 function profileFromUser(user: Record<string, unknown> & { _id: unknown; fullName?: string; name?: string; email: string; role?: string }) {
   return {
@@ -10,6 +12,7 @@ function profileFromUser(user: Record<string, unknown> & { _id: unknown; fullNam
     name: user.fullName || user.name || "",
     email: user.email,
     role: user.role,
+    applicantId: user.applicantId || "",
     phone: user.phone || "",
     nationalId: user.nationalId || "",
     nationalIdImageUrl: user.nationalIdImageUrl || "",
@@ -36,9 +39,17 @@ export async function GET(request: NextRequest) {
     const email = isAdminRole(session.role) && requested ? requested : session.email;
 
     await connectToDatabase();
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
     if (!user) {
       return NextResponse.json({ success: false, error: "Account not found." }, { status: 404 });
+    }
+    const role = String(user.role || "");
+    if (role !== "admin" && role !== "doctor" && !/^APP-RW-\d{4}$/i.test(String(user.applicantId || ""))) {
+      await ensureApplicantIds();
+      user = await User.findOne({ email });
+      if (!user) {
+        return NextResponse.json({ success: false, error: "Account not found." }, { status: 404 });
+      }
     }
     return NextResponse.json({ success: true, user: profileFromUser(user) });
   } catch (error: unknown) {
@@ -59,13 +70,33 @@ export async function PATCH(request: NextRequest) {
     const email = isAdminRole(session.role) && requested ? requested : session.email;
 
     await connectToDatabase();
+    const current = await User.findOne({ email });
+    if (!current) {
+      return NextResponse.json({ success: false, error: "Account not found." }, { status: 404 });
+    }
+
     const update: Record<string, unknown> = {};
     if (body.name) {
       update.name = body.name;
       update.fullName = body.name;
     }
     if (body.phone !== undefined) update.phone = body.phone;
-    if (body.nationalId !== undefined) update.nationalId = body.nationalId;
+    if (body.nationalId !== undefined) {
+      const nextId = normalizeNationalId(body.nationalId);
+      if (nextId) {
+        const taken = await findAccountByNationalId(nextId, String(current._id));
+        if (taken) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "An account with this National ID already exists. Each applicant may have only one FitMed account.",
+            },
+            { status: 409 }
+          );
+        }
+      }
+      update.nationalId = nextId;
+    }
     if (body.avatarUrl !== undefined) update.avatarUrl = body.avatarUrl;
     if (body.dateOfBirth !== undefined) update.dateOfBirth = body.dateOfBirth;
     if (body.gender !== undefined) update.gender = body.gender;

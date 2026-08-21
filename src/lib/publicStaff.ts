@@ -61,7 +61,7 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         name,
         role: specialty,
         qualifications: license ? `RMDC ${license}` : "Licensed physician",
-        bio: `${name} is a licensed FitMed physician providing telehealth fitness assessments${license ? ` (licence ${license})` : ""}.`,
+        bio: `${name} is a licensed FitMed physician providing telehealth fitness assessments.`,
         image: publicPhoto(doc.avatarUrl, linked?.avatarUrl),
         badge: "Licensed Physician",
         kind: "doctor" as const,

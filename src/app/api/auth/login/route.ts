@@ -6,7 +6,7 @@ import User from "@/models/User";
 import { attachAuthCookie } from "@/lib/authCookie";
 import { normalizeRole } from "@/lib/roles";
 
-function userPayload(user: { fullName?: string; name?: string; email: string; role?: string; phone?: string; nationalId?: string; avatarUrl?: string; dateOfBirth?: string; gender?: string; address?: string }) {
+function userPayload(user: { fullName?: string; name?: string; email: string; role?: string; phone?: string; nationalId?: string; applicantId?: string; avatarUrl?: string; dateOfBirth?: string; gender?: string; address?: string }) {
   const role = normalizeRole(user.role);
   return {
     name: user.fullName || user.name || "FitMed user",
@@ -14,6 +14,7 @@ function userPayload(user: { fullName?: string; name?: string; email: string; ro
     role,
     phone: user.phone || "",
     nationalId: user.nationalId || "",
+    applicantId: user.applicantId || "",
     avatarUrl: user.avatarUrl || "",
     dateOfBirth: user.dateOfBirth || "",
     gender: user.gender || "",

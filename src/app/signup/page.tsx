@@ -421,12 +421,14 @@ export default function SignUpPage() {
                       <input
                         type="email"
                         required
+                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Email address"
+                        placeholder="you@email.com"
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                       />
                     </div>
+                    <p className="mt-1.5 text-[11px] text-slate-400">This email can be used for one FitMed account only.</p>
                   </div>
 
                   <div>
@@ -463,6 +465,7 @@ export default function SignUpPage() {
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                     />
                   </div>
+                  <p className="mt-1.5 text-[11px] text-slate-400">Each National ID can be registered once.</p>
                 </div>
 
                 {/* Password */}

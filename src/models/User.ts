@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password?: string;
   temporaryPassword?: string;
   requiresPasswordReset?: boolean;
+  applicantId?: string;
   phone?: string;
   nationalId?: string;
   nationalIdImageUrl?: string;
@@ -43,6 +44,7 @@ const UserSchema = new Schema<IUser>(
     password: { type: String },
     temporaryPassword: { type: String },
     requiresPasswordReset: { type: Boolean, default: false },
+    applicantId: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
     phone: { type: String, trim: true },
     nationalId: { type: String, trim: true },
     nationalIdImageUrl: { type: String },

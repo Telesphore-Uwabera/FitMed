@@ -118,6 +118,7 @@ export default function UserDashboard() {
     email: "",
     phone: "",
     nationalId: "",
+    applicantId: "",
     dob: "",
     gender: "",
     address: "",
@@ -226,6 +227,7 @@ export default function UserDashboard() {
             email: u.email || email,
             phone: u.phone || prev.phone,
             nationalId: u.nationalId || prev.nationalId,
+            applicantId: u.applicantId || prev.applicantId,
             dob: u.dateOfBirth || prev.dob,
             gender: u.gender || prev.gender,
             address: u.address || prev.address,
@@ -1506,6 +1508,16 @@ export default function UserDashboard() {
                       value={profileData.email}
                       disabled
                       className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-bold uppercase mb-1">Applicant ID</label>
+                    <input
+                      type="text"
+                      value={profileData.applicantId || "Assigned after registration"}
+                      disabled
+                      className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-mono font-semibold text-slate-600"
                     />
                   </div>
 

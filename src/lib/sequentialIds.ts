@@ -2,12 +2,18 @@ import Certificate from "@/models/Certificate";
 import Appointment from "@/models/Appointment";
 import Payment from "@/models/Payment";
 import Doctor from "@/models/Doctor";
+import User from "@/models/User";
 import { FITMED_APP_URL } from "@/lib/brevo";
 
 const DOCTOR_PREFIX = "DOC-RW-";
+const APPLICANT_PREFIX = "APP-RW-";
 
 export function formatDoctorId(n: number) {
   return `${DOCTOR_PREFIX}${padSerial(n, 4)}`;
+}
+
+export function formatApplicantId(n: number) {
+  return `${APPLICANT_PREFIX}${padSerial(n, 4)}`;
 }
 
 function padSerial(n: number, width = 5) {
@@ -164,4 +170,41 @@ export async function nextDoctorId() {
     if (Number.isFinite(n) && n > max) max = n;
   }
   return formatDoctorId(max + 1);
+}
+
+export async function ensureApplicantIds() {
+  const users = await User.find({ $nor: [{ role: "admin" }, { role: "doctor" }] })
+    .sort({ createdAt: 1, _id: 1 })
+    .select("_id applicantId")
+    .lean();
+  const used = new Set(
+    users
+      .map((u) => String(u.applicantId || "").toUpperCase())
+      .filter((id) => /^APP-RW-\d{4}$/.test(id))
+  );
+  let cursor = 1;
+  const takeNext = () => {
+    while (used.has(formatApplicantId(cursor))) cursor += 1;
+    const id = formatApplicantId(cursor);
+    used.add(id);
+    cursor += 1;
+    return id;
+  };
+  for (const user of users) {
+    if (/^APP-RW-\d{4}$/i.test(String(user.applicantId || ""))) continue;
+    await User.updateOne({ _id: user._id }, { $set: { applicantId: takeNext() } });
+  }
+}
+
+export async function nextApplicantId() {
+  await ensureApplicantIds();
+  const users = await User.find({ applicantId: { $regex: /^APP-RW-\d{4}$/i } })
+    .select("applicantId")
+    .lean();
+  let max = 0;
+  for (const row of users) {
+    const n = Number(String(row.applicantId).slice(APPLICANT_PREFIX.length));
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return formatApplicantId(max + 1);
 }

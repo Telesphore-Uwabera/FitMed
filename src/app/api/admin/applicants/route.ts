@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Certificate from "@/models/Certificate";
 import { approveApplicantAccount, resetApplicantPasswordWithApprovalEmail } from "@/lib/approveApplicant";
+import { ensureApplicantIds } from "@/lib/sequentialIds";
 
 const PENDING = new Set(["pending", "Pending", "pending_approval"]);
 
@@ -25,7 +26,11 @@ async function findApplicant(id: string, email?: string) {
   }
   return User.findOne({
     ...roleFilter,
-    $or: [{ email: id.trim().toLowerCase() }, { nationalId: id }],
+    $or: [
+      { email: id.trim().toLowerCase() },
+      { nationalId: id },
+      { applicantId: id.trim().toUpperCase() },
+    ],
   });
 }
 
@@ -33,6 +38,7 @@ function mapApplicant(u: Record<string, unknown>, certCount = 0) {
   const status = displayStatus(String(u.status || "Active"));
   return {
     id: String(u._id),
+    applicantId: String(u.applicantId || ""),
     name: String(u.fullName || u.name || "Applicant"),
     email: String(u.email || ""),
     phone: String(u.phone || "—"),
@@ -52,10 +58,11 @@ function mapApplicant(u: Record<string, unknown>, certCount = 0) {
 export async function GET() {
   try {
     await connectToDatabase();
+    await ensureApplicantIds();
     const users = await User.find({
       $nor: [{ role: "admin" }, { role: "doctor" }],
     })
-      .select("fullName name email phone nationalId nationalIdImageUrl avatarUrl status createdAt dateOfBirth gender address")
+      .select("applicantId fullName name email phone nationalId nationalIdImageUrl avatarUrl status createdAt dateOfBirth gender address")
       .sort({ createdAt: -1 })
       .lean();
 
