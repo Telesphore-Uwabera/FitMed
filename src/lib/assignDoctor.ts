@@ -161,7 +161,7 @@ export async function pickOnDutyDoctor() {
   const bumped = await PlatformSettings.findOneAndUpdate(
     { key: "fitmed" },
     { $inc: { roundRobinIndex: 1 }, $setOnInsert: { key: "fitmed" } },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   );
   const index = Math.abs(Number(bumped.roundRobinIndex || 1) - 1) % pool.length;
   const chosen = pool[index];

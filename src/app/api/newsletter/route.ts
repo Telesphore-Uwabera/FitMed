@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     await NewsletterSubscriber.findOneAndUpdate(
       { email },
       { email, name: name || existing?.name || "" },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     await sendBrevoEmail({
       toEmail: email,

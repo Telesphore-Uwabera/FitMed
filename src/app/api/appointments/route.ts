@@ -260,7 +260,7 @@ export async function PATCH(request: NextRequest) {
           ...(scheduledTime && { scheduledTime }),
           ...(durationMinutes && { durationMinutes: Number(durationMinutes) }),
         },
-        { new: true }
+        { returnDocument: "after" }
       );
       return NextResponse.json({ success: true, appointment: updated });
     } catch (dbErr) {

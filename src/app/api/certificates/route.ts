@@ -369,7 +369,7 @@ export async function PATCH(request: NextRequest) {
       const updated = await Certificate.findOneAndUpdate(
         certDoc ? { _id: certDoc._id } : { certificateId: certKey },
         updateData,
-        { new: true }
+        { returnDocument: "after" }
       );
 
       if (updated) {
@@ -399,7 +399,7 @@ export async function PATCH(request: NextRequest) {
               doctorName: updated.assignedDoctor || "",
               paidAt: new Date(),
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: "after" }
           ).catch(() => null);
         }
         await notifyCertificateEmails(updated.toObject(), { status, paymentStatus, decision, decisionNotes });

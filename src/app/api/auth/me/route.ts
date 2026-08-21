@@ -119,7 +119,7 @@ export async function PATCH(request: NextRequest) {
     if (body.address !== undefined) update.address = body.address;
     if (body.nationalIdImageUrl !== undefined) update.nationalIdImageUrl = body.nationalIdImageUrl;
 
-    const user = await User.findOneAndUpdate({ email }, update, { new: true });
+    const user = await User.findOneAndUpdate({ email }, update, { returnDocument: "after" });
     if (!user) {
       return NextResponse.json({ success: false, error: "Account not found." }, { status: 404 });
     }

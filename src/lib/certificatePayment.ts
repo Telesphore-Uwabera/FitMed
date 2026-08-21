@@ -48,7 +48,7 @@ export async function markCertificatePaid(opts: {
       doctorName: cert.assignedDoctor || "",
       paidAt: new Date(),
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   ).catch(() => null);
 
   await AuditLog.create({

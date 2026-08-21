@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         status: doctor.status,
         weeklySchedule: doctor.weeklySchedule || [],
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     return NextResponse.json({ success: true, doctor: serializeDoctor(doctor as Record<string, unknown> & { _id: unknown }) });
   } catch (error: unknown) {
@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest) {
         status: doctor.status,
         weeklySchedule: doctor.weeklySchedule,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     return NextResponse.json({ success: true, doctor: serializeDoctor(doctor.toObject()) });
   } catch (error: unknown) {

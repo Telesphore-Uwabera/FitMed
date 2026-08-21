@@ -9,7 +9,7 @@ export async function GET() {
     const settings = await PlatformSettings.findOneAndUpdate(
       { key: "fitmed" },
       { $setOnInsert: { key: "fitmed" } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     const logs = await AuditLog.find({}).sort({ createdAt: -1 }).limit(40).lean();
     return NextResponse.json({
@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest) {
         },
         $setOnInsert: { key: "fitmed" },
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     return NextResponse.json({
       success: true,
