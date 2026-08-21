@@ -2,8 +2,6 @@
 
 import React, { useState, useRef } from "react";
 import Image from "next/image";
-import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
 import {
   ShieldCheck,
   QrCode,
@@ -105,6 +103,10 @@ export default function OfficialMedicalCertificate({
     if (!certRef.current || isDownloading) return;
     setIsDownloading(true);
     try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas-pro"),
+        import("jspdf"),
+      ]);
       const canvas = await html2canvas(certRef.current, {
         scale: 2,
         useCORS: true,
@@ -299,18 +301,12 @@ export default function OfficialMedicalCertificate({
             <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
               <div className="w-20 h-20 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
                 {cert.certificateId && cert.certificateId !== "—" ? (
-                  <CertificateQr value={verifyUrl} label={`Official Document No. ${cert.certificateId}`} />
+                  <CertificateQr value={verifyUrl} label="Scan to open certificate" />
                 ) : (
                   <QrCode className="w-10 h-10 text-[#0B2D5C]" />
                 )}
               </div>
-              <div className="space-y-0.5 text-[10px] text-slate-600">
-                <div className="font-extrabold text-[#0B2D5C]">Scan to open certificate</div>
-                <div className="font-mono text-[9px] text-[#0B2D5C] break-all">Official Document No. {cert.certificateId}</div>
-                <a href={verifyUrl} className="font-mono text-[8px] text-sky-700 break-all underline" target="_blank" rel="noreferrer">
-                  {verifyUrl.replace(/^https?:\/\//, "")}
-                </a>
-              </div>
+              <div className="text-[10px] font-extrabold text-[#0B2D5C]">Scan to open certificate</div>
             </div>
           </div>
 

@@ -1926,7 +1926,7 @@ export default function UserDashboard() {
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block w-[220px] h-[220px]">
               <CertificateQr
                 value={publicVerifyUrl(selectedCert?.id)}
-                label={`Official Document No. ${selectedCert?.id || ""}`}
+                label="Scan to open certificate"
               />
             </div>
 

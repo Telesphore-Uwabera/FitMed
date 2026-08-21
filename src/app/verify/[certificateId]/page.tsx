@@ -14,26 +14,45 @@ export default async function VerifyCertificatePage({
 }) {
   const { certificateId } = await params;
   const id = officialDocumentNo(certificateId);
-  await connectToDatabase();
-  const cert = await Certificate.findOne({ certificateId: id }).lean();
-  const applicant = cert?.applicantEmail
-    ? await User.findOne({ email: String(cert.applicantEmail).toLowerCase() })
-        .select("avatarUrl nationalId gender dateOfBirth")
-        .lean()
-    : null;
-  let doctor = null;
-  if (cert?.assignedDoctorId) {
-    doctor = await Doctor.findById(cert.assignedDoctorId).select("fullName licenseNumber specialty").lean();
-  }
-  if (!doctor && cert) {
-    doctor = await Doctor.findOne({}).select("fullName licenseNumber specialty").lean();
+
+  let cert: Record<string, unknown> | null = null;
+  let applicant: { avatarUrl?: string; nationalId?: string } | null = null;
+  let doctor: { fullName?: string; licenseNumber?: string; specialty?: string } | null = null;
+  let loadError = "";
+
+  try {
+    await connectToDatabase();
+    cert = (await Certificate.findOne({ certificateId: id }).lean()) as Record<string, unknown> | null;
+    applicant = cert?.applicantEmail
+      ? ((await User.findOne({ email: String(cert.applicantEmail).toLowerCase() })
+          .select("avatarUrl nationalId gender dateOfBirth")
+          .lean()) as { avatarUrl?: string; nationalId?: string } | null)
+      : null;
+    if (cert?.assignedDoctorId) {
+      doctor = (await Doctor.findById(cert.assignedDoctorId)
+        .select("fullName licenseNumber specialty")
+        .lean()) as { fullName?: string; licenseNumber?: string; specialty?: string } | null;
+    }
+    if (!doctor && cert) {
+      doctor = (await Doctor.findOne({}).select("fullName licenseNumber specialty").lean()) as {
+        fullName?: string;
+        licenseNumber?: string;
+        specialty?: string;
+      } | null;
+    }
+  } catch {
+    loadError = "This certificate could not be opened right now. Please try again in a moment.";
   }
 
   return (
     <div className="min-h-screen bg-slate-100">
       <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-10">
-        {!cert ? (
+        {loadError ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950">
+            {loadError}
+          </div>
+        ) : !cert ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
             No FitMed certificate was found for <strong className="font-mono">{id || "this number"}</strong>.
           </div>
