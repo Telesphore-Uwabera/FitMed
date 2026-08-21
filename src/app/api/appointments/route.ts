@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
 import { EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
-import { nextKey, normalizeAppointmentKeys } from "@/lib/sequentialIds";
+import { nextKey } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
 
 export async function GET(request: NextRequest) {
@@ -12,45 +12,47 @@ export async function GET(request: NextRequest) {
     const doctorId = searchParams.get("doctorId");
     const applicantEmail = searchParams.get("applicantEmail");
     const status = searchParams.get("status");
+    const doctorEmail = searchParams.get("doctorEmail");
+    const doctorName = searchParams.get("doctorName");
 
-    try {
-      await connectToDatabase();
-      await normalizeAppointmentKeys();
-      const query: any = {};
-      const doctorEmail = searchParams.get("doctorEmail");
-      const doctorName = searchParams.get("doctorName");
-      const doctorKeys = [...new Set([doctorId, doctorEmail].filter(Boolean))] as string[];
-      const or: object[] = doctorKeys.flatMap((key) => {
-        const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        return [
-          { doctorId: key },
-          { doctorEmail: { $regex: `^${escaped}$`, $options: "i" } },
-        ];
-      });
-      if (doctorName) {
-        const nameKey = doctorName
-          .replace(/\b(dr|md|mbbs)\b\.?/gi, "")
-          .replace(/[,\.]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-        if (nameKey) {
-          const escapedName = nameKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          or.push({ doctorName: { $regex: escapedName, $options: "i" } });
-        }
-      }
-      if (or.length) query.$or = or;
-      if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
-      if (status) query.status = status;
+    await connectToDatabase();
+    const query: Record<string, unknown> = {};
 
-      const appointments = await Appointment.find(query).sort({ scheduledDate: 1, scheduledTime: 1 });
-      return NextResponse.json({ success: true, appointments });
-    } catch (dbErr) {
-      console.warn("MongoDB fetch appointments failed:", dbErr);
-      return NextResponse.json({ success: true, appointments: [] });
+    if (applicantEmail) {
+      query.applicantEmail = {
+        $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+        $options: "i",
+      };
     }
+
+    const or: object[] = [];
+    const doctorKeys = [...new Set([doctorId, doctorEmail].filter(Boolean))] as string[];
+    for (const key of doctorKeys) {
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      or.push({ doctorId: key });
+      or.push({ doctorId: { $regex: `^${escaped}$`, $options: "i" } });
+      or.push({ doctorEmail: { $regex: `^${escaped}$`, $options: "i" } });
+    }
+    if (doctorName) {
+      const nameKey = doctorName
+        .replace(/\b(dr|md|mbbs)\b\.?/gi, "")
+        .replace(/[,\.]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const last = nameKey.split(" ").filter(Boolean).pop();
+      if (last && last.length > 2) {
+        const escapedLast = last.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        or.push({ doctorName: { $regex: escapedLast, $options: "i" } });
+      }
+    }
+    if (or.length && !applicantEmail) query.$or = or;
+    if (status) query.status = status;
+
+    const appointments = await Appointment.find(query).sort({ scheduledDate: 1, scheduledTime: 1 }).lean();
+    return NextResponse.json({ success: true, appointments });
   } catch (error: any) {
     console.error("GET appointments error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message, appointments: [] }, { status: 500 });
   }
 }
 

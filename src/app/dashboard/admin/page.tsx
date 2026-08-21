@@ -1752,7 +1752,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-3">
                 <h3 className="text-sm font-extrabold text-[#0B2D5C]">Booked appointments</h3>
-                {platformAppointments.length === 0 && <p className="text-xs text-slate-400">No appointments in the database yet.</p>}
+                {platformAppointments.length === 0 && <p className="text-xs text-slate-400">No scheduled appointments.</p>}
                 {platformAppointments.map((apt: any) => (
                   <div key={apt.appointmentId || apt._id} className="p-4 rounded-2xl border border-slate-100 text-xs">
                     <div className="font-bold text-[#0B2D5C]">{apt.applicantName}</div>

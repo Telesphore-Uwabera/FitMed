@@ -1004,6 +1004,11 @@ export default function UserDashboard() {
             </div>
 
             <div className="grid gap-4">
+              {appointments.length === 0 && (
+                <div className="p-8 rounded-3xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
+                  No scheduled appointments.
+                </div>
+              )}
               {appointments.map((apt) => (
                 <div
                   key={apt.appointmentId}
@@ -1077,7 +1082,7 @@ export default function UserDashboard() {
               <h3 className="text-sm font-extrabold text-[#0B2D5C] uppercase tracking-wider">Your Scheduled Consultations</h3>
               {appointments.length === 0 && (
                 <div className="p-6 rounded-3xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
-                  No consultations in the database yet. After your doctor schedules a visit, it will appear here and you can join the same room they opened.
+                  No scheduled appointments. After your doctor books a visit, it will appear here.
                 </div>
               )}
               {appointments.map((apt) => (

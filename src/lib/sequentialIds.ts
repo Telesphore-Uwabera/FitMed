@@ -99,14 +99,11 @@ export async function nextKey(
     return formatKey("certificate", max + 1, year);
   }
   if (kind === "appointment") {
-    await normalizeAppointmentKeys(year);
-    const docs = await Appointment.find({ appointmentId: { $regex: `^${prefix}\\d{5}$` } })
-      .select("appointmentId")
-      .lean();
+    const docs = await Appointment.find({}).select("appointmentId").lean();
     let max = 0;
     for (const row of docs) {
-      const n = serialFromId(String(row.appointmentId), prefix);
-      if (n && n > max) max = n;
+      const sequential = serialFromId(String(row.appointmentId), prefix);
+      if (sequential && sequential > max) max = sequential;
     }
     return formatKey("appointment", max + 1, year);
   }

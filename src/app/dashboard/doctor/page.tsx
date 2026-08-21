@@ -336,7 +336,7 @@ export default function DoctorDashboardPage() {
     async function loadData() {
       let doctorId = "";
       let doctorEmail = session?.email || "";
-      let doctorName = "";
+      let doctorName = session?.name || "";
       let doctorLicense = "";
       try {
         const meRes = await fetch("/api/doctors/me", { credentials: "include" });
@@ -373,8 +373,8 @@ export default function DoctorDashboardPage() {
 
       try {
         const aptRes = await fetch(
-          `/api/appointments?doctorId=${encodeURIComponent(doctorId || doctorEmail)}&doctorEmail=${encodeURIComponent(doctorEmail)}&doctorName=${encodeURIComponent(doctorName)}`,
-          { signal: AbortSignal.timeout(8000) }
+          `/api/appointments?doctorId=${encodeURIComponent(doctorId || doctorEmail)}&doctorEmail=${encodeURIComponent(doctorEmail)}&doctorName=${encodeURIComponent(doctorName || session?.name || "")}`,
+          { credentials: "include", signal: AbortSignal.timeout(20000) }
         );
         const aptData = await aptRes.json();
         if (aptData.success) {
@@ -470,19 +470,23 @@ export default function DoctorDashboardPage() {
     try {
       const res = await fetch("/api/appointments", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...scheduleForm,
-          doctorId: session?.email || doctorProfile.id || "",
-          doctorEmail: session?.email || "",
-          doctorName: session?.name || "Physician",
-          doctorSpecialty: "Occupational Health & Telehealth Physician",
+          doctorId: doctorProfile.id || session?.email || "",
+          doctorEmail: session?.email || doctorProfile.email || "",
+          doctorName: doctorProfile.name || session?.name || "Physician",
+          doctorSpecialty: doctorProfile.specialty || "Occupational Health & Telehealth Physician",
         }),
       });
       const data = await res.json();
       if (data.success) {
         setDoctorAppointments((prev) => [data.appointment, ...prev]);
-        success("Appointment Scheduled", `Meeting invitation sent to ${scheduleForm.applicantEmail}.`);
+        success(
+          "Appointment scheduled",
+          `A meeting notice was emailed to ${scheduleForm.applicantEmail}, and it will appear in their applicant dashboard.`
+        );
         setShowScheduleModal(false);
       } else {
         error("Scheduling Error", data.error || "Failed to schedule appointment.");
@@ -1242,7 +1246,7 @@ export default function DoctorDashboardPage() {
             <div className="grid gap-4">
               {doctorAppointments.length === 0 && (
                 <div className="p-8 rounded-3xl border border-dashed border-slate-200 bg-white text-sm text-slate-500">
-                  No appointments in the database. Schedule a consultation to create a shared video room the applicant can join.
+                  No scheduled appointments.
                 </div>
               )}
               {doctorAppointments.map((apt) => (
