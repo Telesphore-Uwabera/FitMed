@@ -83,6 +83,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={manrope.variable} suppressHydrationWarning>
+      <head>
+        <meta name="google-site-verification" content="P7tFxJLbr0ugu0-lq5ZXBX_JsIwzoc0q6iFGN0AN9A8" />
+      </head>
       <body className="antialiased" suppressHydrationWarning>
         <JsonLd />
         <Script
