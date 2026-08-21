@@ -144,16 +144,16 @@ export default function Hero() {
             initial={{ opacity: 0, y: 38 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-3 md:mb-5 text-5xl sm:text-6xl md:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.06] text-white"
+            className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-3 md:mb-5 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
             style={{ fontFamily: "var(--font-primary)" }}
           >
-            <span className="block w-full text-justify [text-align-last:justify] text-white">
+            <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] text-white">
               Get Your
             </span>
-            <span className="block w-full text-justify [text-align-last:justify] bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
+            <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
               Medical Fitness
             </span>
-            <span className="block w-full text-justify [text-align-last:justify] text-white">
+            <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] text-white">
               Certificate Online.
             </span>
           </motion.h1>
@@ -258,7 +258,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.75, delay: 1.0 }}
-              className="flex flex-nowrap gap-2 md:gap-3"
+              className="grid grid-cols-3 gap-2 md:gap-3"
             >
               {stats.map((s, i) => (
                 <motion.div
@@ -267,18 +267,16 @@ export default function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.05 + i * 0.1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="flex-1 min-w-0 glass-dark rounded-2xl px-3 py-2 md:px-5 md:py-3.5 flex items-center gap-2 md:gap-3 cursor-default border border-white/10 hover:border-sky-400/35 transition-colors"
+                  className="min-w-0 glass-dark rounded-2xl px-2 py-3 md:px-4 md:py-4 flex flex-col items-center justify-center text-center gap-1.5 h-full cursor-default border border-white/10 hover:border-sky-400/35 transition-colors"
                 >
                   <s.icon className={`w-5 h-5 ${s.color} flex-shrink-0`} />
-                  <div className="min-w-0">
-                    <div
-                      className={`text-xl font-extrabold ${s.color} leading-tight`}
-                      style={{ fontFamily: "var(--font-primary)" }}
-                    >
-                      {s.value}
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 leading-tight">{s.label}</div>
+                  <div
+                    className={`text-sm sm:text-lg md:text-xl font-extrabold ${s.color} leading-none whitespace-nowrap`}
+                    style={{ fontFamily: "var(--font-primary)" }}
+                  >
+                    {s.value}
                   </div>
+                  <div className="text-[10px] sm:text-[11px] text-slate-400 leading-snug">{s.label}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -310,14 +308,14 @@ export default function Hero() {
       <button
         onClick={back}
         aria-label="Previous slide"
-        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
+        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
+        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
       >
         <ChevronRight className="w-5 h-5" />
       </button>
