@@ -1766,7 +1766,7 @@ export default function DoctorDashboardPage() {
                   <div key={row.label} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">{row.label}</span>
-                      <span className="font-bold text-[#0B2D5C]">{row.count} · {row.pct}%</span>
+                      <span className="font-bold text-[#0B2D5C]">{row.count} · {`${row.pct}%`}</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                       <div className={`h-full rounded-full ${row.bar}`} style={{ width: `${row.pct}%` }} />
@@ -2003,8 +2003,7 @@ export default function DoctorDashboardPage() {
                   <div className="text-[11px] text-slate-500">Choose a recent photo that shows your face clearly.</div>
                   {avatarWebpResult && (
                     <div className="text-[10px] text-teal-700 font-bold mt-1 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 inline-block">
-                      Photo ready · smaller by {avatarWebpResult.reductionPercentage}%
-                    </div>
+                      Photo ready · smaller by {`${avatarWebpResult.reductionPercentage}%`}
                     </div>
                   )}
                 </div>

@@ -1290,7 +1290,7 @@ export default function AdminDashboardPage() {
                         <div className="text-[10px] text-slate-300">We shrink the photo automatically so it loads quickly.</div>
                         {doctorWebpResult && (
                           <div className="text-[10px] text-[#12B8B0] font-bold mt-0.5">
-                            Photo ready · smaller by {doctorWebpResult.reductionPercentage}%
+                            Photo ready · smaller by {`${doctorWebpResult.reductionPercentage}%`}
                           </div>
                         )}
                       </div>
@@ -2099,7 +2099,7 @@ export default function AdminDashboardPage() {
                     Upload real profile photo
                     <input type="file" accept="image/*" onChange={handleAdminAvatarChange} className="hidden" />
                   </label>
-                  {adminAvatarWebp && <span className="text-[11px] text-teal-700 font-bold">Photo ready · smaller by {adminAvatarWebp.reductionPercentage}%</span>}
+                  {adminAvatarWebp && <span className="text-[11px] text-teal-700 font-bold">Photo ready · smaller by {`${adminAvatarWebp.reductionPercentage}%`}</span>}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4 text-xs">
                   <label className="font-bold text-slate-500">Display name<input value={adminProfile.name} onChange={(event) => setAdminProfile({ ...adminProfile, name: event.target.value })} className="mt-1 w-full p-3 rounded-xl border border-slate-200 font-semibold" required /></label>

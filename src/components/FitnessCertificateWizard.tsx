@@ -282,7 +282,7 @@ export default function FitnessCertificateWizard({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Progress</span>
-                <span className="text-xs font-extrabold text-[#12B8B0]">{progressPercent}%</span>
+                <span className="text-xs font-extrabold text-[#12B8B0]">{`${progressPercent}%`}</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <div
