@@ -357,7 +357,7 @@ export default function SignUpPage() {
                         Saved
                       </span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* ── NATIONAL ID / PASSPORT DOCUMENT UPLOAD ── */}
