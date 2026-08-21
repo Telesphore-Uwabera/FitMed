@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
-import { COOKIE_NAME, verifySession, clearAuthCookieOptions } from "@/lib/authCookie";
+import { COOKIE_NAME, verifySession, clearAuthCookieOptions, attachAuthCookie } from "@/lib/authCookie";
 import { normalizeRole } from "@/lib/roles";
 
 function blockedStatus(status?: string) {
@@ -37,16 +37,19 @@ export async function GET(request: NextRequest) {
       return res;
     }
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        name: user.fullName || user.name || session.name,
-        email: user.email,
-        role: normalizeRole(user.role),
-        avatarUrl: user.avatarUrl || "",
-        status: user.status,
-      },
-    });
+    const role = normalizeRole(user.role);
+    const payload = {
+      name: user.fullName || user.name || session.name,
+      email: user.email,
+      role,
+      avatarUrl: user.avatarUrl || "",
+      status: user.status,
+    };
+    const res = NextResponse.json({ success: true, user: payload });
+    if (session.role !== role || session.name !== payload.name) {
+      await attachAuthCookie(res, { email: payload.email, role, name: payload.name });
+    }
+    return res;
   } catch {
     return NextResponse.json({ success: false, error: "Could not verify your session." }, { status: 500 });
   }

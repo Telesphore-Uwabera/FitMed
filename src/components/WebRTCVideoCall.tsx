@@ -7,6 +7,8 @@ import {
   MessageSquare,
   Mic,
   MicOff,
+  Minimize2,
+  Maximize2,
   MonitorOff,
   MonitorUp,
   PhoneOff,
@@ -35,10 +37,12 @@ interface WebRTCVideoCallProps {
   remoteName?: string;
   purpose?: string;
   appointmentId?: string;
-  variant?: "overlay" | "embedded";
+  variant?: "overlay" | "embedded" | "floating";
   initialMessages?: CallChatMessage[];
   onCallEnd?: () => void;
   onRemoteJoined?: () => void;
+  onMinimize?: () => void;
+  onExpand?: () => void;
 }
 
 function socketUrl() {
@@ -56,6 +60,8 @@ export default function WebRTCVideoCall({
   initialMessages = [],
   onCallEnd,
   onRemoteJoined,
+  onMinimize,
+  onExpand,
 }: WebRTCVideoCallProps) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -69,6 +75,10 @@ export default function WebRTCVideoCall({
   const [callDuration, setCallDuration] = useState(0);
   const [mediaError, setMediaError] = useState("");
   const [remoteMuted, setRemoteMuted] = useState(false);
+  const [localLevel, setLocalLevel] = useState(0);
+  const [remoteLevel, setRemoteLevel] = useState(0);
+  const [localSpeaking, setLocalSpeaking] = useState(false);
+  const [remoteSpeaking, setRemoteSpeaking] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -294,6 +304,42 @@ export default function WebRTCVideoCall({
   }, [remoteStream]);
 
   useEffect(() => {
+    const listen = (stream: MediaStream | null, setLevel: (n: number) => void, setSpeaking: (v: boolean) => void) => {
+      if (!stream?.getAudioTracks().length) {
+        setLevel(0);
+        setSpeaking(false);
+        return;
+      }
+      const ctx = new AudioContext();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      let raf = 0;
+      const tick = () => {
+        if (ctx.state === "suspended") void ctx.resume();
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((sum, value) => sum + value, 0) / data.length / 255;
+        setLevel(avg);
+        setSpeaking(avg > 0.06);
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+      return () => {
+        cancelAnimationFrame(raf);
+        void ctx.close();
+      };
+    };
+    const stopLocal = listen(localStream, setLocalLevel, setLocalSpeaking);
+    const stopRemote = listen(remoteStream, setRemoteLevel, setRemoteSpeaking);
+    return () => {
+      stopLocal?.();
+      stopRemote?.();
+    };
+  }, [localStream, remoteStream]);
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -394,10 +440,29 @@ export default function WebRTCVideoCall({
       ? ["Please confirm you have no chest pain.", "Can you perform a full neck rotation?", "Vitals look optimal. Ready to sign."]
       : ["Vitals: BP 118/78", "No symptoms", "Ready"];
 
+  const floating = variant === "floating";
+  const voiceActive = !isMuted && localSpeaking;
   const shellClass =
     variant === "overlay"
       ? "fixed inset-0 z-[90] bg-slate-950 flex flex-col"
-      : "relative min-h-[640px] h-[min(78vh,820px)] rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-2xl";
+      : floating
+        ? "relative h-full min-h-[12rem] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-2xl"
+        : "relative min-h-[640px] h-[min(78vh,820px)] rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-2xl";
+
+  const VoiceBars = ({ level, active }: { level: number; active: boolean }) => (
+    <span className="flex items-end gap-0.5 h-4">
+      {[0.45, 1, 0.7, 1.15, 0.55].map((weight, index) => (
+        <span
+          key={index}
+          className={`w-[3px] rounded-full ${active ? "bg-[#12B8B0]" : "bg-slate-500"}`}
+          style={{
+            height: active ? `${Math.max(4, Math.min(16, 4 + level * 22 * weight))}px` : "4px",
+            transition: "height 80ms linear",
+          }}
+        />
+      ))}
+    </span>
+  );
 
   return (
     <div className={shellClass}>
@@ -409,16 +474,19 @@ export default function WebRTCVideoCall({
               {callStatus === "connected" ? "Live" : "Signaling"} · {formatDuration(callDuration)}
             </span>
           </div>
+          {!floating && (
           <div className="hidden sm:flex items-center gap-2">
             <Shield className="w-3.5 h-3.5 text-[#12B8B0]" />
             <span className="text-[11px] text-slate-400 font-medium">Encrypted WebRTC</span>
           </div>
+          )}
           <span className="text-[10px] text-slate-500 font-mono truncate">
             {appointmentId || roomId}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-300 font-semibold hidden md:block truncate max-w-[240px]">{purpose}</span>
+          {!floating && (
           <button
             onClick={() => setChatOpen((v) => !v)}
             className={`w-9 h-9 rounded-xl flex items-center justify-center ${
@@ -428,6 +496,21 @@ export default function WebRTCVideoCall({
           >
             <MessageSquare className="w-4 h-4" />
           </button>
+          )}
+          {onMinimize && !floating && (
+            <button
+              onClick={onMinimize}
+              className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center"
+              title="Keep meeting while you work"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+          )}
+          {floating && onExpand && (
+            <button onClick={onExpand} className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center" title="Return to full meeting">
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          )}
           {variant === "overlay" && (
             <button onClick={endCall} className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center" title="Close">
               <X className="w-4 h-4" />
@@ -438,7 +521,7 @@ export default function WebRTCVideoCall({
 
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 relative flex items-center justify-center p-3 sm:p-5 min-w-0">
-          <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl">
+          <div className={`relative w-full ${floating ? "h-full min-h-[11rem]" : "max-w-5xl aspect-video"} rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl`}>
             <video
               ref={remoteVideoRef}
               autoPlay
@@ -466,6 +549,7 @@ export default function WebRTCVideoCall({
               <span className={`w-2 h-2 rounded-full ${remoteStream ? "bg-emerald-400" : "bg-amber-400"}`} />
               <span className="text-xs font-bold text-white">{remoteName}</span>
               <BadgeCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
+              {remoteSpeaking && !remoteMuted && <VoiceBars level={remoteLevel} active />}
               {remoteMuted && <MicOff className="w-3.5 h-3.5 text-rose-400" />}
             </div>
             <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-700">
@@ -488,7 +572,10 @@ export default function WebRTCVideoCall({
                   <MicOff className="w-3 h-3 text-white" />
                 </div>
               )}
-              <div className="absolute bottom-1 left-2 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white font-bold">You</div>
+              <div className="absolute bottom-1 left-2 flex items-center gap-1 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white font-bold">
+                You
+                {!isMuted && <VoiceBars level={localLevel} active={voiceActive} />}
+              </div>
             </div>
 
             {screenSharing && (
@@ -501,10 +588,12 @@ export default function WebRTCVideoCall({
           <div className="absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-5 py-3 rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 shadow-2xl">
             <button
               onClick={toggleMute}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isMuted ? "bg-rose-600 text-white" : "bg-slate-700 text-white"}`}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center relative overflow-hidden ${
+                isMuted ? "bg-rose-600 text-white" : voiceActive ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-slate-700 text-white"
+              }`}
               title={isMuted ? "Unmute" : "Mute"}
             >
-              {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              {isMuted ? <MicOff className="w-4 h-4" /> : voiceActive ? <VoiceBars level={localLevel} active /> : <Mic className="w-4 h-4" />}
             </button>
             <button
               onClick={toggleCamera}
@@ -531,7 +620,7 @@ export default function WebRTCVideoCall({
           </div>
         </div>
 
-        {chatOpen && (
+        {chatOpen && !floating && (
           <div className="w-[min(100%,20rem)] flex-shrink-0 bg-slate-900 border-l border-slate-800 flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
               <div className="flex items-center gap-2">

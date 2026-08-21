@@ -20,6 +20,7 @@ export async function middleware(request: NextRequest) {
   const session = await verifySession(request.cookies.get(COOKIE_NAME)?.value);
 
   const isDashboard = pathname.startsWith("/dashboard");
+  const isMeet = pathname.startsWith("/meet/");
   const isAdminApi = pathname.startsWith("/api/admin");
   const isStaffApi =
     pathname.startsWith("/api/certificates") ||
@@ -36,12 +37,12 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/auth/me";
   const isAdminContactRead = pathname.startsWith("/api/contact") && request.method !== "POST";
 
-  if (!isDashboard && !isAdminApi && !isStaffApi && !isAdminContactRead) {
+  if (!isDashboard && !isMeet && !isAdminApi && !isStaffApi && !isAdminContactRead) {
     return NextResponse.next();
   }
 
   if (!session) {
-    if (isDashboard) {
+    if (isDashboard || isMeet) {
       return NextResponse.redirect(signInUrl(request));
     }
     return unauthorizedJson();
@@ -71,6 +72,7 @@ export const config = {
   matcher: [
     "/dashboard",
     "/dashboard/:path*",
+    "/meet/:path*",
     "/api/admin/:path*",
     "/api/auth/approve-user",
     "/api/auth/me",

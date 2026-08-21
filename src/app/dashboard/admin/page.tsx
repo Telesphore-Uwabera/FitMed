@@ -370,7 +370,7 @@ export default function AdminDashboardPage() {
         error("Password not reset", data.error || "Please try again.");
         return;
       }
-      success("New password emailed", `${name} will receive a first-time sign-in password by email.`);
+      success("Approval email sent", `${name} was emailed their FitMed sign-in details. The password was reset only after that email went out.`);
     } catch {
       error("Password not reset", "Could not reach the server.");
     }
@@ -411,7 +411,7 @@ export default function AdminDashboardPage() {
         error("Password not reset", data.error || "Please try again.");
         return;
       }
-      success("New password emailed", `${name} will receive a first-time sign-in password by email.`);
+      success("Approval email sent", `${name} was emailed their FitMed sign-in details. The password was reset only after that email went out.`);
     } catch {
       error("Password not reset", "Could not reach the server.");
     }

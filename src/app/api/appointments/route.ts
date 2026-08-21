@@ -5,7 +5,7 @@ import { EmailTemplates } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
 import { nextKey } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
-import { publicMeetUrl } from "@/lib/meetingTime";
+import { isMeetingClosed, publicMeetUrl } from "@/lib/meetingTime";
 import { processDueMeetingNotices } from "@/lib/meetingReminders";
 
 export async function GET(request: NextRequest) {
@@ -121,12 +121,20 @@ export async function POST(request: NextRequest) {
     const meetingLink = publicMeetUrl(roomId);
     const formattedTime = `${scheduledDate} at ${scheduledTime} (Africa/Kigali)`;
     const physician = doctorName || "FitMed Physician";
+    const inviteDetails = {
+      scheduledDate,
+      scheduledTime,
+      durationMinutes: durationMinutes || 15,
+      purpose: purpose || "Medical Fitness Review",
+      appointmentId,
+      notes: notes || "",
+    };
     await notifyPerson({
       toEmail: applicantEmail,
       toName: applicantName,
       role: "user",
       subject: `FitMed video consultation scheduled with ${physician}`,
-      htmlContent: EmailTemplates.telehealthInvite(applicantName, physician, meetingLink, formattedTime),
+      htmlContent: EmailTemplates.telehealthInvite(applicantName, physician, meetingLink, inviteDetails),
       snippet: `Consultation with ${physician} on ${formattedTime}.`,
       href: meetingLink,
     });
@@ -155,7 +163,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { appointmentId, status, notes, scheduledDate, scheduledTime, action } = body;
+    const { appointmentId, status, notes, scheduledDate, scheduledTime, durationMinutes, action } = body;
 
     if (!appointmentId) {
       return NextResponse.json({ error: "appointmentId required" }, { status: 400 });
@@ -169,6 +177,12 @@ export async function PATCH(request: NextRequest) {
       }
 
       if (action === "remind") {
+        if (isMeetingClosed(appointment)) {
+          return NextResponse.json(
+            { success: false, error: "This visit has ended. Reschedule it to notify the applicant." },
+            { status: 400 }
+          );
+        }
         const time = `${appointment.scheduledDate || ""} ${appointment.scheduledTime || ""}`.trim() || "as scheduled";
         const meetingLink = publicMeetUrl(String(appointment.roomId || appointment.appointmentId));
         await notifyPerson({
@@ -188,6 +202,49 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true, appointment });
       }
 
+      if (action === "reschedule") {
+        if (!scheduledDate || !scheduledTime) {
+          return NextResponse.json({ success: false, error: "Choose a new date and time." }, { status: 400 });
+        }
+        appointment.scheduledDate = scheduledDate;
+        appointment.scheduledTime = scheduledTime;
+        if (durationMinutes) appointment.durationMinutes = Number(durationMinutes);
+        appointment.status = "rescheduled";
+        appointment.reminder30Sent = false;
+        appointment.startNoticeSent = false;
+        await appointment.save();
+        const meetingLink = publicMeetUrl(String(appointment.roomId || appointment.appointmentId));
+        const time = `${scheduledDate} at ${scheduledTime} (Africa/Kigali)`;
+        await notifyPerson({
+          toEmail: appointment.applicantEmail,
+          toName: appointment.applicantName,
+          role: "user",
+          subject: "Your FitMed video visit was rescheduled",
+          htmlContent: EmailTemplates.appointmentRescheduled(
+            appointment.applicantName,
+            appointment.doctorName || "your FitMed doctor",
+            meetingLink,
+            {
+              scheduledDate,
+              scheduledTime,
+              durationMinutes: Number(appointment.durationMinutes || durationMinutes || 15),
+              purpose: appointment.purpose,
+              appointmentId: appointment.appointmentId,
+            }
+          ),
+          snippet: `Your visit is now ${time}.`,
+          href: meetingLink,
+        });
+        return NextResponse.json({ success: true, appointment });
+      }
+
+      if (status && !["completed", "cancelled"].includes(String(status)) && isMeetingClosed(appointment)) {
+        return NextResponse.json(
+          { success: false, error: "This visit has ended. Reschedule it before starting or inviting again." },
+          { status: 400 }
+        );
+      }
+
       const updated = await Appointment.findOneAndUpdate(
         { appointmentId },
         {
@@ -195,6 +252,7 @@ export async function PATCH(request: NextRequest) {
           ...(notes && { notes }),
           ...(scheduledDate && { scheduledDate }),
           ...(scheduledTime && { scheduledTime }),
+          ...(durationMinutes && { durationMinutes: Number(durationMinutes) }),
         },
         { new: true }
       );

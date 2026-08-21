@@ -254,12 +254,33 @@ export const EmailTemplates = {
        ${button(`${FITMED_APP_URL}/dashboard/admin`, "Open admin dashboard", true)}`
     ),
 
-  telehealthInvite: (applicantName: string, doctorName: string, meetingLink: string, time: string) =>
+  telehealthInvite: (
+    applicantName: string,
+    doctorName: string,
+    meetingLink: string,
+    details: {
+      scheduledDate: string;
+      scheduledTime: string;
+      durationMinutes?: number;
+      purpose?: string;
+      appointmentId?: string;
+      notes?: string;
+    }
+  ) =>
     brandedEmail(
-      "Video consultation",
+      "Video consultation scheduled",
       `<p>Hello <strong>${applicantName}</strong>,</p>
-       <p><strong>${doctorName}</strong> has scheduled a secure live video assessment.</p>
-       <p>You do not need to sign in. Open the join link at the scheduled time. If you open it early, FitMed will tell you when the meeting starts.</p>
+       <p><strong>${doctorName}</strong> has scheduled a FitMed telehealth visit. Sign in with your applicant email and password, then you will enter this meeting room.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">Doctor</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${doctorName}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Date</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.scheduledDate}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Time</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.scheduledTime} (Africa/Kigali)</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Duration</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.durationMinutes || 15} minutes</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Purpose</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.purpose || "Medical fitness consultation"}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Meeting ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;font-family:Consolas,monospace;">${details.appointmentId || "—"}</td></tr>
+         ${details.notes ? `<tr><td style="padding:6px 0;color:#64748b;">Notes</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.notes}</td></tr>` : ""}
+       </table>
+       <p>Click below, sign in, and you will be taken straight to this meeting.</p>
        ${button(meetingLink, "Join telehealth room")}`
     ),
 
@@ -269,7 +290,7 @@ export const EmailTemplates = {
       `<p>Dear <strong>${applicantName}</strong>,</p>
        <p>This is a reminder of your FitMed video consultation with <strong>${doctorName}</strong>.</p>
        <p><strong>Scheduled time:</strong> ${time}</p>
-       <p>You do not need to sign in. Open the join link at the scheduled time. If you open it early, the page will wait until the meeting starts.</p>
+       <p>Sign in with your applicant email and password. The join button takes you to this meeting after sign-in.</p>
        ${button(meetingLink, "Join consultation room")}`
     ),
 
@@ -278,7 +299,7 @@ export const EmailTemplates = {
       `Your visit starts in ${minutes} minutes`,
       `<p>Dear <strong>${applicantName}</strong>,</p>
        <p>Your FitMed video consultation with <strong>${doctorName}</strong> begins in <strong>${minutes} minutes</strong> (${time}).</p>
-       <p>Use a quiet, well-lit space and have your National ID ready. Click the button at the start time — no FitMed login is required.</p>
+       <p>Sign in, then join. You will enter meeting <strong>${time}</strong>.</p>
        ${button(meetingLink, "Join video meeting")}`
     ),
 
@@ -287,8 +308,35 @@ export const EmailTemplates = {
       "Your FitMed visit is starting now",
       `<p>Dear <strong>${applicantName}</strong>,</p>
        <p>Your video consultation with <strong>${doctorName}</strong> is starting now (${time}).</p>
-       <p>Click below to join. You do not need to sign in. Your doctor will be in the FitMed clinical room.</p>
+       <p>Sign in with your FitMed applicant account, then you will enter this meeting.</p>
        ${button(meetingLink, "Join now")}`
+    ),
+
+  appointmentRescheduled: (
+    applicantName: string,
+    doctorName: string,
+    meetingLink: string,
+    details: {
+      scheduledDate: string;
+      scheduledTime: string;
+      durationMinutes?: number;
+      purpose?: string;
+      appointmentId?: string;
+    }
+  ) =>
+    brandedEmail(
+      "Your FitMed visit was rescheduled",
+      `<p>Dear <strong>${applicantName}</strong>,</p>
+       <p><strong>${doctorName}</strong> has updated your video consultation. Please use the new date and time below.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
+         <tr><td style="padding:6px 0;color:#64748b;">New date</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.scheduledDate}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">New time</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.scheduledTime} (Africa/Kigali)</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Duration</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.durationMinutes || 15} minutes</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Purpose</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${details.purpose || "Medical fitness consultation"}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Meeting ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;font-family:Consolas,monospace;">${details.appointmentId || "—"}</td></tr>
+       </table>
+       <p>Sign in with your email and password, then you will enter this meeting room.</p>
+       ${button(meetingLink, "Join the rescheduled visit")}`
     ),
 
   certificateStatusNotification: (

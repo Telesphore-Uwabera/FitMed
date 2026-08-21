@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import DashboardShell from "@/components/DashboardShell";
 import BrandDatePicker from "@/components/BrandDatePicker";
+import { meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
 import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
@@ -1008,8 +1009,8 @@ export default function UserDashboard() {
                         <Calendar className="w-3.5 h-3.5 text-[#12B8B0]" />
                         <span>{apt.scheduledDate} at {apt.scheduledTime}</span>
                       </span>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider">
-                        ● {apt.status}
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${meetingStatusClass(meetingLifecycleStatus(apt))}`}>
+                        ● {meetingStatusLabel(meetingLifecycleStatus(apt))}
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-400">ID: {apt.appointmentId}</span>
                     </div>
@@ -1086,8 +1087,8 @@ export default function UserDashboard() {
                         <Calendar className="w-3.5 h-3.5 text-[#12B8B0]" />
                         {apt.scheduledDate} at {apt.scheduledTime}
                       </span>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider">
-                        ● {apt.status}
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${meetingStatusClass(meetingLifecycleStatus(apt))}`}>
+                        ● {meetingStatusLabel(meetingLifecycleStatus(apt))}
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-400">ID: {apt.appointmentId}</span>
                     </div>

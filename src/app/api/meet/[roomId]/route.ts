@@ -25,6 +25,26 @@ export async function GET(
     return NextResponse.json({ success: false, error: "This meeting link is not valid." }, { status: 404 });
   }
 
+  const stored = String(apt.status || "").toLowerCase();
+  if (stored === "completed") {
+    return NextResponse.json({
+      success: true,
+      canJoin: false,
+      status: "completed",
+      minutesUntilStart: 0,
+      appointment: {
+        appointmentId: apt.appointmentId,
+        roomId: apt.roomId || apt.appointmentId,
+        applicantName: apt.applicantName,
+        doctorName: apt.doctorName,
+        purpose: apt.purpose,
+        scheduledDate: apt.scheduledDate,
+        scheduledTime: apt.scheduledTime,
+        durationMinutes: apt.durationMinutes,
+      },
+    });
+  }
+
   const windowInfo = meetingWindow(apt);
   return NextResponse.json({
     success: true,

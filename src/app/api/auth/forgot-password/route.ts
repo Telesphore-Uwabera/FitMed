@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword } from "@/lib/password";
 import User from "@/models/User";
-import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
+import { sendApplicantApprovalEmail } from "@/lib/approveApplicant";
+import { normalizeRole } from "@/lib/roles";
 
 // In-memory OTP storage for rapid verification
 const otpStore = new Map<string, { otp: string; expiresAt: number }>();
@@ -61,20 +63,46 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Verification code has expired." }, { status: 400 });
       }
 
-      const user = await User.findOneAndUpdate(
-        { email: cleanEmail },
-        { password: hashPassword(newPassword), requiresPasswordReset: false, temporaryPassword: undefined },
-        { new: true }
-      );
+      const user = await User.findOne({ email: cleanEmail });
       if (!user) {
         return NextResponse.json({ success: false, error: "No FitMed account uses this email." }, { status: 404 });
       }
+
+      const mail =
+        normalizeRole(user.role) === "user"
+          ? await sendApplicantApprovalEmail({
+              email: cleanEmail,
+              name: user.fullName || user.name || "Applicant",
+            })
+          : await sendBrevoEmail({
+              toEmail: cleanEmail,
+              toName: user.fullName || user.name || "FitMed user",
+              subject: "Your FitMed password was reset",
+              htmlContent: EmailTemplates.applicantAccountApprovedOwnPassword(
+                user.fullName || user.name || "FitMed user",
+                `${FITMED_APP_URL}/signin`
+              ),
+            });
+      if (!mail.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "The approval email could not be sent, so the password was not changed. Try again in a few minutes.",
+          },
+          { status: 502 }
+        );
+      }
+
+      user.password = hashPassword(newPassword);
+      user.requiresPasswordReset = false;
+      user.temporaryPassword = undefined;
+      await user.save();
 
       otpStore.delete(cleanEmail);
 
       return NextResponse.json({
         success: true,
-        message: "Your password has been successfully reset! You may now sign in.",
+        message: "Your password has been reset. Check your email for the FitMed approval notice, then sign in.",
       });
     }
 

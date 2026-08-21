@@ -72,11 +72,13 @@ export default function MeetJoinClient({ roomId }: { roomId: string }) {
     );
   }
 
-  if (payload?.status === "ended") {
+  if (payload?.status === "ended" || payload?.status === "completed") {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center space-y-2">
-        <h1 className="text-xl font-extrabold text-[#0B2D5C]">This meeting has ended</h1>
-        <p className="text-sm text-slate-600">Ask your doctor to schedule another consultation if you still need a visit.</p>
+        <h1 className="text-xl font-extrabold text-[#0B2D5C]">
+          {payload?.status === "completed" ? "This meeting is completed" : "This meeting has ended"}
+        </h1>
+        <p className="text-sm text-slate-600">Ask your doctor to reschedule if you still need a visit.</p>
       </div>
     );
   }

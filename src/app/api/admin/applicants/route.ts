@@ -3,9 +3,7 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import Certificate from "@/models/Certificate";
-import { generateTempPassword, hashPassword } from "@/lib/password";
-import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
-import { approveApplicantAccount } from "@/lib/approveApplicant";
+import { approveApplicantAccount, resetApplicantPasswordWithApprovalEmail } from "@/lib/approveApplicant";
 
 const PENDING = new Set(["pending", "Pending", "pending_approval"]);
 
@@ -125,23 +123,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === "reset-password") {
-      const oneTimePassword = generateTempPassword();
-      user.password = hashPassword(oneTimePassword);
-      user.temporaryPassword = oneTimePassword;
-      user.requiresPasswordReset = true;
-      await user.save();
-      await sendBrevoEmail({
-        toEmail: user.email,
-        toName: user.fullName || user.name || "Applicant",
-        subject: "Your new FitMed sign-in password",
-        htmlContent: EmailTemplates.applicantAccountApprovedWithTempPassword(
-          user.fullName || user.name || "Applicant",
-          user.email,
-          oneTimePassword,
-          `${FITMED_APP_URL}/signin`
-        ),
-      });
-      return NextResponse.json({ success: true });
+      const result = await resetApplicantPasswordWithApprovalEmail(user);
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: result.error }, { status: result.status });
+      }
+      return NextResponse.json(result);
     }
 
     return NextResponse.json({ success: false, error: "Unknown action." }, { status: 400 });

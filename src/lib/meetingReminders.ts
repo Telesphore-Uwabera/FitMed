@@ -1,18 +1,24 @@
 import Appointment from "@/models/Appointment";
 import { EmailTemplates } from "@/lib/brevo";
 import { notifyPerson } from "@/lib/notify";
-import { appointmentStartMs, publicMeetUrl } from "@/lib/meetingTime";
+import { appointmentStartMs, meetingLifecycleStatus, publicMeetUrl } from "@/lib/meetingTime";
 
 export async function processDueMeetingNotices() {
   const now = Date.now();
   const upcoming = await Appointment.find({
-    status: { $in: ["scheduled", "in-progress"] },
+    status: { $in: ["scheduled", "in-progress", "rescheduled", "overdue"] },
   }).lean();
 
   let sent = 0;
   for (const apt of upcoming) {
+    const stored = String(apt.status || "").toLowerCase();
+    if (stored === "completed" || stored === "cancelled") continue;
     const start = appointmentStartMs(apt.scheduledDate, apt.scheduledTime);
     if (!start) continue;
+    const nextStatus = meetingLifecycleStatus(apt);
+    if (nextStatus !== String(apt.status || "") && ["in-progress", "overdue", "scheduled", "rescheduled"].includes(nextStatus)) {
+      await Appointment.updateOne({ _id: apt._id }, { status: nextStatus });
+    }
     const joinUrl = publicMeetUrl(String(apt.roomId || apt.appointmentId));
     const timeLabel = `${apt.scheduledDate} at ${apt.scheduledTime} (Africa/Kigali)`;
     const doctor = String(apt.doctorName || "your FitMed doctor");

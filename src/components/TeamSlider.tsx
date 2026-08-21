@@ -137,7 +137,7 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
               <p className="text-slate-300 text-base md:text-lg leading-relaxed font-normal">{member.bio}</p>
               <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
                 <span>{member.kind === "doctor" ? member.qualifications : "FitMed administration"}</span>
-                <span>System Role: {member.kind === "doctor" ? "Clinical Team" : "Leadership"}</span>
+                <span>Role: {member.kind === "doctor" ? "Clinical Team" : "Leadership"}</span>
               </div>
             </div>
           </motion.div>

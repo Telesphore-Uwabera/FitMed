@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { normalizeRole } from "@/lib/roles";
 
 export interface FitMedSession {
   role: "admin" | "doctor" | "user";
@@ -35,8 +36,8 @@ export function useSession(requiredRole?: FitMedSession["role"]) {
           return;
         }
 
-        if (requiredRole && data.user.role !== requiredRole) {
-          router.replace("/signin?unauthorized=1");
+        if (requiredRole && normalizeRole(data.user.role) !== requiredRole) {
+          router.replace(`/signin?unauthorized=1&next=${encodeURIComponent(window.location.pathname)}`);
           return;
         }
 

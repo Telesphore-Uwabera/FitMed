@@ -61,6 +61,7 @@ import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireVie
 import { useToast } from "@/components/ToastProvider";
 import { useDialog } from "@/components/DialogProvider";
 import { displayValue, isIssuedCertificate, sameCalendarDay, todayShift } from "@/lib/records";
+import { isMeetingClosed, meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
 
 export default function DoctorDashboardPage() {
   const { success, error, warning, info } = useToast();
@@ -110,6 +111,13 @@ export default function DoctorDashboardPage() {
     );
   }, []);
   const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
+  const [rescheduleApt, setRescheduleApt] = useState<any | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    scheduledDate: "",
+    scheduledTime: "09:00",
+    durationMinutes: 15,
+  });
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Doctor Availability & Weekly Schedule State
   const [doctorStatus, setDoctorStatus] = useState<"ONLINE" | "BUSY" | "OFF">("OFF");
@@ -199,40 +207,22 @@ export default function DoctorDashboardPage() {
 
   const startMeeting = async (roomId = meetingRoomId) => {
     let id = consultationRoomId({ appointmentId: roomId, roomId }) || roomId;
+    const selected = doctorAppointments.find(
+      (a) => a.appointmentId === id || a.roomId === id || a.appointmentId === roomId
+    );
+    if (selected && isMeetingClosed(selected)) {
+      warning("This visit has ended", "You cannot start or invite for an ended meeting. Reschedule it, then the applicant will be notified.");
+      return;
+    }
     if (!id || id === FITMED_LIVE_ROOM) {
-      const open = doctorAppointments.find((a) => ["scheduled", "in-progress"].includes(a.status));
+      const open = doctorAppointments.find((a) => {
+        const status = meetingLifecycleStatus(a);
+        return status === "scheduled" || status === "in-progress" || status === "rescheduled";
+      });
       id = consultationRoomId(open) || "";
     }
-    if (!id && selectedCandidate?.applicantEmail) {
-      try {
-        const res = await fetch("/api/appointments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            applicantName: selectedCandidate.name,
-            applicantEmail: selectedCandidate.applicantEmail,
-            applicantPhone: selectedCandidate.phone || "",
-            doctorId: doctorProfile.id || session?.email || "",
-            doctorEmail: session?.email || "",
-            doctorName: session?.name || doctorProfile.name || "Physician",
-            purpose: selectedCandidate.purpose || "Medical fitness review",
-            scheduledDate: new Date().toISOString().split("T")[0],
-            scheduledTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            notes: "Live telehealth room opened from doctor workstation.",
-            certificateDraftId: selectedCandidate.id || "",
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.appointment) {
-          setDoctorAppointments((prev) => [data.appointment, ...prev]);
-          id = consultationRoomId(data.appointment);
-        }
-      } catch {
-        /* handled below */
-      }
-    }
     if (!id) {
-      warning("Schedule a visit first", "Create an appointment or open a queue case so both sides share a database room.");
+      warning("Schedule a visit first", "Create an appointment or reschedule an ended visit so both sides share a meeting room.");
       return;
     }
     setMeetingRoomId(id);
@@ -428,19 +418,23 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const staffRes = await fetch("/api/admin/staff");
-        const staffData = await staffRes.json();
-        if (staffData.success && Array.isArray(staffData.doctors)) {
-          setActiveDoctorsOnDuty(
-            staffData.doctors
-              .filter((d: { presence?: string }) => d.presence === "ONLINE")
-              .map((d: { id: string; name: string; specialty?: string; role?: string; presence?: string }) => ({
-                id: d.id,
-                name: d.name,
-                specialty: d.specialty || d.role || "Physician",
-                status: d.presence === "ONLINE" ? "Online" : "On file",
-              }))
-          );
+        const staffRes = await fetch("/api/admin/staff", { credentials: "include" });
+        if (!staffRes.ok) {
+          setActiveDoctorsOnDuty([]);
+        } else {
+          const staffData = await staffRes.json();
+          if (staffData.success && Array.isArray(staffData.doctors)) {
+            setActiveDoctorsOnDuty(
+              staffData.doctors
+                .filter((d: { presence?: string }) => d.presence === "ONLINE")
+                .map((d: { id: string; name: string; specialty?: string; role?: string; presence?: string }) => ({
+                  id: d.id,
+                  name: d.name,
+                  specialty: d.specialty || d.role || "Physician",
+                  status: d.presence === "ONLINE" ? "Online" : "On file",
+                }))
+            );
+          }
         }
       } catch {
         setActiveDoctorsOnDuty([]);
@@ -510,28 +504,38 @@ export default function DoctorDashboardPage() {
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    const apt = doctorAppointments.find(
+      (a) =>
+        a.appointmentId === meetingRoomId ||
+        a.roomId === meetingRoomId ||
+        String(a.applicantEmail || "").toLowerCase() === inviteEmail.toLowerCase()
+    );
+    if (apt && isMeetingClosed(apt)) {
+      error("This visit has ended", "Reschedule the meeting. Updating the time will email the applicant.");
+      return;
+    }
     try {
       const res = await fetch("/api/telehealth/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicantEmail: inviteEmail,
-          applicantName: selectedCandidate?.name || "",
-          patientEmail: inviteEmail,
-          patientName: selectedCandidate?.name || "",
+          applicantName: selectedCandidate?.name || apt?.applicantName || "",
           doctorName: session?.name || doctorProfile.name || "Physician",
-          scheduledTime: "Live Now (Consultation Active)",
-          roomUrl: `/dashboard/user?tab=consultation&room=${meetingRoomId}`,
+          appointmentId: apt?.appointmentId || meetingRoomId,
+          roomId: apt?.roomId || meetingRoomId,
         }),
       });
       const data = await res.json();
+      if (!data.success) {
+        error("Invite not sent", data.error || "Please try again.");
+        return;
+      }
       setInviteSentAlert(`Telehealth invitation sent to ${inviteEmail}.`);
       setTimeout(() => setInviteSentAlert(null), 4000);
       setShowInviteModal(false);
-    } catch (err) {
-      setInviteSentAlert(`Invite sent to ${inviteEmail}!`);
-      setTimeout(() => setInviteSentAlert(null), 4000);
-      setShowInviteModal(false);
+    } catch {
+      error("Invite not sent", "Could not reach the server.");
     }
   };  const [queue, setQueue] = useState<any[]>([]);
   const [allApplications, setAllApplications] = useState<any[]>([]);
@@ -1303,8 +1307,8 @@ export default function DoctorDashboardPage() {
                         <Calendar className="w-3.5 h-3.5 text-sky-600" />
                         <span>{apt.scheduledDate} at {apt.scheduledTime}</span>
                       </span>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider">
-                        ● {apt.status}
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${meetingStatusClass(meetingLifecycleStatus(apt))}`}>
+                        ● {meetingStatusLabel(meetingLifecycleStatus(apt))}
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-400">Ref: {apt.appointmentId}</span>
                     </div>
@@ -1327,7 +1331,26 @@ export default function DoctorDashboardPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3 flex-shrink-0 flex-wrap justify-end">
+                    <button
+                      onClick={() => {
+                        setRescheduleApt(apt);
+                        setRescheduleForm({
+                          scheduledDate: apt.scheduledDate || new Date().toISOString().split("T")[0],
+                          scheduledTime: apt.scheduledTime || "09:00",
+                          durationMinutes: Number(apt.durationMinutes || 15),
+                        });
+                      }}
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors"
+                    >
+                      Reschedule
+                    </button>
+                    {isMeetingClosed(apt) ? (
+                      <p className="text-[11px] font-bold text-rose-700 max-w-[220px] text-right">
+                        Meeting time has ended. Reschedule to invite the applicant again.
+                      </p>
+                    ) : (
+                      <>
                     <button
                       onClick={async () => {
                         try {
@@ -1367,6 +1390,8 @@ export default function DoctorDashboardPage() {
                       <Video className="w-4 h-4" />
                       <span>Launch Video Call</span>
                     </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1649,7 +1674,16 @@ export default function DoctorDashboardPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => setShowInviteModal(true)}
+                  onClick={() => {
+                    const apt = doctorAppointments.find(
+                      (a) => a.appointmentId === meetingRoomId || a.roomId === meetingRoomId
+                    );
+                    if (apt && isMeetingClosed(apt)) {
+                      warning("This visit has ended", "Reschedule the meeting. The applicant will be emailed the new time.");
+                      return;
+                    }
+                    setShowInviteModal(true);
+                  }}
                   className="px-4 py-2 rounded-xl bg-sky-50 border border-sky-200 text-sky-700 font-bold text-xs hover:bg-sky-100 flex items-center gap-1.5 transition-colors"
                 >
                   <Mail className="w-3.5 h-3.5 text-sky-600" />
@@ -1672,14 +1706,14 @@ export default function DoctorDashboardPage() {
               </div>
             )}
 
-            {meetingStatus === "idle" ? (
+            {meetingStatus === "idle" && !isWebRTCCallActive ? (
               <div className="rounded-3xl border border-slate-200 bg-white p-10 sm:p-16 text-center shadow-sm">
                 <div className="mx-auto w-16 h-16 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center">
                   <Video className="w-8 h-8 text-sky-600" />
                 </div>
                 <h3 className="mt-5 text-xl font-extrabold text-[#0B2D5C]">Meeting not started</h3>
                 <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
-                  Open the live room when you are ready. Schedule or launch an appointment first so the applicant joins that same database room.
+                  Open the live room when you are ready. You can keep working in other dashboard tabs — the meeting will float until you leave it.
                 </p>
                 <button
                   onClick={() => startMeeting()}
@@ -1688,35 +1722,54 @@ export default function DoctorDashboardPage() {
                   Start Meeting
                 </button>
               </div>
-            ) : (
-              <WebRTCVideoCall
-                roomId={webRTCRoomId || meetingRoomId}
-                userName={session?.name || doctorProfile.name || "Physician"}
-                role="doctor"
-                remoteName={selectedCandidate?.name || "Applicant"}
-                purpose={selectedCandidate?.purpose || "Medical fitness consultation"}
-                appointmentId={meetingRoomId}
-                variant="embedded"
-                initialMessages={messages.map((m) => ({
-                  sender: m.sender as "doctor" | "applicant",
-                  name: m.name,
-                  text: m.text,
-                  time: m.time,
-                }))}
-                onRemoteJoined={() => setMeetingStatus("connected")}
-                onCallEnd={() => {
-                  setIsWebRTCCallActive(false);
-                  setWebRTCRoomId("");
-                  setMeetingStatus("idle");
-                  localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
-                  void fetch("/api/appointments", {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ appointmentId: meetingRoomId, status: "completed" }),
-                  });
-                }}
-              />
-            )}
+            ) : null}
+          </div>
+        )}
+
+        {isWebRTCCallActive && (
+          <div
+            className={
+              activeNav === "telehealth"
+                ? "relative"
+                : "fixed bottom-4 right-4 z-[85] w-[22rem] max-w-[calc(100vw-2rem)]"
+            }
+          >
+            <WebRTCVideoCall
+              roomId={webRTCRoomId || meetingRoomId}
+              userName={session?.name || doctorProfile.name || "Physician"}
+              role="doctor"
+              remoteName={selectedCandidate?.name || "Applicant"}
+              purpose={selectedCandidate?.purpose || "Medical fitness consultation"}
+              appointmentId={meetingRoomId}
+              variant={activeNav === "telehealth" ? "embedded" : "floating"}
+              initialMessages={messages.map((m) => ({
+                sender: m.sender as "doctor" | "applicant",
+                name: m.name,
+                text: m.text,
+                time: m.time,
+              }))}
+              onRemoteJoined={() => setMeetingStatus("connected")}
+              onMinimize={() => goToNav("appointments")}
+              onExpand={() => goToNav("telehealth")}
+              onCallEnd={() => {
+                setIsWebRTCCallActive(false);
+                setWebRTCRoomId("");
+                setMeetingStatus("idle");
+                localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
+                setDoctorAppointments((prev) =>
+                  prev.map((a) =>
+                    a.appointmentId === meetingRoomId || a.roomId === meetingRoomId
+                      ? { ...a, status: "completed" }
+                      : a
+                  )
+                );
+                void fetch("/api/appointments", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ appointmentId: meetingRoomId, status: "completed" }),
+                });
+              }}
+            />
           </div>
         )}
 
@@ -2959,7 +3012,7 @@ export default function DoctorDashboardPage() {
                   <span>Automatic email &amp; in-app notification</span>
                 </div>
                 <p className="text-slate-600">
-                  Saving this consultation emails the applicant a join link. They do not need to sign in. The room opens only at the scheduled time. You will receive another email 30 minutes before, and again when the visit starts.
+                  Saving this consultation emails the applicant all meeting details. They sign in with their email and password, then enter this meeting room. The room opens at the scheduled time. They also get a 30-minute reminder and a start notice.
                 </p>
               </div>
 
@@ -2981,6 +3034,92 @@ export default function DoctorDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      )}
+
+      {rescheduleApt && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-5 shadow-2xl border border-slate-200">
+            <h3 className="text-xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              Reschedule visit
+            </h3>
+            <p className="text-xs text-slate-500">
+              Move {rescheduleApt.applicantName}&apos;s consultation. They will get a new approval-style meeting email with the updated time.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">Date</label>
+                <BrandDatePicker
+                  preset="future"
+                  value={rescheduleForm.scheduledDate}
+                  onChange={(scheduledDate) => setRescheduleForm({ ...rescheduleForm, scheduledDate })}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">Time (GMT+2)</label>
+                <BrandTimePicker
+                  value={rescheduleForm.scheduledTime}
+                  onChange={(scheduledTime) => setRescheduleForm({ ...rescheduleForm, scheduledTime })}
+                />
+              </div>
+            </div>
+            <BrandSelect
+              size="compact"
+              label="Duration"
+              value={String(rescheduleForm.durationMinutes)}
+              onChange={(duration) => setRescheduleForm({ ...rescheduleForm, durationMinutes: parseInt(duration, 10) })}
+              options={[
+                { value: "15", label: "15 mins" },
+                { value: "20", label: "20 mins" },
+                { value: "30", label: "30 mins" },
+                { value: "45", label: "45 mins" },
+              ]}
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={isRescheduling}
+                onClick={async () => {
+                  setIsRescheduling(true);
+                  try {
+                    const res = await fetch("/api/appointments", {
+                      method: "PATCH",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        appointmentId: rescheduleApt.appointmentId,
+                        action: "reschedule",
+                        ...rescheduleForm,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                      error("Not rescheduled", data.error || "Please try again.");
+                      return;
+                    }
+                    setDoctorAppointments((prev) =>
+                      prev.map((item) =>
+                        item.appointmentId === rescheduleApt.appointmentId ? { ...item, ...data.appointment, status: "rescheduled" } : item
+                      )
+                    );
+                    success("Visit rescheduled", `${rescheduleApt.applicantName} was emailed the new time.`);
+                    setRescheduleApt(null);
+                  } catch {
+                    error("Not rescheduled", "Could not reach the server.");
+                  } finally {
+                    setIsRescheduling(false);
+                  }
+                }}
+                className="flex-1 py-3 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-black text-xs disabled:opacity-50"
+              >
+                {isRescheduling ? "Updating…" : "Update"}
+              </button>
+              <button type="button" onClick={() => setRescheduleApt(null)} className="px-5 py-3 rounded-xl border border-slate-200 text-xs font-bold">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

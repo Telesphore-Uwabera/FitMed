@@ -9,7 +9,6 @@ import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
 export async function GET() {
   try {
     await connectToDatabase();
-    await seedFitMedAccounts();
 
     const users = await User.find({ role: { $in: ["admin", "doctor"] } })
       .select("fullName name email role status createdAt")
@@ -178,22 +177,28 @@ export async function PATCH(request: NextRequest) {
 
     if (action === "reset-password" && user) {
       const oneTimePassword = generateTempPassword();
+      const mail = await sendBrevoEmail({
+        toEmail: user.email,
+        toName: user.fullName || user.name || doctor.fullName,
+        subject: "Your FitMed account sign-in details",
+        htmlContent: EmailTemplates.staffAccountCreated(
+          user.fullName || user.name || doctor.fullName,
+          user.email,
+          user.role === "admin" ? "admin" : "doctor",
+          oneTimePassword
+        ),
+      });
+      if (!mail.success) {
+        return NextResponse.json(
+          { success: false, error: "The sign-in email could not be sent, so the password was not changed. Check Brevo and try again." },
+          { status: 502 }
+        );
+      }
       user.password = hashPassword(oneTimePassword);
       user.temporaryPassword = oneTimePassword;
       user.requiresPasswordReset = true;
       await user.save();
-      await sendBrevoEmail({
-        toEmail: user.email,
-        toName: user.fullName || user.name || doctor.fullName,
-        subject: "Your new FitMed sign-in password",
-        htmlContent: EmailTemplates.staffAccountCreated(
-          user.fullName || user.name || doctor.fullName,
-          user.email,
-          "doctor",
-          oneTimePassword
-        ),
-      });
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, emailSent: true });
     }
 
     return NextResponse.json({ success: false, error: "Unknown action." }, { status: 400 });

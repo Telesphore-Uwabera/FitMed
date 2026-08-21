@@ -15,7 +15,7 @@ export interface IAppointment extends Document {
   scheduledDate: string; // e.g. "2026-08-22"
   scheduledTime: string; // e.g. "14:30"
   durationMinutes: number;
-  status: "scheduled" | "in-progress" | "completed" | "cancelled" | "rescheduled";
+  status: "scheduled" | "in-progress" | "completed" | "cancelled" | "rescheduled" | "overdue";
   notes?: string;
   roomId: string;
   roomUrl: string;
@@ -44,7 +44,7 @@ const AppointmentSchema = new Schema<IAppointment>(
     durationMinutes: { type: Number, default: 15 },
     status: {
       type: String,
-      enum: ["scheduled", "in-progress", "completed", "cancelled", "rescheduled"],
+      enum: ["scheduled", "in-progress", "completed", "cancelled", "rescheduled", "overdue"],
       default: "scheduled",
     },
     notes: { type: String },

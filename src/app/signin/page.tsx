@@ -93,10 +93,11 @@ function SignInContent() {
       persistSession(data.user.role, data.user.name, data.user.email);
       success("Sign In Successful", `Welcome back, ${data.user.name}!`);
       const allowedNext =
-        nextPath.startsWith("/dashboard/") &&
-        ((data.user.role === "admin" && nextPath.startsWith("/dashboard/admin")) ||
-          (data.user.role === "doctor" && nextPath.startsWith("/dashboard/doctor")) ||
-          (data.user.role === "user" && nextPath.startsWith("/dashboard/user")));
+        nextPath.startsWith("/meet/") ||
+        (nextPath.startsWith("/dashboard/") &&
+          ((data.user.role === "admin" && nextPath.startsWith("/dashboard/admin")) ||
+            (data.user.role === "doctor" && nextPath.startsWith("/dashboard/doctor")) ||
+            (data.user.role === "user" && nextPath.startsWith("/dashboard/user"))));
       if (allowedNext) {
         router.push(nextPath);
       } else if (data.user.role === "doctor") {
@@ -143,7 +144,8 @@ function SignInContent() {
       persistSession(pendingAccount.role || "user", pendingAccount.name || "Applicant", pendingAccount.email.toLowerCase());
       success("Password saved", "You can now use this password to sign in.");
       setShowTempResetModal(false);
-      if (pendingAccount.role === "doctor") router.push("/dashboard/doctor");
+      if (nextPath.startsWith("/meet/")) router.push(nextPath);
+      else if (pendingAccount.role === "doctor") router.push("/dashboard/doctor");
       else if (pendingAccount.role === "admin") router.push("/dashboard/admin");
       else router.push("/dashboard/user");
     }
@@ -287,6 +289,7 @@ function SignInContent() {
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="email"
+                    name="email"
                     autoComplete="username"
                     required
                     value={email}
@@ -321,6 +324,7 @@ function SignInContent() {
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type={showPassword ? "text" : "password"}
+                    name="password"
                     autoComplete="current-password"
                     required
                     value={password}

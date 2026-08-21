@@ -36,6 +36,54 @@ export function publicMeetUrl(roomId: string) {
   return `${base}/meet/${encodeURIComponent(roomId)}`;
 }
 
+export function isMeetingClosed(apt: {
+  scheduledDate?: string;
+  scheduledTime?: string;
+  durationMinutes?: number;
+  status?: string;
+}) {
+  const status = meetingLifecycleStatus(apt);
+  return status === "overdue" || status === "completed" || status === "cancelled";
+}
+
+export function meetingLifecycleStatus(apt: {
+  scheduledDate?: string;
+  scheduledTime?: string;
+  durationMinutes?: number;
+  status?: string;
+}) {
+  const stored = String(apt.status || "scheduled").toLowerCase();
+  if (stored === "completed" || stored === "cancelled") return stored;
+  const start = appointmentStartMs(apt.scheduledDate, apt.scheduledTime);
+  if (!start) return stored || "scheduled";
+  const duration = Number(apt.durationMinutes || 15);
+  const end = start + duration * 60 * 1000;
+  const now = Date.now();
+  if (now < start) return stored === "rescheduled" ? "rescheduled" : "scheduled";
+  if (now <= end) return "in-progress";
+  return "overdue";
+}
+
+export function meetingStatusLabel(status: string) {
+  const value = String(status || "").toLowerCase();
+  if (value === "in-progress") return "In progress";
+  if (value === "overdue") return "Overdue";
+  if (value === "rescheduled") return "Rescheduled";
+  if (value === "completed") return "Completed";
+  if (value === "cancelled") return "Cancelled";
+  return "Scheduled";
+}
+
+export function meetingStatusClass(status: string) {
+  const value = String(status || "").toLowerCase();
+  if (value === "in-progress") return "bg-sky-100 text-sky-800";
+  if (value === "overdue") return "bg-rose-100 text-rose-800";
+  if (value === "rescheduled") return "bg-amber-100 text-amber-800";
+  if (value === "completed") return "bg-emerald-100 text-emerald-800";
+  if (value === "cancelled") return "bg-slate-100 text-slate-600";
+  return "bg-teal-100 text-teal-800";
+}
+
 export function formatCountdown(minutesUntilStart: number | null) {
   if (minutesUntilStart == null) return "";
   if (minutesUntilStart <= 0) return "starting now";
