@@ -1306,15 +1306,16 @@ export default function AdminDashboardPage() {
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Account Type</label>
-                      <select
+                      <BrandSelect
+                        variant="dark"
+                        label="Account Type"
                         value={addDoctorForm.role}
-                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, role: e.target.value as "admin" | "doctor" })}
-                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-[#12B8B0]"
-                      >
-                        <option value="doctor" className="text-slate-900">Doctor</option>
-                        <option value="admin" className="text-slate-900">Admin</option>
-                      </select>
+                        onChange={(v) => setAddDoctorForm({ ...addDoctorForm, role: v as "admin" | "doctor" })}
+                        options={[
+                          { value: "doctor", label: "Doctor" },
+                          { value: "admin", label: "Admin" },
+                        ]}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Full Name</label>

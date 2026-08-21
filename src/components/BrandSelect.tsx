@@ -17,6 +17,7 @@ interface BrandSelectProps {
   placeholder?: string;
   className?: string;
   size?: "default" | "compact";
+  variant?: "light" | "dark";
 }
 
 export default function BrandSelect({
@@ -27,8 +28,10 @@ export default function BrandSelect({
   placeholder = "Select an option...",
   className = "",
   size = "default",
+  variant = "light",
 }: BrandSelectProps) {
   const compact = size === "compact";
+  const dark = variant === "dark";
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +55,11 @@ export default function BrandSelect({
   return (
     <div className={`relative space-y-1.5 ${className}`} ref={dropdownRef}>
       {label && (
-        <label className="block text-xs font-bold uppercase tracking-wider text-[#0B2D5C]">
+        <label
+          className={`block text-xs font-bold uppercase tracking-wider ${
+            dark ? "text-[10px] font-extrabold text-slate-300" : "text-[#0B2D5C]"
+          }`}
+        >
           {label}
         </label>
       )}
@@ -61,17 +68,23 @@ export default function BrandSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full border bg-white text-left flex items-center justify-between transition-all shadow-sm ${
+        className={`w-full border text-left flex items-center justify-between transition-all ${
           compact
             ? "px-3 py-1.5 rounded-lg text-[11px] font-bold"
-            : "p-3.5 rounded-2xl font-semibold text-sm"
+            : dark
+            ? "px-3 py-2.5 rounded-xl text-xs font-semibold"
+            : "p-3.5 rounded-2xl font-semibold text-sm shadow-sm"
         } ${
-          isOpen
-            ? "border-[#12B8B0] ring-2 ring-[#12B8B0]/20 shadow-md"
-            : "border-slate-200 hover:border-slate-300"
+          dark
+            ? isOpen
+              ? "bg-[#0B2D5C] border-[#12B8B0] ring-2 ring-[#12B8B0]/30 text-white"
+              : "bg-white/10 border-white/15 text-white hover:border-[#12B8B0]"
+            : isOpen
+              ? "bg-white border-[#12B8B0] ring-2 ring-[#12B8B0]/20 shadow-md"
+              : "bg-white border-slate-200 hover:border-slate-300"
         }`}
       >
-        <span className={selectedOption ? "text-[#0B2D5C] font-bold" : "text-slate-400"}>
+        <span className={selectedOption ? (dark ? "text-white font-bold" : "text-[#0B2D5C] font-bold") : dark ? "text-slate-300" : "text-slate-400"}>
           {selectedOption ? selectedOption.label || selectedOption.value : placeholder}
         </span>
         <ChevronDown
@@ -83,7 +96,15 @@ export default function BrandSelect({
 
       {/* Brand Styled Menu */}
       {isOpen && (
-        <div className={`absolute z-50 left-0 right-0 mt-1.5 bg-white border-2 border-[#0B2D5C]/10 shadow-2xl overflow-hidden animate-in fade-in duration-150 max-h-64 overflow-y-auto ${compact ? "rounded-xl" : "rounded-2xl"}`}>
+        <div
+          className={`absolute z-50 left-0 right-0 mt-1.5 shadow-2xl overflow-hidden animate-in fade-in duration-150 max-h-64 overflow-y-auto ${
+            compact ? "rounded-xl" : "rounded-2xl"
+          } ${
+            dark
+              ? "bg-[#0B2D5C] border-2 border-[#12B8B0]/40"
+              : "bg-white border-2 border-[#0B2D5C]/10"
+          }`}
+        >
           <div className="p-1.5 space-y-1">
             {normalizedOptions.map((opt) => {
               const isSelected = opt.value === value;
@@ -98,20 +119,24 @@ export default function BrandSelect({
                   className={`w-full text-left rounded-xl font-semibold flex items-center justify-between transition-colors ${
                     compact ? "px-3 py-2 text-[11px]" : "px-3.5 py-2.5 text-xs"
                   } ${
-                    isSelected
-                      ? "bg-[#0B2D5C] text-white font-extrabold shadow-sm"
-                      : "text-slate-700 hover:bg-[#edf6f6] hover:text-[#0B2D5C]"
+                    dark
+                      ? isSelected
+                        ? "bg-[#12B8B0] text-[#0B2D5C] font-extrabold"
+                        : "text-white hover:bg-white/10 hover:text-[#12B8B0]"
+                      : isSelected
+                        ? "bg-[#0B2D5C] text-white font-extrabold shadow-sm"
+                        : "text-slate-700 hover:bg-[#edf6f6] hover:text-[#0B2D5C]"
                   }`}
                 >
                   <div>
                     <div>{opt.label || opt.value}</div>
                     {opt.desc && (
-                      <div className={`text-[10px] ${isSelected ? "text-teal-200" : "text-slate-400"}`}>
+                      <div className={`text-[10px] ${isSelected ? (dark ? "text-[#0B2D5C]/70" : "text-teal-200") : dark ? "text-slate-400" : "text-slate-400"}`}>
                         {opt.desc}
                       </div>
                     )}
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-[#12B8B0] flex-shrink-0 ml-2" />}
+                  {isSelected && <Check className={`w-4 h-4 flex-shrink-0 ml-2 ${dark ? "text-[#0B2D5C]" : "text-[#12B8B0]"}`} />}
                 </button>
               );
             })}
