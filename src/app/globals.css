@@ -601,6 +601,7 @@ input[type="time"] {
 }
 
 /* Underline form fields — bottom border only */
+input:not([type]),
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -623,6 +624,7 @@ select {
   padding-bottom: 0.55rem;
 }
 
+input:not([type]):focus,
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,

@@ -171,6 +171,7 @@ export default function Footer() {
                 <label className="block">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Name</span>
                   <input
+                    type="text"
                     value={newsName}
                     onChange={(e) => setNewsName(e.target.value)}
                     placeholder="Your name"
