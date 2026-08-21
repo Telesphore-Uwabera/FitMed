@@ -45,7 +45,6 @@ import {
   CreditCard,
   Download,
   Calendar,
-  Filter,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
@@ -1181,20 +1180,16 @@ export default function AdminDashboardPage() {
                       className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0] w-56"
                     />
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Filter className="w-3.5 h-3.5 text-slate-400" />
-                    <select
-                      value={reportStatus}
-                      onChange={(e) => setReportStatus(e.target.value)}
-                      className="py-2 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white"
-                    >
-                      {reportStatusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status === "ALL" ? "All statuses" : status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <BrandSelect
+                    size="compact"
+                    className="w-52"
+                    value={reportStatus}
+                    onChange={setReportStatus}
+                    options={reportStatusOptions.map((status) => ({
+                      value: status,
+                      label: status === "ALL" ? "All statuses" : status.charAt(0).toUpperCase() + status.slice(1),
+                    }))}
+                  />
                 </div>
               </div>
 
