@@ -221,9 +221,6 @@ export default function AdminDashboardPage() {
 
   const [adminRefresh, setAdminRefresh] = useState(0);
   const [auditLogs, setAuditLogs] = useState<{ id: string; action: string; detail: string; actor?: string; time: string }[]>([]);
-  useEffect(() => {
-    setAuditDate(new Date().toLocaleDateString("en-GB"));
-  }, []);
 
   // Pending Doctor Approvals
   const [pendingDoctors, setPendingDoctors] = useState<
