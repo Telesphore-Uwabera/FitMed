@@ -154,7 +154,7 @@ export default function EmployerPortal() {
             </div>
 
             {/* Privacy by Design card */}
-            <div className="bg-white rounded-2xl p-6 border border-emerald-100 shadow-sm flex-shrink-0">
+            <div className="bg-white rounded-2xl p-6 border-0 shadow-sm flex-shrink-0">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
                   <ShieldCheck className="w-5 h-5 text-emerald-600" strokeWidth={1.5} />

@@ -70,7 +70,7 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
 
   if (!members.length) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-600">
+      <div className="rounded-3xl border-0 bg-white p-10 text-center text-sm text-slate-600 shadow-sm">
         Team profiles will appear here once staff are added in FitMed.
       </div>
     );
@@ -81,7 +81,7 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
 
   return (
     <div className="relative space-y-8" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
-      <div className="relative overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 text-white shadow-2xl min-h-[440px] flex items-center">
+      <div className="relative overflow-hidden rounded-3xl bg-slate-900 border-0 text-white shadow-2xl min-h-[440px] flex items-center">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#12B8B0]/10 rounded-full blur-3xl pointer-events-none" />
 
         <AnimatePresence mode="wait">

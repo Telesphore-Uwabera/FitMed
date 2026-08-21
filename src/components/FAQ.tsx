@@ -23,8 +23,12 @@ const faqs = [
     a: "Employers access a public verification page linked to your QR code. This shows only certificate validity status, issue and expiry dates, purpose, and certificate number. Your full medical history and clinical notes are never shared with employers.",
   },
   {
+    q: "How long is my certificate valid?",
+    a: "FitMed digital fitness certificates are valid for 6 months from the issue date. After expiry, you can apply for a new assessment if you still need a current certificate.",
+  },
+  {
     q: "How long does the process take?",
-    a: "For standard employment and general fitness certificates, the process typically takes 1–4 hours from account creation to issuance, depending on doctor availability. Priority appointments are available for Professional plan users.",
+    a: "For standard fitness certificates, you can typically get your certificate in under 2 hours from account creation to issuance, depending on doctor availability.",
   },
   {
     q: "What measurements or devices do I need?",
@@ -49,7 +53,7 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
-      className="bg-white dark:bg-[#12253d] rounded-2xl border border-slate-200 dark:border-slate-600 hover:border-sky-200 dark:hover:border-[#12B8B0]/40 transition-all duration-300 overflow-hidden shadow-sm h-fit"
+              className="bg-white dark:bg-[#12253d] rounded-2xl border-0 transition-all duration-300 overflow-hidden shadow-sm h-fit"
     >
       <button
         onClick={() => setOpen(!open)}

@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = (
+const fromEnv = (
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.FITMED_APP_URL ||
-  "https://fitnessmed.rw"
+  ""
 ).replace(/\/$/, "");
+
+/** Public canonical site — Search Console and sitemaps use this, not the Render hostname. */
+export const SITE_URL = fromEnv.includes("fitnessmed.rw")
+  ? fromEnv
+  : "https://fitnessmed.rw";
 
 export const SITE_NAME = "FitMed";
 export const SITE_TAGLINE = "Fit, Verified, and Ready.";

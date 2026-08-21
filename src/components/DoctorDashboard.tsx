@@ -68,7 +68,7 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
             <p className="text-lg leading-relaxed mb-10 text-slate-500 dark:text-slate-300">Everything you need — applicant history, vitals, AI summaries, video consultation, and certificate issuance — in one secure, well-designed place.</p>
             <div className="grid sm:grid-cols-2 gap-4 mb-10">
               {features.map((feature, index) => (
-                <motion.div key={feature.title} initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.2 + index * 0.1 }} className={`rounded-2xl p-5 border ${feature.border} ${feature.bg} transition-all group`}>
+                <motion.div key={feature.title} initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.2 + index * 0.1 }} className={`rounded-2xl p-5 border-0 ${feature.bg} transition-all group`}>
                   <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform"><feature.icon className={`w-4.5 h-4.5 ${feature.color}`} strokeWidth={1.5} /></div>
                   <h4 className="text-sm font-bold mb-1 text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>{feature.title}</h4>
                   <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-300">{feature.desc}</p>
@@ -86,7 +86,7 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
           </motion.div>
 
           <motion.div initial={{ opacity: 0, x: 50 }} animate={isInView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.8, delay: 0.2 }} className="relative">
-            <div className="relative rounded-3xl overflow-hidden aspect-[4/5] shadow-2xl border border-slate-200 bg-[#0B2D5C]">
+            <div className="relative rounded-3xl overflow-hidden aspect-[4/5] shadow-2xl border-0 bg-[#0B2D5C]">
               {!doctor ? (
                 <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-sm text-[#8ff3e8]">
                   Licensed doctors added in FitMed will appear here.

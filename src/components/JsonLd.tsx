@@ -24,7 +24,6 @@ export default function JsonLd() {
         name: SITE_NAME,
         url: SITE_URL,
         description: DEFAULT_DESCRIPTION,
-        image: absoluteUrl("/logo-4.webp"),
         telephone: "+250 788 000 000",
         address: {
           "@type": "PostalAddress",

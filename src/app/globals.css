@@ -162,16 +162,15 @@ body {
 /* ─── Cards ──────────────────────────────────────────────────────── */
 .card-white {
   background: #ffffff;
-  border: 1px solid #dae4f0;
+  border: none;
   box-shadow: 0 1px 3px rgba(11,45,92,.05), 0 4px 16px rgba(11,45,92,.04);
 }
 .card-white:hover {
-  border-color: #12B8B0;
   box-shadow: 0 4px 24px rgba(18,184,176,.15);
 }
 .card-tinted {
   background: #edf6f6;
-  border: 1px solid rgba(18,184,176,.25);
+  border: none;
 }
 
 /* ─── Gradient text ──────────────────────────────────────────────── */
@@ -402,6 +401,24 @@ section, footer, header, main {
 }
 .animate-shrink {
   animation: shrink 4.5s linear forwards;
+}
+
+@keyframes services-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.services-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: services-marquee 90s linear infinite;
+}
+.services-marquee-track:hover {
+  animation-play-state: paused;
+}
+.services-marquee-group {
+  display: flex;
+  gap: 2.75rem;
+  padding-right: 2.75rem;
 }
 
 /* ─── Video call animations ──────────────────────────────────────── */
@@ -716,7 +733,7 @@ html.dark:not(:has(.dashboard-app)) .section-slate h4 {
 
 html.dark:not(:has(.dashboard-app)) .card-white {
   background: #12253d;
-  border-color: #243a57;
+  border: none;
 }
 
 html.dark:not(:has(.dashboard-app)) .bg-white,
@@ -766,4 +783,14 @@ html.dark:not(:has(.dashboard-app)) .border-amber-200,
 html.dark:not(:has(.dashboard-app)) .border-rose-200,
 html.dark:not(:has(.dashboard-app)) .border-indigo-200 {
   border-color: #2d4a6a;
+}
+
+html.dark:not(:has(.dashboard-app)) .bg-\[\#edf6f6\] {
+  background-color: rgba(18, 184, 176, 0.12);
+}
+
+html.dark:not(:has(.dashboard-app)) .badge-teal {
+  background: rgba(18, 184, 176, 0.15);
+  color: #7ee8e2;
+  border-color: rgba(18, 184, 176, 0.35);
 }

@@ -45,7 +45,7 @@ const SLIDE_DURATION = 6000; // ms
 const stats = [
   { icon: TrendingUp, value: "10,000+", label: "Certificates Issued", color: "text-[#12B8B0]"  },
   { icon: Star,        value: "4.9 / 5",  label: "Doctor Rating",      color: "text-amber-300" },
-  { icon: Clock,       value: "< 4 hrs",  label: "Avg. Turnaround",    color: "text-white"  },
+  { icon: Clock,       value: "< 2 hrs",  label: "Avg. Turnaround",    color: "text-white"  },
 ];
 
 const trustBadges = [

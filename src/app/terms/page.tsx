@@ -35,7 +35,7 @@ const sections = [
   },
   {
     title: "6. Certificates",
-    body: "Digitally signed medical fitness certificates are issued by licensed doctors and are the professional opinion of that doctor. FitMed is not liable for decisions made by employers, institutions, or other parties based on certificate content. Certificates are valid only for the purpose and period stated.",
+    body: "Digitally signed medical fitness certificates are issued by licensed doctors and are the professional opinion of that doctor. FitMed is not liable for decisions made by employers, institutions, or other parties based on certificate content. Certificates are valid for 6 months from the issue date, and only for the purpose stated.",
   },
   {
     title: "7. Prohibited Use",

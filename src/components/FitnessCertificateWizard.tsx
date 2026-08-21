@@ -421,7 +421,7 @@ export default function FitnessCertificateWizard({
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
                   <div className="font-bold text-[#0B2D5C]">Fixed Clinical Assessment Rate</div>
-                  <div className="mt-1">Standard Medical Fitness Clearance: <strong className="text-[#0B2D5C]">5,000 FRW</strong> (includes physician review, QR-verified digital certificate).</div>
+                  <div className="mt-1">Standard Medical Fitness Clearance: <strong className="text-[#0B2D5C]">5,000 FRW</strong> (includes physician review, QR-verified digital certificate valid for 6 months).</div>
                 </div>
               </div>
             )}

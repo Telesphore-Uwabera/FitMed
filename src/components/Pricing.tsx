@@ -2,70 +2,83 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { CheckCircle, Zap, Building2, ArrowRight, Stethoscope } from "lucide-react";
+import {
+  Briefcase,
+  GraduationCap,
+  HeartPulse,
+  Car,
+  Utensils,
+  Plane,
+  HardHat,
+} from "lucide-react";
+import { CERTIFICATE_VALIDITY_MONTHS, FITMED_SERVICES } from "@/lib/fitmedServices";
 
-/* ─── All plans share the same canonical 7-item feature list ─────
-   Blank strings render as greyed-out "—" to keep card heights equal.
-──────────────────────────────────────────────────────────────── */
-const services = [
-  {
-    name: "Workplace & Office Fitness",
-    icon: Zap,
-    price: "5,000 FRW",
-    period: "per assessment",
-    desc: "Comprehensive digital medical assessment by a licensed doctor with instant QR-verifiable certificate.",
-    color: "from-sky-500 to-sky-600",
-    border: "border-slate-200 hover:border-sky-300",
-    cta: "Request Certificate",
-    href: "/signin",
-    features: [
-      "Adaptive clinical health questionnaire",
-      "Doctor evaluation and risk screening",
-      "Digitally signed official certificate",
-      "Instant QR verification",
-      "12-month digital certificate validity",
-      "Downloadable and shareable certificate",
-    ],
-  },
-  {
-    name: "Transport & Commercial Driver",
-    icon: Stethoscope,
-    price: "5,000 FRW",
-    period: "per assessment",
-    desc: "Fixed general service rate of 5,000 FRW with priority doctor review within 4 hours.",
-    color: "from-teal-500 to-teal-600",
-    border: "border-teal-400",
-    cta: "Get Certified",
-    href: "/signin",
-    features: [
-      "Driver fitness and safety screening",
-      "Licensed doctor assessment",
-      "Live consultation when clinically needed",
-      "In-person clinic referral routing",
-      "Secure digital record archive",
-      "Verified certificate for employers",
-    ],
-  },
-  {
-    name: "Construction & Physical Work",
-    icon: Building2,
-    price: "5,000 FRW",
-    period: "per employee credit",
-    desc: "Fixed service fee of 5,000 FRW per assessment for workforce and institutional clearances.",
-    color: "from-violet-500 to-violet-600",
-    border: "border-slate-200 hover:border-violet-300",
-    cta: "Contact Team",
-    href: "/contact#employers",
-    features: [
-      "Work-at-height and physical activity screening",
-      "Doctor evaluation and risk screening",
-      "Further assessment referral when needed",
-      "Digitally signed official certificate",
-      "Instant QR verification",
-      "Certificate sharing for employers",
-    ],
-  },
-];
+const serviceIcons = {
+  workplace: Briefcase,
+  school: GraduationCap,
+  sports: HeartPulse,
+  transport: Car,
+  food: Utensils,
+  travel: Plane,
+  construction: HardHat,
+} as const;
+
+const iconColors = {
+  workplace: "text-sky-600 dark:text-sky-400",
+  school: "text-teal-600 dark:text-teal-400",
+  sports: "text-rose-600 dark:text-rose-400",
+  transport: "text-amber-600 dark:text-amber-400",
+  food: "text-emerald-600 dark:text-emerald-400",
+  travel: "text-indigo-600 dark:text-indigo-400",
+  construction: "text-violet-600 dark:text-violet-400",
+} as const;
+
+function ServiceCard({
+  service,
+}: {
+  service: (typeof FITMED_SERVICES)[number];
+}) {
+  const Icon = serviceIcons[service.id];
+  const iconColor = iconColors[service.id];
+
+  return (
+    <article className="w-[min(20rem,82vw)] aspect-square shrink-0 bg-white dark:bg-[#12253d] rounded-3xl border-0 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col overflow-hidden">
+      <div className="p-6 flex flex-col flex-1 min-h-0">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <Icon className={`w-8 h-8 ${iconColor} flex-shrink-0`} strokeWidth={1.5} />
+          <span className="px-2.5 py-1 rounded-full bg-[#edf6f6] dark:bg-[#12B8B0]/15 text-[#0B2D5C] dark:text-[#7ee8e2] text-[10px] font-extrabold border border-teal-200 dark:border-[#12B8B0]/35">
+            {service.tag}
+          </span>
+        </div>
+
+        <h3
+          className="text-lg font-extrabold text-slate-900 dark:text-slate-100 mb-1 leading-snug"
+          style={{ fontFamily: "var(--font-primary)" }}
+        >
+          {service.title}
+        </h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 leading-relaxed flex-1">
+          {service.desc}
+        </p>
+
+        <div className="mb-3 flex-shrink-0">
+          <span
+            className="text-2xl font-black text-slate-900 dark:text-white"
+            style={{ fontFamily: "var(--font-primary)" }}
+          >
+            5,000 FRW
+          </span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">service fee</span>
+        </div>
+
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">{service.time}</p>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+          Valid for {CERTIFICATE_VALIDITY_MONTHS} months
+        </p>
+      </div>
+    </article>
+  );
+}
 
 export default function Pricing() {
   const ref = useRef(null);
@@ -73,117 +86,47 @@ export default function Pricing() {
 
   return (
     <section id="pricing" className="relative py-28 section-gray overflow-hidden">
-
       <div className="container-wide">
-        {/* Header */}
         <motion.div
           ref={ref}
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7 }}
-          className="text-center mb-20"
+          className="text-center mb-16"
         >
           <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-teal">
             Simple, Transparent Pricing
           </span>
           <h2
-            className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
+            className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-slate-100 mb-5"
             style={{ fontFamily: "var(--font-primary)" }}
           >
             Services for Every{" "}
             <span className="gradient-text">Fitness Requirement</span>
           </h2>
-          <p className="text-slate-500 text-lg max-w-xl mx-auto leading-relaxed">
-            Choose the assessment that matches your work, travel, or activity needs.
-            Every service includes licensed doctor review and a verifiable digital certificate.
+          <p className="text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto leading-relaxed">
+            The same seven assessments available in your applicant dashboard.
+            Each includes licensed doctor review and a verifiable digital certificate valid for 6 months.
           </p>
         </motion.div>
+      </div>
 
-        {/*
-          items-stretch  → all grid cells stretch to the tallest card
-          The inner div uses flex-col + h-full so the CTA always pins to the bottom
-        */}
-        <div className="grid md:grid-cols-3 gap-6 items-stretch">
-          {services.map((plan, i) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 45 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.65, delay: i * 0.13 }}
-              whileHover={{ y: -6, transition: { duration: 0.22 } }}
-              className={`relative bg-white rounded-3xl border ${plan.border} transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col h-full`}
-            >
-              {/* Card body */}
-              <div className="p-8 flex flex-col flex-1">
-                {/* Icon */}
-                <div
-                  className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-5 shadow-md flex-shrink-0`}
-                >
-                  <plan.icon className="w-6 h-6 text-white" strokeWidth={1.5} />
-                </div>
-
-                {/* Name + description */}
-                <h3
-                  className="text-xl font-extrabold text-slate-900 mb-1"
-                  style={{ fontFamily: "var(--font-primary)" }}
-                >
-                  {plan.name}
-                </h3>
-                <p className="text-sm text-slate-500 mb-6 leading-relaxed min-h-[3.5rem]">
-                  {plan.desc}
-                </p>
-
-                {/* Price */}
-                <div className="mb-8 flex-shrink-0">
-                  <span
-                    className="text-3xl font-black text-slate-900"
-                    style={{ fontFamily: "var(--font-primary)" }}
-                  >
-                    {plan.price}
-                  </span>
-                  <span className="text-sm text-slate-400 ml-2">{plan.period}</span>
-                </div>
-
-                {/* Feature list — always 7 items */}
-                <ul className="space-y-3 flex-1 mb-8">
-                  {plan.features.map((f, fi) =>
-                    f ? (
-                      <li key={fi} className="flex items-center gap-2.5 text-sm text-slate-600">
-                        <CheckCircle className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                        <span>{f}</span>
-                      </li>
-                    ) : (
-                      /* Empty slot — keeps spacing but invisible */
-                      <li key={fi} className="flex items-center gap-2.5 text-sm opacity-0 select-none" aria-hidden>
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <span>–</span>
-                      </li>
-                    )
-                  )}
-                </ul>
-
-                {/* CTA — always at the bottom */}
-                <motion.a
-                  href={plan.href}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 group ${
-                    "btn-outline-primary"
-                  }`}
-                >
-                  <span>{plan.cta}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </motion.a>
-              </div>
-            </motion.div>
+      <div className="overflow-hidden" aria-label="FitMed services">
+        <div className="services-marquee-track">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="services-marquee-group">
+              {FITMED_SERVICES.map((service) => (
+                <ServiceCard key={`${copy}-${service.id}`} service={service} />
+              ))}
+            </div>
           ))}
         </div>
-
-        <p className="text-center text-sm text-slate-400 mt-10">
-          Pricing reflects clinical service, doctor time, and technology costs.
-          Refund available if the assessment cannot be completed.
-        </p>
       </div>
+
+      <p className="text-center text-sm text-slate-400 mt-10 px-4">
+        Pricing is a FitMed service fee covering clinical review, doctor time, and technology.
+        Refund available if the assessment cannot be completed.
+      </p>
     </section>
   );
 }

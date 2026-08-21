@@ -107,7 +107,7 @@ export default function HowItWorks() {
               className="group card-white rounded-3xl overflow-hidden transition-all duration-300 flex flex-col"
             >
               {/* ── Large visual icon panel ── */}
-              <div className="relative h-48 lg:h-56 overflow-hidden flex-shrink-0 bg-slate-900 border border-slate-800 flex items-center justify-center">
+              <div className="relative h-48 lg:h-56 overflow-hidden flex-shrink-0 bg-slate-900 flex items-center justify-center">
                 <span className="absolute top-5 left-6 text-3xl font-black tracking-wider text-white/90" aria-label={`Step ${i + 1}`}>
                   {i + 1}<sup className="ml-0.5 text-sm align-super tracking-normal">{i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}</sup>
                 </span>

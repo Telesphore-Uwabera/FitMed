@@ -842,7 +842,7 @@ export default function UserDashboard() {
                 return (
                   <div
                     key={service.id}
-                    className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-[#12B8B0] transition-all flex flex-col justify-between space-y-4 group"
+                    className="p-6 rounded-3xl bg-white border-0 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -865,7 +865,7 @@ export default function UserDashboard() {
 
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                       <div className="text-xs">
-                        <div className="text-slate-400 font-medium">Rate</div>
+                        <div className="text-slate-400 font-medium">Rate · Valid 6 months</div>
                         <div className="text-sm font-extrabold text-[#0B2D5C]">5,000 FRW</div>
                       </div>
 

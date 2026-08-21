@@ -143,11 +143,11 @@ export default async function AboutPage() {
             src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1800&q=85&auto=format&fit=crop"
             alt="Medical team providing digital fitness assessments in Rwanda"
             fill
-            className="object-cover object-center opacity-25"
+            className="object-cover object-center opacity-55"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0B2D5C]/95 via-[#0B2D5C]/80 to-[#0B2D5C]/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C] via-transparent to-[#0B2D5C]/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0B2D5C]/70 via-[#0B2D5C]/45 to-[#0B2D5C]/25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/75 via-transparent to-[#0B2D5C]/35" />
         </div>
 
         {/* Decorative blur glows */}
@@ -290,7 +290,7 @@ export default async function AboutPage() {
             {pillars.map((p) => (
               <div
                 key={p.title}
-                className="p-8 rounded-3xl bg-slate-50 border border-slate-200 hover:border-[#12B8B0] transition-all duration-300 flex flex-col justify-between group shadow-sm hover:shadow-md"
+                className="p-8 rounded-3xl bg-slate-50 border-0 transition-all duration-300 flex flex-col justify-between group shadow-sm hover:shadow-md"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -355,7 +355,7 @@ export default async function AboutPage() {
             {clinicalSteps.map((step) => (
               <div
                 key={step.num}
-                className="bg-slate-50 rounded-3xl p-7 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-lg transition-shadow"
+                className="bg-slate-50 rounded-3xl p-7 border-0 shadow-sm flex flex-col justify-between hover:shadow-lg transition-shadow"
               >
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-2xl bg-[#0B2D5C] text-[#12B8B0] font-black text-base flex items-center justify-center">
@@ -372,7 +372,7 @@ export default async function AboutPage() {
             ))}
           </div>
 
-          <div className="mt-12 p-8 rounded-3xl bg-gradient-to-r from-[#0B2D5C] to-[#071d3d] text-white flex flex-col md:flex-row items-center justify-between gap-6 border border-[#12B8B0]/30 shadow-xl">
+          <div className="mt-12 p-8 rounded-3xl bg-gradient-to-r from-[#0B2D5C] to-[#071d3d] text-white flex flex-col md:flex-row items-center justify-between gap-6 border-0 shadow-xl">
             <div className="space-y-2 text-center md:text-left">
               <h4 className="text-xl font-bold text-white" style={{ fontFamily: "var(--font-primary)" }}>
                 In-Person Partner Clinic Network
@@ -405,7 +405,7 @@ export default async function AboutPage() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((v) => (
-              <div key={v.title} className="p-7 rounded-3xl bg-white border border-slate-200 text-center space-y-4 hover:border-[#12B8B0] transition-colors shadow-sm">
+              <div key={v.title} className="p-7 rounded-3xl bg-white border-0 text-center space-y-4 shadow-sm">
                 <div className="w-14 h-14 rounded-2xl bg-[#edf6f6] border border-teal-200/60 text-[#12B8B0] flex items-center justify-center mx-auto">
                   <v.icon className="w-7 h-7" />
                 </div>
