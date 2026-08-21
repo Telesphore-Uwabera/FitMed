@@ -387,9 +387,17 @@ export default function DoctorDashboardPage() {
         const mine = all.filter((cert: Record<string, unknown>) => {
           if (doctorId && String(cert.assignedDoctorId || "") === doctorId) return true;
           if (doctorLicense && String(cert.assignedDoctorLicense || "") === doctorLicense) return true;
-          const assigned = String(cert.assignedDoctor || "").replace(/\s*\(You\)\s*/gi, "").trim().toLowerCase();
-          const mineName = doctorName.replace(/\s*\(You\)\s*/gi, "").trim().toLowerCase();
-          return Boolean(mineName) && assigned.includes(mineName.replace(/^dr\.?\s*/, ""));
+          const normalize = (value: string) =>
+            value
+              .replace(/\s*\(You\)\s*/gi, "")
+              .replace(/\b(dr|md|mbbs)\b\.?/gi, "")
+              .replace(/[,\.]/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .toLowerCase();
+          const assigned = normalize(String(cert.assignedDoctor || ""));
+          const mineName = normalize(doctorName);
+          return Boolean(mineName) && Boolean(assigned) && (assigned.includes(mineName) || mineName.includes(assigned));
         });
         setQueue(mine.filter((cert: Record<string, unknown>) => String(cert.status || "").toLowerCase() === "submitted").map(mapQueueItem));
         setAllApplications(mine);
