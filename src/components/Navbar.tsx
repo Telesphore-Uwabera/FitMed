@@ -26,12 +26,12 @@ const navLinks = [
 const NAV_H_TOP      = 80;
 const NAV_H_SCROLLED = 58;
 
+const pageLinks = navLinks.filter((link) => link.href !== "/");
+
 /*
  * Breakpoint strategy:
- *  < 1024px (below lg) → show hamburger + MENU label
- *  ≥ 1024px (lg+)      → show full desktop nav
- *
- * This prevents the nav links wrapping on 768–1023px tablets.
+ *  < 1280px (below xl) → hamburger so Home and other links are never clipped
+ *  ≥ 1280px (xl+)      → full desktop nav, with Home pinned beside the logo
  */
 export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
@@ -94,7 +94,7 @@ export default function Navbar() {
           opacity: { duration: 0.65 },
         }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 overflow-hidden",
+          "fixed top-0 left-0 right-0 z-50",
           scrolled
             ? onHero
               ? "bg-[#071d3d]/95 backdrop-blur-xl shadow-xl shadow-black/30"
@@ -102,16 +102,17 @@ export default function Navbar() {
             : "bg-transparent"
         )}
       >
-        <div className="container-wide h-full flex items-center justify-between gap-4">
+        <div className="container-wide h-full flex items-center justify-between gap-3 min-w-0">
 
-          {/* ── Logo ─────────────────────────────────────────── */}
+          {/* ── Logo + Home (Home stays visible next to the mark) ── */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 min-w-0">
           <Link href="/" aria-label="FitMed home" className="flex-shrink-0 block">
             <motion.div
-              animate={{ width: mounted && scrolled ? 120 : 180 }}
+              animate={{ width: mounted && scrolled ? 108 : 148 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
-              className="overflow-hidden"
+              className="overflow-hidden xl:w-[160px] 2xl:w-[180px]"
             >
               {/*
                * Not scrolled (on hero)  → logo-4.webp  (full colour, hero version)
@@ -129,19 +130,29 @@ export default function Navbar() {
               />
             </motion.div>
           </Link>
+          <Link
+            href="/"
+            onClick={(event) => handleLinkClick(event, "/")}
+            className={cn(
+              "whitespace-nowrap px-2.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
+              onHero
+                ? "text-white hover:bg-white/12"
+                : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
+            )}
+          >
+            Home
+          </Link>
+          </div>
 
-          {/* ── Desktop nav — visible from lg (1024px) up ─────
-              flex-nowrap + overflow-hidden ensures links NEVER
-              wrap to a second row regardless of screen width.
-          ─────────────────────────────────────────────────── */}
-          <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-hidden">
-            {navLinks.map((link) => (
+          {/* ── Desktop nav — xl+ so laptop widths are not clipped ── */}
+          <nav className="hidden xl:flex items-center gap-0.5 flex-1 justify-end min-w-0">
+            {pageLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={(event) => handleLinkClick(event, link.href)}
                 className={cn(
-                  "whitespace-nowrap flex-shrink-0 px-3 xl:px-4 py-2 rounded-xl text-sm xl:text-[0.9rem] font-semibold transition-all duration-200",
+                  "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 rounded-xl text-[13px] 2xl:text-[0.9rem] font-semibold transition-all duration-200",
                   onHero
                     ? "text-white/85 hover:text-white hover:bg-white/12"
                     : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
@@ -152,8 +163,8 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* ── CTA — desktop only (lg+) ──────────────────────── */}
-          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+          {/* ── CTA — desktop only (xl+) ──────────────────────── */}
+          <div className="hidden xl:flex items-center gap-1.5 flex-shrink-0">
             <Link
               href="/signin"
               className={cn(
@@ -186,7 +197,7 @@ export default function Navbar() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={cn(
-              "lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase flex-shrink-0",
+              "xl:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase flex-shrink-0",
               onHero
                 ? "text-white hover:bg-white/12"
                 : "text-[#0B2D5C] hover:bg-[#edf6f6]"
@@ -230,7 +241,7 @@ export default function Navbar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm xl:hidden"
               onClick={() => setMobileOpen(false)}
             />
 
@@ -240,7 +251,7 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white shadow-2xl lg:hidden flex flex-col"
+              className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white shadow-2xl xl:hidden flex flex-col"
             >
               {/* Drawer header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
