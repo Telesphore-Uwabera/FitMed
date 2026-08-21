@@ -59,6 +59,7 @@ import { toOfficialCertificateData } from "@/lib/certificateDisplay";
 import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessmentForm";
 import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
 import { useToast } from "@/components/ToastProvider";
+import { subscribeLiveRefresh, broadcastLiveRefresh } from "@/lib/liveRefresh";
 import { useDialog } from "@/components/DialogProvider";
 import { displayValue, isIssuedCertificate, sameCalendarDay, todayShift } from "@/lib/records";
 import { canRescheduleMeeting, isMeetingClosed, meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
@@ -325,7 +326,7 @@ export default function DoctorDashboardPage() {
       fullCertificate: cert,
     });
 
-    async function loadData() {
+    async function loadData(live = false) {
       let doctorId = "";
       let doctorEmail = session?.email || "";
       let doctorName = session?.name || "";
@@ -343,6 +344,7 @@ export default function DoctorDashboardPage() {
           if (d.avatarUrl) setDoctorAvatar(d.avatarUrl);
           if (d.status === "ONLINE" || d.status === "BUSY" || d.status === "OFF") setDoctorStatus(d.status);
           const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+          if (!live) {
           if (Array.isArray(d.weeklySchedule) && d.weeklySchedule.length) {
             setWeeklySchedule(d.weeklySchedule);
           } else {
@@ -357,6 +359,7 @@ export default function DoctorDashboardPage() {
                 nightEnd: "",
               }))
             );
+          }
           }
         }
       } catch {
@@ -378,7 +381,7 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const certRes = await fetch("/api/certificates", { signal: AbortSignal.timeout(15000) });
+        const certRes = await fetch("/api/certificates", { cache: "no-store", signal: AbortSignal.timeout(15000) });
         const certData = await certRes.json();
         const all = Array.isArray(certData.certificates) ? certData.certificates : [];
         const mine = all.filter((cert: Record<string, unknown>) => {
@@ -457,11 +460,17 @@ export default function DoctorDashboardPage() {
       }
     }
 
-    loadData();
+    loadData(false);
+    const stopLive = subscribeLiveRefresh(() => {
+      void loadData(true);
+    }, 5000);
     const reminderTick = setInterval(() => {
       void fetch("/api/meet/tick");
     }, 60 * 1000);
-    return () => clearInterval(reminderTick);
+    return () => {
+      stopLive();
+      clearInterval(reminderTick);
+    };
   }, [session?.email]);
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
@@ -685,7 +694,7 @@ export default function DoctorDashboardPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ certificateId, status: "under-review" }),
-    });
+    }).then(() => broadcastLiveRefresh());
   };
 
   const exportApplications = () => {

@@ -4,15 +4,17 @@ import { useState, useEffect } from "react";
 import {
   FileText, Ruler, AlertOctagon, Activity, Sparkles,
   Check, ChevronRight, ChevronLeft, AlertTriangle, ShieldAlert,
-  Thermometer, Heart, Wind, Droplets, Scale, ArrowUp,
+  Thermometer, Heart, Wind, Droplets, Scale, ArrowUp, Calendar,
 } from "lucide-react";
-import { runClinicalEngine, calculateBMI, bmiCategory, WizardData, ClinicalDecision, RED_FLAG_DEFINITIONS } from "@/lib/clinicalEngine";
+import { runClinicalEngine, calculateBMI, bmiCategory, ageFromDateOfBirth, assessBloodPressureByAge, WizardData, ClinicalDecision, RED_FLAG_DEFINITIONS } from "@/lib/clinicalEngine";
 import ClinicalOutcomeScreen from "@/components/ClinicalOutcomeScreen";
 import BrandSelect from "@/components/BrandSelect";
+import { DEFAULT_FITMED_PURPOSE, FITMED_SERVICE_TITLES } from "@/lib/fitmedServices";
 
 interface FitnessCertificateWizardProps {
   initialPurpose?: string;
   initialStep?: number;
+  dateOfBirth?: string;
   onComplete: (data: WizardData & { outcome: ClinicalDecision; draftId: string }) => void;
   onCancel?: () => void;
 }
@@ -160,6 +162,7 @@ function VitalInput({
 export default function FitnessCertificateWizard({
   initialPurpose,
   initialStep = 1,
+  dateOfBirth,
   onComplete,
   onCancel,
 }: FitnessCertificateWizardProps) {
@@ -171,14 +174,15 @@ export default function FitnessCertificateWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Step 1
-  const [purpose, setPurpose] = useState(initialPurpose || "School / Workplace Fitness");
-  const [jobType, setJobType] = useState("None of the above");
+  const [purpose, setPurpose] = useState(initialPurpose || DEFAULT_FITMED_PURPOSE);
 
   // Step 2: Measurements
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [bmi, setBmi] = useState("");
   const [vitals, setVitals] = useState({ temperature: "", bp: "", pulse: "", spo2: "" });
+  const profileAge = ageFromDateOfBirth(dateOfBirth);
+  const bpAssessment = assessBloodPressureByAge(vitals.bp, profileAge);
 
   // BMI auto-calculate
   useEffect(() => {
@@ -244,7 +248,7 @@ export default function FitnessCertificateWizard({
       return;
     }
     setIsSubmitting(true);
-    const data: WizardData = { purpose, jobType, height, weight, bmi, redFlags, symptoms, history, functional, vitals, additionalNotes };
+    const data: WizardData = { purpose, jobType: purpose, height, weight, bmi, redFlags, symptoms, history, functional, vitals, additionalNotes };
     setTimeout(() => {
       const decision = runClinicalEngine(data);
       setOutcomeResult(decision);
@@ -254,7 +258,7 @@ export default function FitnessCertificateWizard({
 
   const handleProceedFromOutcome = () => {
     if (!outcomeResult) return;
-    const data: WizardData = { purpose, jobType, height, weight, bmi, redFlags, symptoms, history, functional, vitals, additionalNotes };
+    const data: WizardData = { purpose, jobType: purpose, height, weight, bmi, redFlags, symptoms, history, functional, vitals, additionalNotes };
     const draftId = `FM-DRAFT-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
     onComplete({ ...data, outcome: outcomeResult, draftId });
   };
@@ -412,37 +416,7 @@ export default function FitnessCertificateWizard({
                   label="Certificate Purpose"
                   value={purpose}
                   onChange={(v) => setPurpose(v)}
-                  options={[
-                    "School / Workplace Fitness",
-                    "Sports & Athletic Fitness",
-                    "Transport / Commercial Driver Clearance",
-                    "Heavy Machinery Operator",
-                    "Construction & Physical Labour",
-                    "Work at Height / Scaffolding",
-                    "Food Handler & Hygiene Clearance",
-                    "Visa & Travel Medical Assessment",
-                    "Aviation / Maritime / Security",
-                    "Healthcare / Clinical Role",
-                  ]}
-                />
-
-                <BrandSelect
-                  label="Job / Activity Type"
-                  value={jobType}
-                  onChange={(v) => setJobType(v)}
-                  options={[
-                    "None of the above",
-                    "Sedentary / Desk office work",
-                    "Commercial driving & logistics",
-                    "Professional driving (taxi, bus, truck)",
-                    "Heavy machinery operation",
-                    "Work at height / Scaffolding",
-                    "Construction / mining",
-                    "Kitchen & food preparation",
-                    "Healthcare professional",
-                    "Security / armed services",
-                    "Aviation / maritime crew",
-                  ]}
+                  options={[...FITMED_SERVICE_TITLES]}
                 />
 
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
@@ -455,6 +429,30 @@ export default function FitnessCertificateWizard({
             {/* ── STEP 2: MEASUREMENTS ── */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-in fade-in duration-200">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#0B2D5C] mb-3">Applicant age</h4>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Age (from profile)
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={
+                        profileAge !== null
+                          ? `${profileAge} years`
+                          : "Add your date of birth in Profile"
+                      }
+                      className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold bg-slate-50 text-slate-700"
+                    />
+                    {!dateOfBirth && (
+                      <p className="mt-1.5 text-[11px] text-amber-700">
+                        Blood pressure is classified using the age stored on your FitMed profile.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 {/* Height & Weight → BMI */}
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#0B2D5C] mb-3">Body Measurements</h4>
@@ -511,6 +509,17 @@ export default function FitnessCertificateWizard({
                     <VitalInput label="Pulse" unit="bpm" value={vitals.pulse} onChange={(v) => setVitals((p) => ({ ...p, pulse: v }))} placeholder="e.g. 72" icon={Activity} />
                     <VitalInput label="SpO₂" unit="%" value={vitals.spo2} onChange={(v) => setVitals((p) => ({ ...p, spo2: v }))} placeholder="e.g. 98" icon={Droplets} />
                   </div>
+                  {bpAssessment && (
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-bold text-slate-500">Blood pressure:</span>
+                        <span className={`text-lg font-extrabold ${bpAssessment.color}`}>
+                          {vitals.bp} <span className="text-sm font-bold">{bpAssessment.label}</span>
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-slate-500">{bpAssessment.detail}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

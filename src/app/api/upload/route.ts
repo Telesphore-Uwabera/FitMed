@@ -31,23 +31,10 @@ export async function POST(request: NextRequest) {
       : { folder, format: "webp" as const, resource_type: "image" as const };
 
     if (!hasCloudinary) {
-      let base64String = "";
-      let mime = "application/octet-stream";
-      if (typeof file === "string") {
-        base64String = file;
-      } else if (file instanceof Blob) {
-        mime = file.type || mime;
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        base64String = `data:${mime};base64,${buffer.toString("base64")}`;
-      }
-
-      return NextResponse.json({
-        success: true,
-        url: base64String,
-        publicId: `fitmed-file-${Date.now()}`,
-        format: isDocument ? "file" : "webp",
-      });
+      return NextResponse.json(
+        { error: "Cloudinary is not configured. Photos cannot be stored until CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set." },
+        { status: 503 }
+      );
     }
 
     let uploadData: any;

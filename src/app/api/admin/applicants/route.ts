@@ -84,11 +84,14 @@ export async function GET() {
       mapApplicant(u as Record<string, unknown>, certCounts.get(String(u.email || "").toLowerCase()) || 0)
     );
 
-    return NextResponse.json({
-      success: true,
-      pending: mapped.filter((u) => PENDING.has(u.status)),
-      applicants: mapped.filter((u) => !PENDING.has(u.status)),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        pending: mapped.filter((u) => PENDING.has(u.status)),
+        applicants: mapped.filter((u) => !PENDING.has(u.status)),
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } }
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load applicants.";
     return NextResponse.json({ success: false, error: message }, { status: 500 });

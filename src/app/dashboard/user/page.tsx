@@ -7,6 +7,7 @@ import DashboardShell from "@/components/DashboardShell";
 import BrandDatePicker from "@/components/BrandDatePicker";
 import { meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
 import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
+import { ageFromDateOfBirth } from "@/lib/clinicalEngine";
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
 import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
@@ -14,7 +15,8 @@ import IremboPayCheckoutModal from "@/components/IremboPayCheckoutModal";
 import CertificateQr from "@/components/CertificateQr";
 import { consultationRoomId, formatCertificateCard, formatChatMessages } from "@/lib/consultation";
 import { publicVerifyUrl, toOfficialCertificateData } from "@/lib/certificateDisplay";
-import { useToast } from "@/components/ToastProvider";
+import { DEFAULT_FITMED_PURPOSE, FITMED_SERVICES } from "@/lib/fitmedServices";
+import { subscribeLiveRefresh, broadcastLiveRefresh } from "@/lib/liveRefresh";
 import {
   FileCheck2,
   Clock,
@@ -63,7 +65,7 @@ import {
   Info,
   Building2,
 } from "lucide-react";
-import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
+import { convertToWebP, uploadToCloudinary, isCloudinaryUrl, WebPConversionResult } from "@/lib/imageUtils";
 import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
 
 export default function UserDashboard() {
@@ -84,7 +86,7 @@ export default function UserDashboard() {
     const tab = params.get("tab") || params.get("nav");
     if (tab) setActiveTab(tab);
   }, []);
-  const [selectedServicePurpose, setSelectedServicePurpose] = useState<string>("School / Workplace Fitness");
+  const [selectedServicePurpose, setSelectedServicePurpose] = useState<string>(DEFAULT_FITMED_PURPOSE);
   const [wizardStartStep, setWizardStartStep] = useState<number>(1);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showOfficialCertModal, setShowOfficialCertModal] = useState(false);
@@ -93,18 +95,7 @@ export default function UserDashboard() {
 
   // Quick Service Apply handler: Sets purpose and jumps directly to Step 2 (Measurements)
   const handleServiceApply = (serviceTitle: string) => {
-    const purposeMap: Record<string, string> = {
-      "Workplace & Office Fitness": "School / Workplace Fitness",
-      "School & University Admission": "School / Workplace Fitness",
-      "Sports, Gym & Athletic Fitness": "Sports & Athletic Fitness",
-      "Commercial Driver & Transport": "Transport / Commercial Driver Clearance",
-      "Food Handler & Hygiene Clearance": "Food Handler & Hygiene Clearance",
-      "Visa & International Travel Medical": "Visa & Travel Medical Assessment",
-      "Construction & Heights Fitness": "Construction & Physical Labour",
-    };
-
-    const mappedPurpose = purposeMap[serviceTitle] || serviceTitle;
-    setSelectedServicePurpose(mappedPurpose);
+    setSelectedServicePurpose(serviceTitle);
     setWizardStartStep(2);
     goToTab("request");
   };
@@ -128,6 +119,7 @@ export default function UserDashboard() {
     emergencyPhone: "",
     employerCode: "",
     avatarUrl: "",
+    nationalIdImageUrl: "",
   });
 
   const [avatarWebpResult, setAvatarWebpResult] = useState<WebPConversionResult | null>(null);
@@ -214,24 +206,27 @@ export default function UserDashboard() {
       email,
     }));
 
-    async function loadData() {
+    async function loadData(live = false) {
       try {
-        const meRes = await fetch(`/api/auth/me?email=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
-        const meData = await meRes.json();
-        if (meData.success && meData.user) {
-          const u = meData.user;
-          setProfileData((prev) => ({
-            ...prev,
-            name: u.name || prev.name,
-            email: u.email || email,
-            phone: u.phone || prev.phone,
-            nationalId: u.nationalId || prev.nationalId,
-            applicantId: u.applicantId || prev.applicantId,
-            dob: u.dateOfBirth || prev.dob,
-            gender: u.gender || prev.gender,
-            address: u.address || prev.address,
-            avatarUrl: u.avatarUrl || prev.avatarUrl,
-          }));
+        if (!live) {
+          const meRes = await fetch(`/api/auth/me?email=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+          const meData = await meRes.json();
+          if (meData.success && meData.user) {
+            const u = meData.user;
+            setProfileData((prev) => ({
+              ...prev,
+              name: u.name || prev.name,
+              email: u.email || email,
+              phone: u.phone || prev.phone,
+              nationalId: u.nationalId || prev.nationalId,
+              applicantId: u.applicantId || prev.applicantId,
+              dob: u.dateOfBirth || prev.dob,
+              gender: u.gender || prev.gender,
+              address: u.address || prev.address,
+              avatarUrl: u.avatarUrl || prev.avatarUrl,
+              nationalIdImageUrl: u.nationalIdImageUrl || prev.nationalIdImageUrl,
+            }));
+          }
         }
       } catch (err) {
         console.warn("Could not load profile:", err);
@@ -242,17 +237,19 @@ export default function UserDashboard() {
         const aptData = await aptRes.json();
         if (aptData.success) {
           setAppointments(aptData.appointments || []);
-          const params = new URLSearchParams(window.location.search);
-          const room = params.get("room");
-          if (room) {
-            const match = (aptData.appointments || []).find(
-              (a: any) => a.appointmentId === room || a.roomId === room
-            );
-            if (match) {
-              goToTab("consultation");
-              setTimeout(() => {
-                void handleStartCall(match);
-              }, 300);
+          if (!live) {
+            const params = new URLSearchParams(window.location.search);
+            const room = params.get("room");
+            if (room) {
+              const match = (aptData.appointments || []).find(
+                (a: any) => a.appointmentId === room || a.roomId === room
+              );
+              if (match) {
+                goToTab("consultation");
+                setTimeout(() => {
+                  void handleStartCall(match);
+                }, 300);
+              }
             }
           }
         }
@@ -277,7 +274,10 @@ export default function UserDashboard() {
       }
 
       try {
-        const certRes = await fetch(`/api/certificates?applicantEmail=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+        const certRes = await fetch(`/api/certificates?applicantEmail=${encodeURIComponent(email)}`, {
+          cache: "no-store",
+          signal: AbortSignal.timeout(8000),
+        });
         const certData = await certRes.json();
         if (certData.success) {
           const cards = (certData.certificates || []).map((cert: any) => formatCertificateCard(cert));
@@ -298,11 +298,17 @@ export default function UserDashboard() {
       }
     }
 
-    loadData();
+    loadData(false);
+    const stopLive = subscribeLiveRefresh(() => {
+      void loadData(true);
+    }, 5000);
     const reminderTick = setInterval(() => {
       void fetch("/api/meet/tick");
     }, 60 * 1000);
-    return () => clearInterval(reminderTick);
+    return () => {
+      stopLive();
+      clearInterval(reminderTick);
+    };
   }, [session?.email]);
 
   const handleWizardComplete = async (data: any) => {
@@ -311,13 +317,22 @@ export default function UserDashboard() {
         error("Profile incomplete", "Add your National ID in Profile before applying.");
         return;
       }
+      if (!isCloudinaryUrl(profileData.avatarUrl) || !isCloudinaryUrl(profileData.nationalIdImageUrl)) {
+        error(
+          "Photos required",
+          "Your profile photo and National ID photo must be stored on Cloudinary before you can submit an application."
+        );
+        return;
+      }
       const submissionData = {
         applicantEmail: profileData.email,
         applicantPhone: profileData.phone,
         candidateName: profileData.name,
         candidateIdNumber: profileData.nationalId,
         avatarUrl: profileData.avatarUrl,
-        age: new Date().getFullYear() - new Date(profileData.dob).getFullYear(),
+        nationalIdImageUrl: profileData.nationalIdImageUrl,
+        age: ageFromDateOfBirth(profileData.dob) ?? undefined,
+        dateOfBirth: profileData.dob,
         gender: profileData.gender || "",
         purpose: data.purpose,
         jobType: data.jobType,
@@ -373,6 +388,7 @@ export default function UserDashboard() {
         };
 
         setHistory((prev) => [newEntry, ...prev]);
+        broadcastLiveRefresh();
         success("Application Submitted", `Your fitness certificate application for "${data.purpose}" is now in review.`);
         goToTab("certificates");
       } else {
@@ -393,6 +409,7 @@ export default function UserDashboard() {
       prev.map((h) => (h.id === certToPay.id ? { ...h, status: "Active (Paid)", outcome: "Fit for Activity" } : h))
     );
     setShowIremboModal(false);
+    broadcastLiveRefresh();
     setPaymentSuccessAlert(
       `Payment of 5,000 FRW confirmed via IremboPay (${txRef}). Certificate ${certToPay.id} is now active.`
     );
@@ -810,65 +827,17 @@ export default function UserDashboard() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  id: "workplace",
-                  title: "Workplace & Office Fitness",
-                  desc: "Pre-employment screening, annual corporate health checks, and sedentary desk fitness.",
-                  icon: Briefcase,
-                  tag: "Most Popular",
-                  time: "Under 15 mins",
-                },
-                {
-                  id: "school",
-                  title: "School & University Admission",
-                  desc: "Academic clearance, boarding school admissions, and physical education fitness clearance.",
-                  icon: GraduationCap,
-                  tag: "Student Fast-Track",
-                  time: "Under 10 mins",
-                },
-                {
-                  id: "sports",
-                  title: "Sports, Gym & Athletic Fitness",
-                  desc: "Cardiovascular endurance screening, marathon clearance, and gym club memberships.",
-                  icon: HeartPulse,
-                  tag: "Athletic Ready",
-                  time: "Under 15 mins",
-                },
-                {
-                  id: "transport",
-                  title: "Commercial Driver & Transport",
-                  desc: "Vision, reflex, and blood pressure screening for taxi, bus, and fleet operators.",
-                  icon: Car,
-                  tag: "Regulatory Approved",
-                  time: "Under 20 mins",
-                },
-                {
-                  id: "food",
-                  title: "Food Handler & Hygiene Clearance",
-                  desc: "Gastrointestinal screening, infectious symptom check, and commercial hygiene compliance.",
-                  icon: Utensils,
-                  tag: "Hygienic Verified",
-                  time: "Under 15 mins",
-                },
-                {
-                  id: "travel",
-                  title: "Visa & International Travel Medical",
-                  desc: "Embassy and immigration health assessments, travel clearance, and vaccine status checks.",
-                  icon: Plane,
-                  tag: "Global Format",
-                  time: "Under 15 mins",
-                },
-                {
-                  id: "construction",
-                  title: "Construction & Heights Fitness",
-                  desc: "Balance, vertigo, and occupational physical readiness for manual and high-risk work.",
-                  icon: HardHat,
-                  tag: "High Risk Review",
-                  time: "Physician & Clinic",
-                },
-              ].map((service) => {
-                const Icon = service.icon;
+              {FITMED_SERVICES.map((service) => {
+                const Icon =
+                  {
+                    workplace: Briefcase,
+                    school: GraduationCap,
+                    sports: HeartPulse,
+                    transport: Car,
+                    food: Utensils,
+                    travel: Plane,
+                    construction: HardHat,
+                  }[service.id] || Briefcase;
                 return (
                   <div
                     key={service.id}
@@ -941,6 +910,7 @@ export default function UserDashboard() {
               key={`${selectedServicePurpose}-${wizardStartStep}`}
               initialPurpose={selectedServicePurpose}
               initialStep={wizardStartStep}
+              dateOfBirth={profileData.dob}
               onComplete={handleWizardComplete}
               onCancel={() => {
                 setWizardStartStep(1);

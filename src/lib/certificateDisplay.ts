@@ -1,3 +1,5 @@
+import { FITMED_SERVICE_TITLES } from "@/lib/fitmedServices";
+
 export function publicAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com").replace(/\/$/, "");
 }
@@ -24,19 +26,27 @@ export function qrCodeFallbackUrl(certificateId?: string) {
 }
 
 export function categoryFromPurpose(purpose?: string, category?: string, jobType?: string) {
+  const purposeValue = String(purpose || "").trim();
+  if (FITMED_SERVICE_TITLES.includes(purposeValue as (typeof FITMED_SERVICE_TITLES)[number])) {
+    return purposeValue;
+  }
   const existing = String(category || jobType || "").trim();
   const ignored = !existing || existing === "—" || /^general$/i.test(existing) || /^none of the above$/i.test(existing);
-  if (!ignored) return existing;
-  const value = String(purpose || "").toLowerCase();
-  if (value.includes("employ") || value.includes("office") || value.includes("workplace")) return "Employment Fitness";
-  if (value.includes("school") || value.includes("univers") || value.includes("student")) return "School & University";
-  if (value.includes("driver") || value.includes("transport") || value.includes("taxi")) return "Transport & Driving";
-  if (value.includes("height") || value.includes("construction") || value.includes("mining") || value.includes("occup")) {
-    return "Occupational / High-Risk";
+  if (!ignored && FITMED_SERVICE_TITLES.includes(existing as (typeof FITMED_SERVICE_TITLES)[number])) {
+    return existing;
   }
-  if (value.includes("aviation") || value.includes("pilot") || value.includes("diving")) return "Aviation & Specialised";
-  if (existing) return existing;
-  return "General Health Fitness";
+  const value = String(purpose || "").toLowerCase();
+  if (value.includes("school") || value.includes("univers") || value.includes("student")) return "School & University Admission";
+  if (value.includes("sport") || value.includes("gym") || value.includes("athletic")) return "Sports, Gym & Athletic Fitness";
+  if (value.includes("driver") || value.includes("transport") || value.includes("taxi")) return "Commercial Driver & Transport";
+  if (value.includes("food") || value.includes("hygiene") || value.includes("kitchen")) return "Food Handler & Hygiene Clearance";
+  if (value.includes("visa") || value.includes("travel") || value.includes("embassy")) return "Visa & International Travel Medical";
+  if (value.includes("height") || value.includes("construction") || value.includes("mining") || value.includes("occup")) {
+    return "Construction & Heights Fitness";
+  }
+  if (value.includes("employ") || value.includes("office") || value.includes("workplace")) return "Workplace & Office Fitness";
+  if (existing && !ignored) return existing;
+  return "Workplace & Office Fitness";
 }
 
 export function formatCertDate(value?: string | Date | null) {

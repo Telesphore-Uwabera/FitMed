@@ -337,3 +337,92 @@ export function bmiCategory(bmi: number): { label: string; color: string } {
   if (bmi < 30)   return { label: "Overweight", color: "text-amber-600" };
   return { label: "Obese", color: "text-rose-600" };
 }
+
+export function ageFromDateOfBirth(dob?: string | Date | null): number | null {
+  if (!dob) return null;
+  let birth: Date;
+  if (dob instanceof Date) {
+    birth = dob;
+  } else {
+    const iso = String(dob).trim().slice(0, 10);
+    const parts = iso.split("-").map(Number);
+    if (parts.length === 3 && parts.every((n) => Number.isFinite(n))) {
+      birth = new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+      birth = new Date(dob);
+    }
+  }
+  if (Number.isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) years -= 1;
+  if (years < 0 || years > 120) return null;
+  return years;
+}
+
+type BpRange = { sys: number; dia: number };
+
+const BP_CHART_BY_AGE: {
+  label: string;
+  minYears: number;
+  maxYears: number;
+  min: BpRange;
+  normal: BpRange;
+  max: BpRange;
+}[] = [
+  { label: "1 to 12 months", minYears: 0, maxYears: 0, min: { sys: 75, dia: 50 }, normal: { sys: 90, dia: 60 }, max: { sys: 110, dia: 75 } },
+  { label: "1 to 5 years", minYears: 1, maxYears: 5, min: { sys: 80, dia: 55 }, normal: { sys: 95, dia: 65 }, max: { sys: 110, dia: 79 } },
+  { label: "6 to 13 years", minYears: 6, maxYears: 13, min: { sys: 90, dia: 60 }, normal: { sys: 105, dia: 70 }, max: { sys: 115, dia: 80 } },
+  { label: "14 to 19 years", minYears: 14, maxYears: 19, min: { sys: 105, dia: 73 }, normal: { sys: 117, dia: 77 }, max: { sys: 120, dia: 81 } },
+  { label: "20 to 24 years", minYears: 20, maxYears: 24, min: { sys: 108, dia: 75 }, normal: { sys: 120, dia: 79 }, max: { sys: 132, dia: 83 } },
+  { label: "25 to 29 years", minYears: 25, maxYears: 29, min: { sys: 109, dia: 76 }, normal: { sys: 121, dia: 80 }, max: { sys: 133, dia: 84 } },
+  { label: "30 to 34 years", minYears: 30, maxYears: 34, min: { sys: 110, dia: 77 }, normal: { sys: 122, dia: 81 }, max: { sys: 134, dia: 85 } },
+  { label: "35 to 39 years", minYears: 35, maxYears: 39, min: { sys: 111, dia: 78 }, normal: { sys: 123, dia: 82 }, max: { sys: 135, dia: 86 } },
+  { label: "40 to 44 years", minYears: 40, maxYears: 44, min: { sys: 112, dia: 79 }, normal: { sys: 125, dia: 83 }, max: { sys: 137, dia: 87 } },
+  { label: "45 to 49 years", minYears: 45, maxYears: 49, min: { sys: 115, dia: 80 }, normal: { sys: 127, dia: 84 }, max: { sys: 139, dia: 88 } },
+  { label: "50 to 54 years", minYears: 50, maxYears: 54, min: { sys: 116, dia: 81 }, normal: { sys: 129, dia: 85 }, max: { sys: 142, dia: 89 } },
+  { label: "55 to 59 years", minYears: 55, maxYears: 59, min: { sys: 118, dia: 82 }, normal: { sys: 131, dia: 86 }, max: { sys: 144, dia: 90 } },
+  { label: "60 years and above", minYears: 60, maxYears: 120, min: { sys: 121, dia: 83 }, normal: { sys: 134, dia: 87 }, max: { sys: 147, dia: 91 } },
+];
+
+function bpBandForAge(ageYears: number) {
+  return BP_CHART_BY_AGE.find((band) => ageYears >= band.minYears && ageYears <= band.maxYears) || BP_CHART_BY_AGE[BP_CHART_BY_AGE.length - 1];
+}
+
+export function assessBloodPressureByAge(
+  bp: string,
+  ageYears: number | null
+): { label: string; color: string; detail: string } | null {
+  const parsed = parseBP(bp);
+  if (!parsed) return null;
+  if (ageYears === null) {
+    return {
+      label: "Enter date of birth in Profile",
+      color: "text-slate-500",
+      detail: "Age from your profile is required to classify this reading.",
+    };
+  }
+
+  const band = bpBandForAge(ageYears);
+  const { systolic, diastolic } = parsed;
+  let label = "Normal";
+  let color = "text-emerald-600";
+
+  if (systolic > band.max.sys || diastolic > band.max.dia) {
+    label = "High";
+    color = "text-rose-600";
+  } else if (systolic < band.min.sys || diastolic < band.min.dia) {
+    label = "Low";
+    color = "text-sky-600";
+  } else if (systolic > band.normal.sys || diastolic > band.normal.dia) {
+    label = "Elevated";
+    color = "text-amber-600";
+  }
+
+  return {
+    label,
+    color,
+    detail: `Typical for age ${ageYears} (${band.label}): ${band.normal.sys}/${band.normal.dia} · range ${band.min.sys}/${band.min.dia}–${band.max.sys}/${band.max.dia}`,
+  };
+}

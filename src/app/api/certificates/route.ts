@@ -6,7 +6,7 @@ import Payment from "@/models/Payment";
 import AuditLog from "@/models/AuditLog";
 import User from "@/models/User";
 import mongoose from "mongoose";
-import { runClinicalEngine, WizardData } from "@/lib/clinicalEngine";
+import { runClinicalEngine, WizardData, ageFromDateOfBirth } from "@/lib/clinicalEngine";
 import { pickOnDutyDoctor } from "@/lib/assignDoctor";
 import crypto from "crypto";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/lib/brevo";
 import { nextKey, normalizeCertificateKeys } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
+import { isCloudinaryUrl } from "@/lib/imageUtils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
           avatarUrl: cert.avatarUrl || applicant?.avatarUrl || "",
           candidateIdNumber: cert.candidateIdNumber || applicant?.nationalId || "",
           gender: cert.gender || applicant?.gender || "",
+          age: cert.age || ageFromDateOfBirth(applicant?.dateOfBirth) || undefined,
           assignedDoctorLicense: cert.assignedDoctorLicense || doctor?.licenseNumber || "",
           assignedDoctor: cert.assignedDoctor || doctor?.fullName || "",
           assignedDoctorSpecialty: doctor?.specialty || "Occupational Medicine & Telehealth",
@@ -78,7 +80,10 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      return NextResponse.json({ success: true, certificates: enriched });
+      return NextResponse.json(
+        { success: true, certificates: enriched },
+        { headers: { "Cache-Control": "no-store, max-age=0" } }
+      );
     } catch (dbErr) {
       console.warn("MongoDB fetch certificates failed:", dbErr);
       return NextResponse.json({ success: true, certificates: [] });
@@ -162,12 +167,24 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const applicant = await User.findOne({ email: String(applicantEmail).toLowerCase() })
-      .select("avatarUrl nationalId gender dateOfBirth phone fullName")
+      .select("avatarUrl nationalId nationalIdImageUrl gender dateOfBirth phone fullName")
       .lean();
     const photoUrl = String(avatarUrl || applicant?.avatarUrl || "");
+    const idPhotoUrl = String(nationalIdImageUrl || applicant?.nationalIdImageUrl || "");
+    if (!isCloudinaryUrl(photoUrl) || !isCloudinaryUrl(idPhotoUrl)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Upload your profile photo and National ID photo (saved to Cloudinary) before submitting an application.",
+        },
+        { status: 400 }
+      );
+    }
     const idNumber = String(candidateIdNumber || applicant?.nationalId || "");
     const applicantPhoneResolved = String(applicantPhone || applicant?.phone || "");
     const applicantGender = String(gender || applicant?.gender || "");
+    const profileDob = String(applicant?.dateOfBirth || body.dateOfBirth || "");
+    const resolvedAge = ageFromDateOfBirth(profileDob) ?? (typeof age === "number" ? age : undefined);
 
     const certificateId = await nextKey("certificate");
     const sha256Hash = crypto.createHash("sha256").update(JSON.stringify(wizardData)).digest("hex");
@@ -185,8 +202,8 @@ export async function POST(request: NextRequest) {
       candidateName,
       candidateIdNumber: idNumber,
       avatarUrl: photoUrl,
-      nationalIdImageUrl: nationalIdImageUrl || "",
-      age,
+      nationalIdImageUrl: idPhotoUrl,
+      age: resolvedAge,
       gender: applicantGender,
       purpose,
       jobType,

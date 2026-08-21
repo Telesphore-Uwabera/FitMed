@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
+import { subscribeLiveRefresh } from "@/lib/liveRefresh";
 import { useDialog } from "@/components/DialogProvider";
 import { useSession } from "@/lib/useSession";
 import { displayDoctorName } from "@/lib/certificateDisplay";
@@ -669,7 +670,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const appRes = await fetch("/api/admin/applicants");
+        const appRes = await fetch("/api/admin/applicants", { cache: "no-store" });
         const appData = await appRes.json();
         if (appData.success) {
           setPendingApplicants(appData.pending || []);
@@ -681,7 +682,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const certRes = await fetch("/api/certificates");
+        const certRes = await fetch("/api/certificates", { cache: "no-store" });
         const certData = await certRes.json();
         if (certData.success && Array.isArray(certData.certificates)) {
           setCertificateRows(
@@ -788,6 +789,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
+        if (adminRefresh === 0) {
         const settingsRes = await fetch("/api/admin/settings");
         const settingsData = await settingsRes.json();
         if (settingsData.success && settingsData.settings) {
@@ -799,6 +801,7 @@ export default function AdminDashboardPage() {
           }));
           setAuditLogs(settingsData.logs || []);
         }
+        }
       } catch {
         setAuditLogs([]);
       }
@@ -806,6 +809,12 @@ export default function AdminDashboardPage() {
 
     loadAdminData();
   }, [adminRefresh]);
+
+  useEffect(() => {
+    return subscribeLiveRefresh(() => {
+      setAdminRefresh((n) => n + 1);
+    }, 5000);
+  }, []);
 
   const paidTransactions = transactions.filter((t) => t.status === "PAID");
   const grossRevenue = paidTransactions.reduce((sum, t) => sum + t.amount, 0);

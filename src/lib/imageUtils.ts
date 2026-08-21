@@ -113,10 +113,15 @@ export async function convertToWebP(
  * Uploads a WebP image to Cloudinary
  * Calls our secure server-side `/api/upload` endpoint or directly uploads using an unsigned preset.
  */
+export function isCloudinaryUrl(url?: string) {
+  const value = String(url || "").trim();
+  return /^https:\/\/res\.cloudinary\.com\//i.test(value);
+}
+
 export async function uploadToCloudinary(
   fileOrDataUrl: File | Blob | string,
   folder = "fitmed/profiles"
-): Promise<{ url: string; publicId: string; format: string }> {
+): Promise<{ url: string; publicId: string; format: string; error?: string }> {
   try {
     const formData = new FormData();
 
@@ -127,47 +132,32 @@ export async function uploadToCloudinary(
     }
     formData.append("folder", folder);
 
-    // Call server-side upload endpoint
     const response = await fetch("/api/upload", {
       method: "POST",
       body: formData,
     });
-
-    if (response.ok) {
-      const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    const url = String(data.url || "");
+    if (!response.ok || !isCloudinaryUrl(url)) {
       return {
-        url: data.url,
-        publicId: data.publicId,
-        format: data.format || "webp",
-      };
-    } else {
-      // Fallback: If server route has no Cloudinary credentials configured yet, return a local dataUrl preview
-      console.warn("Cloudinary API returned non-OK, using local WebP representation");
-      let previewUrl = "";
-      if (typeof fileOrDataUrl === "string") {
-        previewUrl = fileOrDataUrl;
-      } else {
-        previewUrl = URL.createObjectURL(fileOrDataUrl);
-      }
-      return {
-        url: previewUrl,
-        publicId: `local-webp-${Date.now()}`,
+        url: "",
+        publicId: "",
         format: "webp",
+        error: data.error || "Cloudinary did not store this photo. Try again.",
       };
-    }
-  } catch (err) {
-    console.error("Upload error:", err);
-    // Return data URL as fallback for smooth UI interaction
-    let previewUrl = "";
-    if (typeof fileOrDataUrl === "string") {
-      previewUrl = fileOrDataUrl;
-    } else {
-      previewUrl = URL.createObjectURL(fileOrDataUrl);
     }
     return {
-      url: previewUrl,
-      publicId: `local-webp-${Date.now()}`,
+      url,
+      publicId: data.publicId || "",
+      format: data.format || "webp",
+    };
+  } catch (err) {
+    console.error("Upload error:", err);
+    return {
+      url: "",
+      publicId: "",
       format: "webp",
+      error: "Could not reach Cloudinary. Check your connection and try again.",
     };
   }
 }

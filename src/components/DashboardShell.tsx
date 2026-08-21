@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useTheme } from "@/components/ThemeProvider";
+import { subscribeLiveRefresh } from "@/lib/liveRefresh";
 
 export type DashboardRole = "user" | "doctor" | "admin";
 
@@ -169,14 +170,19 @@ export default function DashboardShell({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/notifications", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled && data.success) setEmailNotifications(data.notifications || []);
-      })
-      .catch(() => null);
+    const loadNotifications = () => {
+      fetch("/api/notifications", { credentials: "include", cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!cancelled && data.success) setEmailNotifications(data.notifications || []);
+        })
+        .catch(() => null);
+    };
+    loadNotifications();
+    const stopLive = subscribeLiveRefresh(loadNotifications, 8000);
     return () => {
       cancelled = true;
+      stopLive();
     };
   }, [userProfile.email]);
 

@@ -21,8 +21,11 @@ import {
   UploadCloud,
   CheckCircle2,
   Sparkles,
+  MapPin,
 } from "lucide-react";
-import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
+import BrandDatePicker from "@/components/BrandDatePicker";
+import BrandSelect from "@/components/BrandSelect";
+import { convertToWebP, uploadToCloudinary, isCloudinaryUrl, WebPConversionResult } from "@/lib/imageUtils";
 import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
 import { useToast } from "@/components/ToastProvider";
 
@@ -35,6 +38,9 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [nationalId, setNationalId] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
+  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -51,7 +57,10 @@ export default function SignUpPage() {
   const [idWebpResult, setIdWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingId, setIsConvertingId] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileCloudUrl, setProfileCloudUrl] = useState("");
+  const [idCloudUrl, setIdCloudUrl] = useState("");
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingId, setUploadingId] = useState(false);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,17 +68,29 @@ export default function SignUpPage() {
 
     try {
       setIsConverting(true);
-      // Auto-convert to WebP format before storage in Cloudinary
+      setUploadingProfile(true);
+      setProfileCloudUrl("");
       const converted = await convertToWebP(file, 0.85, 800);
       setWebpResult(converted);
       setProfileImage(converted.dataUrl);
+      setIsConverting(false);
+      const uploaded = await uploadToCloudinary(converted.file, "fitmed/applicants");
+      if (!isCloudinaryUrl(uploaded.url)) {
+        warning("Photo not stored", uploaded.error || "Profile photo must be saved to Cloudinary before you can submit.");
+        setProfileImage(null);
+        setWebpResult(null);
+        return;
+      }
+      setProfileCloudUrl(uploaded.url);
+      info("Profile photo saved", "Stored on Cloudinary.");
     } catch (err) {
       console.error("WebP conversion error:", err);
-      const reader = new FileReader();
-      reader.onload = () => setProfileImage(reader.result as string);
-      reader.readAsDataURL(file);
+      warning("Photo not stored", "Could not process the profile photo. Try another image.");
+      setProfileImage(null);
+      setWebpResult(null);
     } finally {
       setIsConverting(false);
+      setUploadingProfile(false);
     }
   };
 
@@ -79,17 +100,29 @@ export default function SignUpPage() {
 
     try {
       setIsConvertingId(true);
-      // Auto-convert National ID document to WebP format before storage in Cloudinary
+      setUploadingId(true);
+      setIdCloudUrl("");
       const converted = await convertToWebP(file, 0.90, 1200);
       setIdWebpResult(converted);
       setNationalIdImage(converted.dataUrl);
+      setIsConvertingId(false);
+      const uploaded = await uploadToCloudinary(converted.file, "fitmed/national_ids");
+      if (!isCloudinaryUrl(uploaded.url)) {
+        warning("ID photo not stored", uploaded.error || "National ID photo must be saved to Cloudinary before you can submit.");
+        setNationalIdImage(null);
+        setIdWebpResult(null);
+        return;
+      }
+      setIdCloudUrl(uploaded.url);
+      info("National ID saved", "Stored on Cloudinary.");
     } catch (err) {
       console.error("National ID WebP conversion error:", err);
-      const reader = new FileReader();
-      reader.onload = () => setNationalIdImage(reader.result as string);
-      reader.readAsDataURL(file);
+      warning("ID photo not stored", "Could not process the National ID photo. Try another image.");
+      setNationalIdImage(null);
+      setIdWebpResult(null);
     } finally {
       setIsConvertingId(false);
+      setUploadingId(false);
     }
   };
 
@@ -111,34 +144,24 @@ export default function SignUpPage() {
       warning("Check your details", fieldError);
       return;
     }
-    if (!nationalIdImage && !idWebpResult) {
-      warning("National ID Required", "Please upload your National ID or Passport document photo for doctor identity verification.");
+    if (!dateOfBirth || !gender || !address.trim()) {
+      warning("Check your details", "Date of birth, gender, and address are required.");
+      return;
+    }
+    if (!isCloudinaryUrl(profileCloudUrl) || !isCloudinaryUrl(idCloudUrl)) {
+      warning(
+        "Photos required",
+        "Upload a profile photo and National ID photo and wait until both are saved to Cloudinary before submitting."
+      );
+      return;
+    }
+    if (uploadingProfile || uploadingId) {
+      warning("Photos still uploading", "Wait until both photos show as saved to Cloudinary.");
       return;
     }
     setIsSubmitting(true);
 
     try {
-      let avatarUrl = "";
-      let idDocUrl = "";
-
-      if (webpResult) {
-        const uploadRes = await uploadToCloudinary(webpResult.file, "fitmed/applicants");
-        if (uploadRes.url) avatarUrl = uploadRes.url;
-      }
-
-      if (idWebpResult) {
-        const uploadIdRes = await uploadToCloudinary(idWebpResult.file, "fitmed/national_ids");
-        idDocUrl = uploadIdRes.url || idWebpResult.dataUrl || nationalIdImage || "";
-      } else if (nationalIdImage) {
-        idDocUrl = nationalIdImage;
-      }
-
-      if (!idDocUrl) {
-        warning("National ID Required", "Please upload your National ID or Passport document photo.");
-        setIsSubmitting(false);
-        return;
-      }
-
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,9 +170,12 @@ export default function SignUpPage() {
           email,
           phone: compactPhone(phone),
           nationalId,
+          dateOfBirth,
+          gender,
+          address: address.trim(),
           password,
-          avatarUrl,
-          idDocUrl,
+          avatarUrl: profileCloudUrl,
+          idDocUrl: idCloudUrl,
         }),
       });
       const data = await res.json().catch(() => ({ success: false }));
@@ -289,7 +315,7 @@ export default function SignUpPage() {
                         <User className="w-8 h-8 text-slate-400" />
                       )}
 
-                      {isConverting && (
+                      {(isConverting || uploadingProfile) && (
                         <div className="absolute inset-0 bg-[#0B2D5C]/70 flex items-center justify-center">
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         </div>
@@ -319,16 +345,16 @@ export default function SignUpPage() {
                   </div>
 
                   {/* Upload confirmation */}
-                  {webpResult && (
+                  {profileCloudUrl ? (
                     <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-[11px] text-teal-900 font-semibold flex items-center justify-between animate-in fade-in">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
                         <span>
-                          Profile photo ready for upload
+                          Profile photo saved to Cloudinary
                         </span>
                       </div>
                       <span className="text-[10px] uppercase font-bold bg-teal-200 text-teal-800 px-2 py-0.5 rounded-md">
-                        Ready
+                        Saved
                       </span>
                     </div>
                   )}
@@ -357,7 +383,7 @@ export default function SignUpPage() {
                         <IdCard className="w-8 h-8 text-slate-400" />
                       )}
 
-                      {isConvertingId && (
+                      {(isConvertingId || uploadingId) && (
                         <div className="absolute inset-0 bg-[#0B2D5C]/70 flex items-center justify-center">
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         </div>
@@ -387,19 +413,19 @@ export default function SignUpPage() {
                   </div>
 
                   {/* Upload confirmation */}
-                  {idWebpResult && (
+                  {idCloudUrl ? (
                     <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 font-semibold flex items-center justify-between animate-in fade-in">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
                         <span>
-                          Identity document ready for review
+                          National ID saved to Cloudinary
                         </span>
                       </div>
                       <span className="text-[10px] uppercase font-bold bg-sky-200 text-sky-800 px-2 py-0.5 rounded-md">
-                        Ready
+                        Saved
                       </span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 </div>
 
@@ -487,6 +513,44 @@ export default function SignUpPage() {
                   <p className="mt-1.5 text-[11px] text-slate-400">Must be exactly 16 numbers. Each National ID can be registered once.</p>
                 </div>
 
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Date of Birth
+                    </label>
+                    <BrandDatePicker value={dateOfBirth} onChange={setDateOfBirth} preset="birth" placeholder="Select date of birth" />
+                  </div>
+                  <div>
+                    <BrandSelect
+                      label="Gender"
+                      value={gender}
+                      onChange={setGender}
+                      placeholder="Select gender"
+                      options={[
+                        { value: "Male", label: "Male" },
+                        { value: "Female", label: "Female" },
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Address
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="District, sector, or street address"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
+                    />
+                  </div>
+                </div>
+
                 {/* Password */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
@@ -571,7 +635,7 @@ export default function SignUpPage() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || uploadingProfile || uploadingId || !profileCloudUrl || !idCloudUrl}
                   className="w-full max-w-md mx-auto py-3 rounded-xl font-bold text-white btn-primary text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 disabled:opacity-75"
                 >
                   {isSubmitting ? (

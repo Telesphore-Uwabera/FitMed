@@ -14,11 +14,12 @@ import {
   normalizeNationalId,
 } from "@/lib/applicantIdentity";
 import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
+import { isCloudinaryUrl } from "@/lib/imageUtils";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, nationalId, password, avatarUrl, idDocUrl } = body;
+    const { name, email, phone, nationalId, dateOfBirth, gender, address, password, avatarUrl, idDocUrl } = body;
     const cleanEmail = normalizeEmail(email);
     const cleanName = String(name || "").trim();
     const cleanNationalId = normalizeNationalId(nationalId);
@@ -33,6 +34,24 @@ export async function POST(request: NextRequest) {
     });
     if (fieldError) {
       return NextResponse.json({ success: false, error: fieldError }, { status: 400 });
+    }
+    const cleanGender = String(gender || "").trim();
+    const cleanAddress = String(address || "").trim();
+    const cleanDob = String(dateOfBirth || "").trim();
+    if (!cleanDob || !cleanGender || !cleanAddress) {
+      return NextResponse.json(
+        { success: false, error: "Date of birth, gender, and address are required." },
+        { status: 400 }
+      );
+    }
+    if (!isCloudinaryUrl(avatarUrl) || !isCloudinaryUrl(idDocUrl)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Profile photo and National ID photo must both be stored on Cloudinary before the account can be created.",
+        },
+        { status: 400 }
+      );
     }
     if (cleanPassword.length < 6) {
       return NextResponse.json(
@@ -69,6 +88,9 @@ export async function POST(request: NextRequest) {
       email: cleanEmail,
       phone: cleanPhone,
       nationalId: cleanNationalId,
+      dateOfBirth: cleanDob,
+      gender: cleanGender,
+      address: cleanAddress,
       applicantId: await nextApplicantId(),
       password: hashPassword(cleanPassword),
       avatarUrl: avatarUrl || undefined,
