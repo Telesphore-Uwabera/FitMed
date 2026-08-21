@@ -3037,7 +3037,6 @@ export default function DoctorDashboardPage() {
           </div>
         </div>
       )}
-      )}
 
       {rescheduleApt && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
