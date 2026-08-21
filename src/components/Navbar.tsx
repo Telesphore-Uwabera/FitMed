@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { label: "Home",          href: "/" },
-  { label: "About Us",      href: "/about" },
+  { label: "About",         href: "/about" },
   { label: "How It Works",  href: "/#how-it-works" },
   { label: "Certificates",  href: "/#certificates" },
   { label: "For Employers", href: "/#employers" },
@@ -26,12 +26,10 @@ const navLinks = [
 const NAV_H_TOP      = 80;
 const NAV_H_SCROLLED = 58;
 
-const pageLinks = navLinks.filter((link) => link.href !== "/");
-
 /*
  * Breakpoint strategy:
- *  < 1280px (below xl) → hamburger so Home and other links are never clipped
- *  ≥ 1280px (xl+)      → full desktop nav, with Home pinned beside the logo
+ *  < 1280px (below xl) → hamburger so links are never clipped
+ *  ≥ 1280px (xl+)      → one desktop nav group: Home, About, and the rest
  */
 export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
@@ -104,8 +102,6 @@ export default function Navbar() {
       >
         <div className="container-wide h-full flex items-center justify-between gap-3 min-w-0">
 
-          {/* ── Logo + Home (Home stays visible next to the mark) ── */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 min-w-0">
           <Link href="/" aria-label="FitMed home" className="flex-shrink-0 block">
             <motion.div
               animate={{ width: mounted && scrolled ? 108 : 148 }}
@@ -130,45 +126,29 @@ export default function Navbar() {
               />
             </motion.div>
           </Link>
-          <Link
-            href="/"
-            onClick={(event) => handleLinkClick(event, "/")}
-            className={cn(
-              "whitespace-nowrap px-2.5 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
-              onHero
-                ? "text-white hover:bg-white/12"
-                : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
-            )}
-          >
-            Home
-          </Link>
-          </div>
 
-          {/* ── Desktop nav — xl+ so laptop widths are not clipped ── */}
-          <nav className="hidden xl:flex items-center gap-0.5 flex-1 justify-end min-w-0">
-            {pageLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={(event) => handleLinkClick(event, link.href)}
-                className={cn(
-                  "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 rounded-xl text-[13px] 2xl:text-[0.9rem] font-semibold transition-all duration-200",
-                  onHero
-                    ? "text-white/85 hover:text-white hover:bg-white/12"
-                    : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* ── CTA — desktop only (xl+) ──────────────────────── */}
-          <div className="hidden xl:flex items-center gap-1.5 flex-shrink-0">
+          <div className="hidden xl:flex items-center gap-0.5 min-w-0">
+            <nav className="flex items-center gap-0.5">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={(event) => handleLinkClick(event, link.href)}
+                  className={cn(
+                    "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 rounded-xl text-[13px] 2xl:text-[0.9rem] font-semibold transition-all duration-200",
+                    onHero
+                      ? "text-white/85 hover:text-white hover:bg-white/12"
+                      : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
             <Link
               href="/signin"
               className={cn(
-                "whitespace-nowrap flex-shrink-0 px-3 xl:px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-200",
+                "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 text-[13px] 2xl:text-sm font-semibold rounded-xl transition-all duration-200",
                 onHero
                   ? "text-white/70 hover:text-white hover:bg-white/10"
                   : "text-[#0B2D5C]/70 hover:text-[#0B2D5C]"
