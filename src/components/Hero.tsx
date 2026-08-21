@@ -136,34 +136,30 @@ export default function Hero() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#071d3d]/15 to-transparent" />
       </div>
 
-      {/* ── Hero content — 70% on lg, full on smaller ─────────── */}
+      {/* ── Hero content ─────────────────────────────────────── */}
       <div className="relative z-10 flex-1 flex items-center w-full">
-        <div className="w-full max-w-7xl mx-auto px-6 pt-32 pb-10">
-          {/*
-           * On large screens  → w-[70%]  (70 % of the container width)
-           * On medium screens → w-full or w-4/5
-           * On small screens  → w-full
-           */}
-          <div className="w-full md:w-4/5 lg:w-[70%]">
+        <div className="w-full pt-32 pb-8 md:pb-10">
+          <motion.h1
+            key={`h1-${current}`}
+            initial={{ opacity: 0, y: 38 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-3 md:mb-5 text-5xl sm:text-6xl md:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.06] text-white"
+            style={{ fontFamily: "var(--font-primary)" }}
+          >
+            <span className="block w-full text-justify [text-align-last:justify] text-white">
+              Get Your
+            </span>
+            <span className="block w-full text-justify [text-align-last:justify] bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
+              Medical Fitness
+            </span>
+            <span className="block w-full text-justify [text-align-last:justify] text-white">
+              Certificate Online.
+            </span>
+          </motion.h1>
 
-            {/* Headline — three natural lines on large screens */}
-            <motion.h1
-              key={`h1-${current}`}
-              initial={{ opacity: 0, y: 38 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl md:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.06] mb-5 text-white"
-              style={{ fontFamily: "var(--font-primary)" }}
-            >
-              {/* Line 1 */}
-              <span className="block text-white">Get Your</span>
-              {/* Line 2 — brand teal gradient */}
-              <span className="block bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
-                Medical Fitness
-              </span>
-              {/* Line 3 */}
-              <span className="block text-white">Certificate Online.</span>
-            </motion.h1>
+          <div className="w-full max-w-7xl mx-auto px-4 md:px-6">
+          <div className="w-full lg:w-[70%]">
 
             {/* Animated slide caption */}
             <AnimatePresence mode="wait">
@@ -173,7 +169,7 @@ export default function Hero() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
                 transition={{ duration: 0.45 }}
-                className="text-[#12B8B0] text-sm font-bold mb-4 tracking-wide uppercase"
+                className="text-[#12B8B0] text-sm font-bold mb-2 md:mb-4 tracking-wide uppercase"
               >
                 {SLIDES[current].caption}
               </motion.p>
@@ -184,7 +180,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-lg text-slate-300 max-w-xl mb-7 leading-relaxed"
+              className="text-lg text-slate-300 max-w-xl mb-5 md:mb-7 leading-relaxed"
             >
               A secure digital medical fitness assessment conducted by a{" "}
               <span className="text-white font-semibold">licensed doctor</span> — verified,
@@ -196,29 +192,30 @@ export default function Hero() {
               initial={{ opacity: 0, scaleX: 0.4 }}
               animate={{ opacity: 1, scaleX: 1 }}
               transition={{ delay: 0.9, duration: 0.6 }}
-              className="mb-8 origin-left max-w-xs"
+              className="mb-6 md:mb-8 origin-left max-w-xs"
             >
               <ECGLine />
             </motion.div>
 
-            {/* CTA buttons */}
+            {/* CTA buttons — one row on small and medium screens */}
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: 0.5 }}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10"
+              className="flex flex-row items-stretch gap-2 md:gap-4 mb-8 md:mb-10"
             >
               <motion.div
                 whileHover={{ scale: 1.04, boxShadow: "0 20px 50px rgba(14,165,233,.45)" }}
                 whileTap={{ scale: 0.97 }}
+                className="flex-1 min-w-0"
               >
                 <Link
                   href="/signin"
-                  className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-base font-bold text-white btn-primary shadow-xl shadow-sky-500/25"
+                  className="group w-full h-full inline-flex items-center justify-center gap-2 md:gap-3 px-3 py-2 md:px-8 md:py-4 rounded-2xl text-sm md:text-base font-bold text-white btn-primary shadow-xl shadow-sky-500/25"
                 >
                   <Shield className="w-5 h-5 flex-shrink-0" />
-                  <span>Request a Certificate</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <span className="leading-tight text-center">Request a Certificate</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform flex-shrink-0 hidden sm:block" />
                 </Link>
               </motion.div>
 
@@ -226,12 +223,12 @@ export default function Hero() {
                 href="#how-it-works"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                className="group inline-flex items-center gap-3 px-7 py-4 rounded-2xl font-semibold text-white/90 glass-dark hover:bg-white/12 hover:text-white transition-all duration-300 text-sm"
+                className="group flex-1 min-w-0 inline-flex items-center justify-center gap-2 md:gap-3 px-3 py-2 md:px-7 md:py-4 rounded-2xl font-semibold text-white/90 glass-dark hover:bg-white/12 hover:text-white transition-all duration-300 text-sm"
               >
                 <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center group-hover:bg-sky-500/30 transition-colors flex-shrink-0">
                   <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
                 </div>
-                <span>Watch how it works</span>
+                <span className="leading-tight text-center">Watch how it works</span>
               </motion.a>
             </motion.div>
 
@@ -240,7 +237,7 @@ export default function Hero() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.75 }}
-              className="flex flex-wrap gap-x-5 gap-y-2 mb-14"
+              className="flex flex-wrap gap-x-3 gap-y-1 md:gap-x-5 md:gap-y-2 mb-12 md:mb-14"
             >
               {trustBadges.map((item, i) => (
                 <motion.div
@@ -261,7 +258,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.75, delay: 1.0 }}
-              className="flex flex-wrap gap-3"
+              className="flex flex-nowrap gap-2 md:gap-3"
             >
               {stats.map((s, i) => (
                 <motion.div
@@ -270,27 +267,28 @@ export default function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.05 + i * 0.1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="glass-dark rounded-2xl px-5 py-3.5 flex items-center gap-3 cursor-default border border-white/10 hover:border-sky-400/35 transition-colors"
+                  className="flex-1 min-w-0 glass-dark rounded-2xl px-3 py-2 md:px-5 md:py-3.5 flex items-center gap-2 md:gap-3 cursor-default border border-white/10 hover:border-sky-400/35 transition-colors"
                 >
                   <s.icon className={`w-5 h-5 ${s.color} flex-shrink-0`} />
-                  <div>
+                  <div className="min-w-0">
                     <div
                       className={`text-xl font-extrabold ${s.color} leading-tight`}
                       style={{ fontFamily: "var(--font-primary)" }}
                     >
                       {s.value}
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap">{s.label}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5 leading-tight">{s.label}</div>
                   </div>
                 </motion.div>
               ))}
             </motion.div>
           </div>
+          </div>
         </div>
       </div>
 
       {/* ── Slider dots ─────────────────────────────────────────── */}
-      <div className="relative z-10 flex items-center justify-center gap-2 pb-14">
+      <div className="relative z-10 flex items-center justify-center gap-2 pb-12 md:pb-14">
         {SLIDES.map((_, i) => (
           <button
             key={i}
@@ -312,14 +310,14 @@ export default function Hero() {
       <button
         onClick={back}
         aria-label="Previous slide"
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
+        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
       >
         <ChevronRight className="w-5 h-5" />
       </button>

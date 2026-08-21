@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { Activity, Brain, CheckCircle2, ClipboardList, FileSignature, Shield, Video } from "lucide-react";
+import { Brain, ClipboardList, FileSignature, Video } from "lucide-react";
 import Image from "next/image";
 import type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
@@ -111,18 +111,6 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
                 </AnimatePresence>
               )}
             </div>
-            <motion.div animate={{ y: [-4, 4, -4] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-4 border border-slate-200 shadow-xl max-w-[240px]">
-              <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-sky-500" /><span className="text-xs font-bold text-slate-700">Vitals Summary</span></div>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[['BP', '118/78', 'text-teal-600'], ['HR', '72 bpm', 'text-sky-600'], ['BMI', '23.4', 'text-violet-600'], ['SpO₂', '98%', 'text-emerald-600']].map(([label, value, color]) => (
-                  <div key={label} className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100"><div className={`text-sm font-bold ${color}`}>{value}</div><div className="text-[10px] text-slate-400">{label}</div></div>
-                ))}
-              </div>
-              <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-slate-100"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" /><span className="text-[10px] text-green-600 font-semibold">0 red flags detected</span></div>
-            </motion.div>
-            <motion.div animate={{ y: [-3, 5, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -top-5 -left-4 bg-white rounded-2xl p-3.5 border border-slate-200 shadow-xl">
-              <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center"><Shield className="w-4 h-4 text-emerald-600" /></div><div><div className="text-xs font-bold text-slate-800">Certificate Issued</div><div className="text-[10px] text-emerald-600">✓ Digitally signed</div></div></div>
-            </motion.div>
             {doctors.length > 1 && (
               <div className="flex items-center justify-center gap-2 mt-4" aria-label="Doctor profiles">
                 {doctors.map((item, index) => (

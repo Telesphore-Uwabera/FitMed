@@ -73,7 +73,7 @@ export default function TechFeatures() {
             <h3 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: "var(--font-primary)" }}>Platform Architecture</h3>
             <p className="text-sm text-slate-500">Every assessment follows a verified, auditable pathway</p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2.5 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { label: "Applicant App",    icon: Smartphone, cls: "text-sky-700 border-sky-200 bg-white" },
               { label: "AI Screening",     icon: Brain,      cls: "text-violet-700 border-violet-200 bg-white" },
@@ -82,11 +82,17 @@ export default function TechFeatures() {
               { label: "Video Consult",    icon: Globe,      cls: "text-amber-700 border-amber-200 bg-white" },
               { label: "Digital Cert",     icon: QrCode,     cls: "text-rose-700 border-rose-200 bg-white" },
             ].map((item, i) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold ${item.cls} shadow-sm`}>
-                  <item.icon className="w-3.5 h-3.5" /><span>{item.label}</span>
+              <div key={item.label} className="relative">
+                <div className={`h-full flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-2xl border font-semibold text-center ${item.cls} shadow-sm`}>
+                  <span className="text-[10px] font-bold tracking-widest text-slate-400">{String(i + 1).padStart(2, "0")}</span>
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-xs leading-tight">{item.label}</span>
                 </div>
-                {i < 5 && <span className="text-slate-400 text-base font-light">→</span>}
+                {i < 5 && (
+                  <span className="hidden lg:flex absolute top-1/2 -right-2.5 z-10 -translate-y-1/2 text-slate-400 text-sm" aria-hidden>
+                    →
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -100,9 +106,12 @@ export default function TechFeatures() {
           className="text-center"
         >
           <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-5">Compatible Devices & Platforms</p>
-          <div className="flex flex-wrap justify-center gap-2.5">
-            {integrations.map(d => (
-              <div key={d} className="px-4 py-2 rounded-full border border-slate-200 bg-white text-xs text-slate-600 font-medium hover:border-sky-300 hover:text-sky-700 transition-all cursor-default shadow-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 max-w-4xl mx-auto">
+            {integrations.map((d) => (
+              <div
+                key={d}
+                className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-600 font-medium text-center hover:border-sky-300 hover:text-sky-700 transition-all cursor-default shadow-sm"
+              >
                 {d}
               </div>
             ))}
