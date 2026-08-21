@@ -139,27 +139,27 @@ export default function Hero() {
       {/* ── Hero content ─────────────────────────────────────── */}
       <div className="relative z-10 flex-1 flex items-center w-full">
         <div className="w-full pt-32 pb-8 md:pb-10">
+          <div className="w-full max-w-7xl mx-auto px-2 md:px-6">
+          <div className="w-full lg:w-[70%] text-center lg:text-left">
+
           <motion.h1
             key={`h1-${current}`}
             initial={{ opacity: 0, y: 38 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-6 md:mb-10 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
+            className="w-full mb-6 md:mb-10 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
             style={{ fontFamily: "var(--font-primary)" }}
           >
-            <span className="block w-full text-center lg:text-left text-white">
+            <span className="block text-white">
               Get Your
             </span>
-            <span className="block w-full text-center lg:text-left bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
               Medical Fitness
             </span>
-            <span className="block w-full text-center lg:text-left text-white">
+            <span className="block text-white">
               Certificate Online.
             </span>
           </motion.h1>
-
-          <div className="w-full max-w-7xl mx-auto px-2 md:px-6">
-          <div className="w-full lg:w-[70%] text-center lg:text-left">
 
             {/* Animated slide caption */}
             <AnimatePresence mode="wait">
