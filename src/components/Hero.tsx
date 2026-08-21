@@ -147,19 +147,19 @@ export default function Hero() {
             className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-6 md:mb-10 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
             style={{ fontFamily: "var(--font-primary)" }}
           >
-            <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] text-white">
+            <span className="block w-full text-center lg:text-left text-white">
               Get Your
             </span>
-            <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
+            <span className="block w-full text-center lg:text-left bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
               Medical Fitness
             </span>
-            <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] text-white">
+            <span className="block w-full text-center lg:text-left text-white">
               Certificate Online.
             </span>
           </motion.h1>
 
           <div className="w-full max-w-7xl mx-auto px-2 md:px-6">
-          <div className="w-full lg:w-[70%]">
+          <div className="w-full lg:w-[70%] text-center lg:text-left">
 
             {/* Animated slide caption */}
             <AnimatePresence mode="wait">
@@ -180,7 +180,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-lg text-slate-300 max-w-xl mb-5 md:mb-7 leading-relaxed"
+              className="text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 mb-5 md:mb-7 leading-relaxed"
             >
               A secure digital medical fitness assessment conducted by a{" "}
               <span className="text-white font-semibold">licensed doctor</span> — verified,
@@ -192,7 +192,7 @@ export default function Hero() {
               initial={{ opacity: 0, scaleX: 0.4 }}
               animate={{ opacity: 1, scaleX: 1 }}
               transition={{ delay: 0.9, duration: 0.6 }}
-              className="mb-6 md:mb-8 origin-left max-w-xs"
+              className="mb-6 md:mb-8 origin-center lg:origin-left max-w-xs mx-auto lg:mx-0"
             >
               <ECGLine />
             </motion.div>
@@ -237,7 +237,7 @@ export default function Hero() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.75 }}
-              className="flex flex-wrap gap-x-3 gap-y-1 md:gap-x-5 md:gap-y-2 mb-12 md:mb-14"
+              className="flex flex-wrap justify-center lg:justify-start gap-x-3 gap-y-1 md:gap-x-5 md:gap-y-2 mb-12 md:mb-14"
             >
               {trustBadges.map((item, i) => (
                 <motion.div
