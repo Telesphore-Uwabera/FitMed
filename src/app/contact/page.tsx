@@ -36,7 +36,7 @@ const contactDepartments = [
     badgeBg: "bg-sky-50 border-sky-200 text-sky-800",
     title: "Doctor & Clinical Support",
     email: "doctors@fitmed.rw",
-    desc: "Support for licensed medical practitioners using the Doctor Dashboard and telehealth workstation.",
+    desc: "Support for licensed doctors using FitMed video consultations and applicant reviews.",
   },
   {
     id: "employers",
@@ -45,7 +45,7 @@ const contactDepartments = [
     badgeBg: "bg-indigo-50 border-indigo-200 text-indigo-800",
     title: "Employer & Corporate Support",
     email: "employers@fitmed.rw",
-    desc: "Assistance with corporate accounts, bulk employee clearances (5,000 FRW/credit), and HRIS verification.",
+    desc: "Help with company accounts, staff fitness certificates, and verification for HR teams.",
   },
   {
     id: "report",
@@ -63,7 +63,7 @@ const contactDepartments = [
     badgeBg: "bg-emerald-50 border-emerald-200 text-emerald-800",
     title: "Privacy & Data Protection",
     email: "privacy@fitmed.rw",
-    desc: "Applicant medical record privacy inquiries, HIPAA compliance questions, or data consent requests.",
+    desc: "Questions about how we protect your health information, or requests about your personal data.",
   },
   {
     id: "legal",
@@ -72,7 +72,7 @@ const contactDepartments = [
     badgeBg: "bg-amber-50 border-amber-200 text-amber-800",
     title: "Legal & Regulatory Compliance",
     email: "legal@fitmed.rw",
-    desc: "Regulatory queries, RMDC doctor licensing verification, or legal documentation.",
+    desc: "Questions about regulations, doctor licensing, or legal documents.",
   },
 ];
 
@@ -341,7 +341,7 @@ export default function ContactPage() {
                         "Doctor Network Application",
                         "Employer Corporate Account (5,000 FRW)",
                         "In-Person Partner Clinic Referral",
-                        "Technical / API Integration Inquiry",
+                        "Technical support",
                         "Others",
                       ]}
                       className="text-xs"

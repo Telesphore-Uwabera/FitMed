@@ -105,10 +105,14 @@ export default function AdminDashboardPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem("fitmed_admin_profile");
-    const savedGovernance = localStorage.getItem("fitmed_admin_governance");
-    if (savedProfile) setAdminProfile((prev) => ({ ...prev, ...JSON.parse(savedProfile) }));
-    if (savedGovernance) setGovernanceSettings((prev) => ({ ...prev, ...JSON.parse(savedGovernance) }));
+    try {
+      const savedProfile = localStorage.getItem("fitmed_admin_profile");
+      const savedGovernance = localStorage.getItem("fitmed_admin_governance");
+      if (savedProfile) setAdminProfile((prev) => ({ ...prev, ...JSON.parse(savedProfile) }));
+      if (savedGovernance) setGovernanceSettings((prev) => ({ ...prev, ...JSON.parse(savedGovernance) }));
+    } catch {
+      // Ignore stored profile/settings that are not valid JSON.
+    }
   }, []);
 
   useEffect(() => {

@@ -33,7 +33,7 @@ export function formatCertificateCard(cert: any, existing: Record<string, any> =
     ...existing,
     id: cert.certificateId,
     purpose: cert.purpose || existing.purpose,
-    doctor: cert.assignedDoctor || existing.doctor || "FitMed Physician",
+    doctor: String(cert.assignedDoctor || existing.doctor || "FitMed Physician").replace(/\s*\(You\)\s*/gi, "").trim(),
     license: cert.assignedDoctorLicense || existing.license || "—",
     issueDate: issued ? new Date(issued).toLocaleDateString() : existing.issueDate || "Today",
     expiryDate: expires ? new Date(expires).toLocaleDateString() : existing.expiryDate || "—",

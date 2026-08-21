@@ -199,7 +199,7 @@ export default function SignUpPage() {
                 National ID Submitted to Admin
               </h2>
               <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                Thank you, <strong>{fullName}</strong>. Your account registration and National ID/Passport document have been routed to the FitMed System Administrator for verification.
+                Thank you, <strong>{fullName}</strong>. Your registration and identity document have been received. You can sign in after the FitMed team has approved your account.
               </p>
             </div>
 

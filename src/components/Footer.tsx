@@ -23,7 +23,7 @@ const footerLinks = {
     { label: "Terms of Service", href: "/terms",      ext: false },
     { label: "Cookie Policy",    href: "/cookies",    ext: false },
     { label: "Compliance",       href: "/compliance", ext: false },
-    { label: "HIPAA Notice",     href: "/hipaa",      ext: false },
+    { label: "Health data notice", href: "/hipaa",      ext: false },
   ],
   Support: [
     { label: "Help Centre",      href: "/contact",          ext: false },
@@ -163,7 +163,7 @@ export default function Footer() {
                 Subscribe for platform updates
               </h3>
               <p className="text-sm text-slate-400 max-w-md">
-                Get notices about certificate processing, doctor availability, and FitMed announcements. Administrators send these broadcasts from the admin console.
+                Get notices about certificate processing, doctor availability, and FitMed announcements.
               </p>
             </div>
             <form onSubmit={subscribe} className="space-y-4">

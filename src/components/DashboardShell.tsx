@@ -104,7 +104,7 @@ const roleConfigs: Record<
     ],
   },
   doctor: {
-    roleTitle: "Doctor Workstation",
+    roleTitle: "Doctor dashboard",
     badgeBg: "bg-sky-500/10",
     badgeBorder: "border-sky-500/30",
     badgeText: "text-sky-400",
@@ -199,7 +199,7 @@ export default function DashboardShell({
       {/* ── FIXED SIDEBAR (DESKTOP & MOBILE DRAWER) ── */}
       <aside
         className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-[#0B2D5C] text-white flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "max-lg:-translate-x-full"
         }`}
       >
         <div className="flex flex-col flex-1 overflow-y-auto">

@@ -334,6 +334,8 @@ export default function DoctorDashboardPage() {
     async function loadData() {
       let doctorId = "";
       let doctorEmail = session?.email || "";
+      let doctorName = "";
+      let doctorLicense = "";
       try {
         const meRes = await fetch("/api/doctors/me", { credentials: "include" });
         const meData = await meRes.json();
@@ -341,6 +343,8 @@ export default function DoctorDashboardPage() {
           const d = meData.doctor;
           doctorId = d.id || "";
           doctorEmail = d.email || doctorEmail;
+          doctorName = d.name || "";
+          doctorLicense = d.licenseNumber || "";
           setDoctorProfile(d);
           if (d.avatarUrl) setDoctorAvatar(d.avatarUrl);
           if (d.status === "ONLINE" || d.status === "BUSY" || d.status === "OFF") setDoctorStatus(d.status);
@@ -376,41 +380,33 @@ export default function DoctorDashboardPage() {
         setDoctorAppointments([]);
       }
 
-      const assignedQuery = doctorId ? `&assignedDoctorId=${encodeURIComponent(doctorId)}` : "";
       try {
-        const certRes = await fetch(`/api/certificates?status=submitted${assignedQuery}`, { signal: AbortSignal.timeout(15000) });
+        const certRes = await fetch("/api/certificates", { signal: AbortSignal.timeout(15000) });
         const certData = await certRes.json();
-        if (certData.success) {
-          setQueue((certData.certificates || []).map(mapQueueItem));
-        } else {
-          setQueue([]);
-        }
+        const all = Array.isArray(certData.certificates) ? certData.certificates : [];
+        const mine = all.filter((cert: Record<string, unknown>) => {
+          if (doctorId && String(cert.assignedDoctorId || "") === doctorId) return true;
+          if (doctorLicense && String(cert.assignedDoctorLicense || "") === doctorLicense) return true;
+          const assigned = String(cert.assignedDoctor || "").replace(/\s*\(You\)\s*/gi, "").trim().toLowerCase();
+          const mineName = doctorName.replace(/\s*\(You\)\s*/gi, "").trim().toLowerCase();
+          return Boolean(mineName) && assigned.includes(mineName.replace(/^dr\.?\s*/, ""));
+        });
+        setQueue(mine.filter((cert: Record<string, unknown>) => String(cert.status || "").toLowerCase() === "submitted").map(mapQueueItem));
+        setAllApplications(mine);
+        setIssuedCertificates(
+          mine.filter(isIssuedCertificate).map((cert: Record<string, unknown>) => ({
+            id: String(cert.certificateId || ""),
+            name: String(cert.candidateName || "Applicant"),
+            candidate: String(cert.candidateName || "Applicant"),
+            purpose: String(cert.purpose || "—"),
+            decision: String(cert.decision || cert.status || "ISSUED"),
+            date: cert.issuedAt || cert.appliedDate ? new Date(String(cert.issuedAt || cert.appliedDate)).toLocaleDateString() : "—",
+            avatarUrl: String(cert.avatarUrl || ""),
+          }))
+        );
       } catch (err) {
         console.warn("Could not load applicant queue:", err);
         setQueue([]);
-      }
-
-      try {
-        const issuedRes = await fetch(`/api/certificates${doctorId ? `?assignedDoctorId=${encodeURIComponent(doctorId)}` : ""}`, { signal: AbortSignal.timeout(15000) });
-        const issuedData = await issuedRes.json();
-        if (issuedData.success && Array.isArray(issuedData.certificates)) {
-          setAllApplications(issuedData.certificates);
-          setIssuedCertificates(
-            issuedData.certificates.filter(isIssuedCertificate).map((cert: Record<string, unknown>) => ({
-              id: String(cert.certificateId || ""),
-              name: String(cert.candidateName || "Applicant"),
-              candidate: String(cert.candidateName || "Applicant"),
-              purpose: String(cert.purpose || "—"),
-              decision: String(cert.decision || cert.status || "ISSUED"),
-              date: cert.issuedAt || cert.appliedDate ? new Date(String(cert.issuedAt || cert.appliedDate)).toLocaleDateString() : "—",
-              avatarUrl: String(cert.avatarUrl || ""),
-            }))
-          );
-        } else {
-          setAllApplications([]);
-          setIssuedCertificates([]);
-        }
-      } catch {
         setAllApplications([]);
         setIssuedCertificates([]);
       }
@@ -695,7 +691,7 @@ export default function DoctorDashboardPage() {
   if (sessionLoading || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500">
-        Loading doctor workstation…
+        Loading your dashboard…
       </div>
     );
   }
@@ -833,7 +829,7 @@ export default function DoctorDashboardPage() {
                   Candidate Intake & Triage Queue ({queue.length})
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Intelligent round-robin request dispatching distributed among active on-duty physicians.
+                  New applications go to doctors who are on duty, taking turns.
                 </p>
               </div>
 
@@ -1369,7 +1365,7 @@ export default function DoctorDashboardPage() {
             <form onSubmit={handleSaveSchedule} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-[#0B2D5C]">Weekly Operating Hours (Rwanda Time / GMT+2)</h3>
-                <p className="text-xs text-slate-500 font-medium mt-1">Saved to your doctor record and the schedules collection. New certificate applications are routed only to doctors who are ONLINE during these hours, alternating in order.</p>
+                <p className="text-xs text-slate-500 font-medium mt-1">These hours are saved to your profile. New applications go to doctors who are online during these times, taking turns in order.</p>
                 <div className="flex items-center gap-3 text-xs text-slate-500">
                   <span className="flex items-center gap-1.5">
                     <span className="w-3 h-3 rounded-full bg-sky-100 border border-sky-400 inline-block" />
@@ -1870,7 +1866,7 @@ export default function DoctorDashboardPage() {
               Physical Clinic Referrals ({physicalReferrals.length})
             </h3>
             <p className="text-xs text-slate-500">
-              Candidates requiring in-person examination are recorded here and stored in the referrals collection.
+              Candidates who need an in-person examination are listed here.
             </p>
             <form
               onSubmit={async (e) => {
@@ -2044,7 +2040,7 @@ export default function DoctorDashboardPage() {
               <div className="text-amber-950 space-y-0.5">
                 <div className="font-bold">Permanent Practitioner Credentials (Immutable)</div>
                 <p className="text-[11px] text-amber-800">
-                  Doctor ID, RMDC License, and Legal Practitioner Name are assigned permanently by the FitMed System Administrator during onboarding and cannot be altered by the doctor. To update clinical licenses, contact governance.
+                  Your doctor ID, licence number, and legal name are set when FitMed creates your account. Contact FitMed support if a licence detail needs updating.
                 </p>
               </div>
             </div>

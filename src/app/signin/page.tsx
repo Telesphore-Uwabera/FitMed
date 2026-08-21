@@ -254,7 +254,7 @@ function SignInContent() {
               Sign In to FitMed
             </h1>
             <p className="text-slate-500 text-sm">
-              Access your medical fitness dashboard, evaluations, or doctor workstation.
+              Access your medical fitness dashboard and evaluations.
             </p>
           </div>
 
