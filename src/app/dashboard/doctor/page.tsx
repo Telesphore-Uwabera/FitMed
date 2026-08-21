@@ -678,7 +678,6 @@ export default function DoctorDashboardPage() {
     URL.revokeObjectURL(url);
     success("Spreadsheet downloaded", "The filtered applications list was saved to your computer.");
   };
-  const estimatedPayout = issuedCount * 4000;
   const decisionMix = (() => {
     const labels = [
       { label: "FIT", match: (d: string) => d === "FIT" || d.toUpperCase() === "FIT", bar: "bg-emerald-500" },
