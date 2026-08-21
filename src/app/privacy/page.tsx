@@ -123,7 +123,7 @@ export default function PrivacyPage() {
 
           <div className="flex items-center gap-5 mb-5">
             <div className="relative flex-shrink-0" style={{ width: 160, height: 56 }}>
-              <Image src="/logo.webp" alt="FitMed" fill className="object-contain" />
+              <Image src="/logo-4.webp" alt="FitMed" fill className="object-contain" />
             </div>
           </div>
 

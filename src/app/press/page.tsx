@@ -71,7 +71,7 @@ export default function PressPage() {
           </p>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
-              { label: "FitMed Logo (WebP)", file: "/logo.webp" },
+              { label: "FitMed Logo (WebP)", file: "/logo-4.webp" },
               { label: "FitMed Icon (WebP)", file: "/favicon-icon.webp" },
               { label: "Brand Guidelines", file: "mailto:press@fitmed.rw" },
             ].map((asset) => (
