@@ -61,7 +61,7 @@ import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireVie
 import { useToast } from "@/components/ToastProvider";
 import { useDialog } from "@/components/DialogProvider";
 import { displayValue, isIssuedCertificate, sameCalendarDay, todayShift } from "@/lib/records";
-import { isMeetingClosed, meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
+import { canRescheduleMeeting, isMeetingClosed, meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
 
 export default function DoctorDashboardPage() {
   const { success, error, warning, info } = useToast();
@@ -1332,24 +1332,26 @@ export default function DoctorDashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3 flex-shrink-0 flex-wrap justify-end">
-                    <button
-                      onClick={() => {
-                        setRescheduleApt(apt);
-                        setRescheduleForm({
-                          scheduledDate: apt.scheduledDate || new Date().toISOString().split("T")[0],
-                          scheduledTime: apt.scheduledTime || "09:00",
-                          durationMinutes: Number(apt.durationMinutes || 15),
-                        });
-                      }}
-                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors"
-                    >
-                      Reschedule
-                    </button>
-                    {isMeetingClosed(apt) ? (
+                    {canRescheduleMeeting(apt) && (
+                      <button
+                        onClick={() => {
+                          setRescheduleApt(apt);
+                          setRescheduleForm({
+                            scheduledDate: apt.scheduledDate || new Date().toISOString().split("T")[0],
+                            scheduledTime: apt.scheduledTime || "09:00",
+                            durationMinutes: Number(apt.durationMinutes || 15),
+                          });
+                        }}
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors"
+                      >
+                        Reschedule
+                      </button>
+                    )}
+                    {meetingLifecycleStatus(apt) === "overdue" ? (
                       <p className="text-[11px] font-bold text-rose-700 max-w-[220px] text-right">
                         Meeting time has ended. Reschedule to invite the applicant again.
                       </p>
-                    ) : (
+                    ) : meetingLifecycleStatus(apt) === "completed" || meetingLifecycleStatus(apt) === "cancelled" ? null : (
                       <>
                     <button
                       onClick={async () => {

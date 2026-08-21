@@ -5,7 +5,7 @@ import { EmailTemplates } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
 import { nextKey } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
-import { isMeetingClosed, publicMeetUrl } from "@/lib/meetingTime";
+import { canRescheduleMeeting, isMeetingClosed, publicMeetUrl } from "@/lib/meetingTime";
 import { processDueMeetingNotices } from "@/lib/meetingReminders";
 
 export async function GET(request: NextRequest) {
@@ -203,6 +203,12 @@ export async function PATCH(request: NextRequest) {
       }
 
       if (action === "reschedule") {
+        if (!canRescheduleMeeting(appointment)) {
+          return NextResponse.json(
+            { success: false, error: "Completed visits cannot be rescheduled." },
+            { status: 400 }
+          );
+        }
         if (!scheduledDate || !scheduledTime) {
           return NextResponse.json({ success: false, error: "Choose a new date and time." }, { status: 400 });
         }

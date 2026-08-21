@@ -36,6 +36,16 @@ export function publicMeetUrl(roomId: string) {
   return `${base}/meet/${encodeURIComponent(roomId)}`;
 }
 
+export function canRescheduleMeeting(apt: {
+  scheduledDate?: string;
+  scheduledTime?: string;
+  durationMinutes?: number;
+  status?: string;
+}) {
+  const status = meetingLifecycleStatus(apt);
+  return status === "scheduled" || status === "rescheduled" || status === "overdue";
+}
+
 export function isMeetingClosed(apt: {
   scheduledDate?: string;
   scheduledTime?: string;
