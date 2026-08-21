@@ -14,6 +14,7 @@ import {
   DollarSign,
   UserCheck,
   CheckCircle2,
+  Loader2,
   XCircle,
   Plus,
   Edit2,
@@ -95,6 +96,7 @@ export default function AdminDashboardPage() {
     avatarUrl: "",
   });
   const [adminAvatarWebp, setAdminAvatarWebp] = useState<WebPConversionResult | null>(null);
+  const [adminProfileSaveStatus, setAdminProfileSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [governanceSettings, setGovernanceSettings] = useState({
     assessmentRate: "5,000 FRW",
     requireLiveConsultation: true,
@@ -138,15 +140,24 @@ export default function AdminDashboardPage() {
 
   const saveAdminProfile = async (event: React.FormEvent) => {
     event.preventDefault();
-    let profileToSave = adminProfile;
-    if (adminAvatarWebp) {
-      const upload = await uploadToCloudinary(adminAvatarWebp.file, "fitmed/admin-profiles");
-      if (upload.url) profileToSave = { ...profileToSave, avatarUrl: upload.url };
+    if (adminProfileSaveStatus === "saving") return;
+    setAdminProfileSaveStatus("saving");
+    try {
+      let profileToSave = adminProfile;
+      if (adminAvatarWebp) {
+        const upload = await uploadToCloudinary(adminAvatarWebp.file, "fitmed/admin-profiles");
+        if (upload.url) profileToSave = { ...profileToSave, avatarUrl: upload.url };
+      }
+      setAdminProfile(profileToSave);
+      localStorage.setItem("fitmed_admin_profile", JSON.stringify(profileToSave));
+      setAdminAvatarWebp(null);
+      setAdminProfileSaveStatus("saved");
+      success("Profile saved", "Your administrator profile is now updated.");
+      setTimeout(() => setAdminProfileSaveStatus("idle"), 2500);
+    } catch {
+      setAdminProfileSaveStatus("idle");
+      error("Profile not saved", "Could not save the administrator profile.");
     }
-    setAdminProfile(profileToSave);
-    localStorage.setItem("fitmed_admin_profile", JSON.stringify(profileToSave));
-    setAdminAvatarWebp(null);
-    success("Profile saved", "Your administrator profile is now updated.");
   };
 
   const changeAdminPassword = async (event: React.FormEvent) => {
@@ -2131,7 +2142,27 @@ export default function AdminDashboardPage() {
                   <label className="font-bold text-slate-500">Display name<input value={adminProfile.name} onChange={(event) => setAdminProfile({ ...adminProfile, name: event.target.value })} className="mt-1 w-full p-3 rounded-xl border border-slate-200 font-semibold" required /></label>
                   <label className="font-bold text-slate-500">Email address<input value={adminProfile.email} disabled className="mt-1 w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500" /></label>
                 </div>
-                <div className="flex justify-end"><button type="submit" className="px-5 py-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-black text-xs">Save profile</button></div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={adminProfileSaveStatus === "saving"}
+                    className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 disabled:cursor-wait ${
+                      adminProfileSaveStatus === "saving"
+                        ? "bg-amber-400 text-[#0B2D5C]"
+                        : adminProfileSaveStatus === "saved"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-[#12B8B0] text-[#0B2D5C]"
+                    }`}
+                  >
+                    {adminProfileSaveStatus === "saving" && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {adminProfileSaveStatus === "saved" && <CheckCircle2 className="w-4 h-4" />}
+                    {adminProfileSaveStatus === "saving"
+                      ? "Saving changes…"
+                      : adminProfileSaveStatus === "saved"
+                      ? "Saved"
+                      : "Save profile"}
+                  </button>
+                </div>
               </form>
             )}
 

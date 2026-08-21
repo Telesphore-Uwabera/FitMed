@@ -17,6 +17,7 @@ import {
   FileCheck2,
   Clock,
   CheckCircle2,
+  Loader2,
   QrCode,
   Download,
   PlusCircle,
@@ -108,6 +109,7 @@ export default function UserDashboard() {
   // Account Settings Subtabs
   const [settingsTab, setSettingsTab] = useState<"profile" | "security" | "billing" | "employer" | "wearables">("profile");
   const [savedSettingsAlert, setSavedSettingsAlert] = useState(false);
+  const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   // Profile data
   const [profileData, setProfileData] = useState({
@@ -440,7 +442,17 @@ export default function UserDashboard() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (profileSaveStatus === "saving") return;
+    setProfileSaveStatus("saving");
     try {
+      let avatarUrl = profileData.avatarUrl;
+      if (avatarWebpResult) {
+        const uploaded = await uploadToCloudinary(avatarWebpResult.file, "fitmed/applicants");
+        if (uploaded.url) {
+          avatarUrl = uploaded.url;
+          setProfileData((prev) => ({ ...prev, avatarUrl }));
+        }
+      }
       const res = await fetch("/api/auth/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -451,18 +463,24 @@ export default function UserDashboard() {
           nationalId: profileData.nationalId,
           dateOfBirth: profileData.dob,
           address: profileData.address,
-          avatarUrl: profileData.avatarUrl,
+          avatarUrl,
         }),
       });
       const data = await res.json();
       if (!data.success) {
+        setProfileSaveStatus("idle");
         error("Profile not saved", data.error || "Could not update your record.");
         return;
       }
+      setProfileSaveStatus("saved");
       setSavedSettingsAlert(true);
-      setTimeout(() => setSavedSettingsAlert(false), 3000);
+      setTimeout(() => {
+        setSavedSettingsAlert(false);
+        setProfileSaveStatus("idle");
+      }, 2500);
       success("Profile saved", "Your details were stored in FitMed.");
     } catch {
+      setProfileSaveStatus("idle");
       error("Profile not saved", "Network error while saving your profile.");
     }
   };
@@ -1437,33 +1455,7 @@ export default function UserDashboard() {
 
             {/* Subtab 1: Personal Identity */}
             {settingsTab === "profile" && (
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                if (avatarWebpResult) {
-                  const res = await uploadToCloudinary(avatarWebpResult.file, "fitmed/applicants");
-                  if (res.url) {
-                    setProfileData((prev) => ({ ...prev, avatarUrl: res.url }));
-                    await fetch("/api/auth/me", {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        email: profileData.email || session?.email,
-                        name: profileData.name,
-                        phone: profileData.phone,
-                        nationalId: profileData.nationalId,
-                        dateOfBirth: profileData.dob,
-                        address: profileData.address,
-                        avatarUrl: res.url,
-                      }),
-                    });
-                    setSavedSettingsAlert(true);
-                    setTimeout(() => setSavedSettingsAlert(false), 3000);
-                    success("Profile saved", "Your details were stored in FitMed.");
-                    return;
-                  }
-                }
-                await handleSaveProfile(e);
-              }} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+              <form onSubmit={handleSaveProfile} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <div>
                     <h3 className="text-base font-bold text-[#0B2D5C]">Your personal details</h3>
@@ -1560,9 +1552,22 @@ export default function UserDashboard() {
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                   <button
                     type="submit"
-                    className="px-6 py-3 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs transition-colors"
+                    disabled={profileSaveStatus === "saving"}
+                    className={`px-6 py-3 rounded-xl font-black text-xs transition-colors flex items-center gap-2 disabled:cursor-wait ${
+                      profileSaveStatus === "saving"
+                        ? "bg-amber-400 text-[#0B2D5C]"
+                        : profileSaveStatus === "saved"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C]"
+                    }`}
                   >
-                    Save Changes
+                    {profileSaveStatus === "saving" && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {profileSaveStatus === "saved" && <Check className="w-4 h-4" />}
+                    {profileSaveStatus === "saving"
+                      ? "Saving changes…"
+                      : profileSaveStatus === "saved"
+                      ? "Saved"
+                      : "Save Changes"}
                   </button>
                 </div>
               </form>
