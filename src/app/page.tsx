@@ -4,6 +4,7 @@ import HowItWorks from "@/components/HowItWorks";
 import CertificateCategories from "@/components/CertificateCategories";
 import EmployerPortal from "@/components/EmployerPortal";
 import DoctorDashboard from "@/components/DoctorDashboard";
+import { getPublicStaff } from "@/lib/publicStaff";
 import TechFeatures from "@/components/TechFeatures";
 import CertificatePreview from "@/components/CertificatePreview";
 import Pricing from "@/components/Pricing";
@@ -23,7 +24,8 @@ import Footer from "@/components/Footer";
  * the Technology anchor so scrolling to #technology leads naturally
  * through all three.
  */
-export default function Home() {
+export default async function Home() {
+  const { doctors } = await getPublicStaff().catch(() => ({ doctors: [] }));
   return (
     <main className="min-h-screen w-full overflow-x-hidden">
       <Navbar />
@@ -40,7 +42,7 @@ export default function Home() {
       <EmployerPortal />
 
       {/* Technology */}
-      <DoctorDashboard />
+      <DoctorDashboard doctors={doctors} />
       <TechFeatures />
 
       {/* Pricing */}

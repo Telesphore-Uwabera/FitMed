@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import { COOKIE_NAME, verifySession, clearAuthCookieOptions } from "@/lib/authCookie";
-
-function sessionRole(role?: string): "admin" | "doctor" | "user" {
-  if (role === "admin") return "admin";
-  if (role === "doctor") return "doctor";
-  return "user";
-}
+import { normalizeRole } from "@/lib/roles";
 
 function blockedStatus(status?: string) {
   const value = String(status || "").toLowerCase();
@@ -47,7 +42,7 @@ export async function GET(request: NextRequest) {
       user: {
         name: user.fullName || user.name || session.name,
         email: user.email,
-        role: sessionRole(user.role),
+        role: normalizeRole(user.role),
         avatarUrl: user.avatarUrl || "",
         status: user.status,
       },

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TeamSlider from "@/components/TeamSlider";
+import { getPublicStaff } from "@/lib/publicStaff";
 import {
   ShieldCheck,
   Stethoscope,
@@ -123,7 +124,8 @@ function Shield(props: any) {
   return <ShieldCheck {...props} />;
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const { team } = await getPublicStaff().catch(() => ({ team: [] }));
   return (
     <main className="min-h-screen w-full overflow-x-hidden bg-white">
       {/* Shared Navbar */}
@@ -320,12 +322,12 @@ export default function AboutPage() {
               Meet Our Healthcare & Leadership Team
             </h2>
             <p className="text-slate-600 text-base sm:text-lg">
-              Our multidisciplinary team of medical directors, telehealth practitioners, compliance leaders, and health informaticists.
+              Our administrators and licensed doctors, loaded live from FitMed records.
             </p>
           </div>
 
           {/* Interactive 6-Person Team Slider */}
-          <TeamSlider />
+          <TeamSlider members={team} />
         </div>
       </section>
 

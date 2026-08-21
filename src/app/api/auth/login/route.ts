@@ -4,15 +4,10 @@ import { seedFitMedAccounts } from "@/lib/seedAccounts";
 import { verifyPassword } from "@/lib/password";
 import User from "@/models/User";
 import { attachAuthCookie } from "@/lib/authCookie";
-
-function sessionRole(role?: string): "admin" | "doctor" | "user" {
-  if (role === "admin") return "admin";
-  if (role === "doctor") return "doctor";
-  return "user";
-}
+import { normalizeRole } from "@/lib/roles";
 
 function userPayload(user: { fullName?: string; name?: string; email: string; role?: string; phone?: string; nationalId?: string; avatarUrl?: string; dateOfBirth?: string; gender?: string; address?: string }) {
-  const role = sessionRole(user.role);
+  const role = normalizeRole(user.role);
   return {
     name: user.fullName || user.name || "FitMed user",
     email: user.email,

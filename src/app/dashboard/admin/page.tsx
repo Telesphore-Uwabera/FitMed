@@ -107,23 +107,29 @@ export default function AdminDashboardPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
-    try {
-      const savedProfile = localStorage.getItem("fitmed_admin_profile");
-      const savedGovernance = localStorage.getItem("fitmed_admin_governance");
-      if (savedProfile) setAdminProfile((prev) => ({ ...prev, ...JSON.parse(savedProfile) }));
-      if (savedGovernance) setGovernanceSettings((prev) => ({ ...prev, ...JSON.parse(savedGovernance) }));
-    } catch {
-      // Ignore stored profile/settings that are not valid JSON.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!session) return;
-    setAdminProfile((prev) => ({
-      ...prev,
-      name: session.name || prev.name,
-      email: session.email || prev.email,
-    }));
+    if (!session?.email) return;
+    const loadProfile = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const data = await res.json();
+        if (data.success && data.user) {
+          setAdminProfile({
+            name: data.user.name || session.name || "",
+            email: data.user.email || session.email || "",
+            avatarUrl: data.user.avatarUrl || "",
+          });
+          return;
+        }
+      } catch {
+        // Fall back to the signed-in session if the profile request fails.
+      }
+      setAdminProfile((prev) => ({
+        ...prev,
+        name: session.name || prev.name,
+        email: session.email || prev.email,
+      }));
+    };
+    void loadProfile();
   }, [session]);
 
   const handleAdminAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,13 +152,35 @@ export default function AdminDashboardPage() {
       let profileToSave = adminProfile;
       if (adminAvatarWebp) {
         const upload = await uploadToCloudinary(adminAvatarWebp.file, "fitmed/admin-profiles");
-        if (upload.url) profileToSave = { ...profileToSave, avatarUrl: upload.url };
+        if (!upload.url) {
+          throw new Error("Photo upload failed");
+        }
+        profileToSave = { ...profileToSave, avatarUrl: upload.url };
       }
-      setAdminProfile(profileToSave);
-      localStorage.setItem("fitmed_admin_profile", JSON.stringify(profileToSave));
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileToSave.name,
+          avatarUrl: profileToSave.avatarUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Profile not saved", data.error || "Could not update the administrator profile.");
+        setAdminProfileSaveStatus("idle");
+        return;
+      }
+      const saved = {
+        name: data.user?.name || profileToSave.name,
+        email: data.user?.email || profileToSave.email,
+        avatarUrl: data.user?.avatarUrl || profileToSave.avatarUrl,
+      };
+      setAdminProfile(saved);
       setAdminAvatarWebp(null);
       setAdminProfileSaveStatus("saved");
-      success("Profile saved", "Your administrator profile is now updated.");
+      success("Profile saved", "Your administrator name and photo are now stored in FitMed.");
       setTimeout(() => setAdminProfileSaveStatus("idle"), 2500);
     } catch {
       setAdminProfileSaveStatus("idle");
@@ -284,10 +312,11 @@ export default function AdminDashboardPage() {
 
   const approveApplicant = async (id: string, name: string, email: string) => {
     try {
-      const res = await fetch("/api/auth/approve-user", {
-        method: "POST",
+      const res = await fetch("/api/admin/applicants", {
+        method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ id, email, name, action: "approve" }),
       });
       const data = await res.json();
       if (!data.success) {

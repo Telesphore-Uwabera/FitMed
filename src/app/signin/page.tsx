@@ -287,6 +287,7 @@ function SignInContent() {
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="email"
+                    autoComplete="username"
                     required
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setError(""); }}
@@ -320,6 +321,7 @@ function SignInContent() {
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     required
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
@@ -448,6 +450,7 @@ function SignInContent() {
                   </label>
                   <input
                     type="password"
+                    autoComplete="new-password"
                     required
                     value={forgotNewPassword}
                     onChange={(e) => setForgotNewPassword(e.target.value)}
@@ -502,6 +505,7 @@ function SignInContent() {
                 </label>
                 <input
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={permanentPassword}
                   onChange={(e) => setPermanentPassword(e.target.value)}

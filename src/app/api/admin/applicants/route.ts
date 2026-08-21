@@ -5,6 +5,7 @@ import User from "@/models/User";
 import Certificate from "@/models/Certificate";
 import { generateTempPassword, hashPassword } from "@/lib/password";
 import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
+import { approveApplicantAccount } from "@/lib/approveApplicant";
 
 const PENDING = new Set(["pending", "Pending", "pending_approval"]);
 
@@ -101,6 +102,14 @@ export async function PATCH(request: NextRequest) {
     const user = await findApplicant(id, email);
     if (!user) {
       return NextResponse.json({ success: false, error: "Applicant not found." }, { status: 404 });
+    }
+
+    if (action === "approve") {
+      const result = await approveApplicantAccount(user.email, user.fullName || user.name || "");
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: result.error }, { status: result.status });
+      }
+      return NextResponse.json(result);
     }
 
     if (action === "suspend") {

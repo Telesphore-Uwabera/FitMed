@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifySession } from "@/lib/authCookie";
+import { isAdminRole, normalizeRole } from "@/lib/roles";
 
 function signInUrl(request: NextRequest, reason?: string) {
   const url = request.nextUrl.clone();
@@ -19,7 +20,7 @@ export async function middleware(request: NextRequest) {
   const session = await verifySession(request.cookies.get(COOKIE_NAME)?.value);
 
   const isDashboard = pathname.startsWith("/dashboard");
-  const isAdminApi = pathname.startsWith("/api/admin") || pathname === "/api/auth/approve-user";
+  const isAdminApi = pathname.startsWith("/api/admin");
   const isStaffApi =
     pathname.startsWith("/api/certificates") ||
     pathname.startsWith("/api/appointments") ||
@@ -46,18 +47,18 @@ export async function middleware(request: NextRequest) {
     return unauthorizedJson();
   }
 
-  if (pathname.startsWith("/dashboard/admin") && session.role !== "admin") {
+  if (pathname.startsWith("/dashboard/admin") && !isAdminRole(session.role)) {
     return NextResponse.redirect(signInUrl(request, "unauthorized"));
   }
-  if (pathname.startsWith("/dashboard/doctor") && session.role !== "doctor") {
+  if (pathname.startsWith("/dashboard/doctor") && normalizeRole(session.role) !== "doctor") {
     return NextResponse.redirect(signInUrl(request, "unauthorized"));
   }
-  if (pathname.startsWith("/dashboard/user") && session.role !== "user") {
+  if (pathname.startsWith("/dashboard/user") && normalizeRole(session.role) !== "user") {
     return NextResponse.redirect(signInUrl(request, "unauthorized"));
   }
-  if ((isAdminApi || isAdminContactRead) && session.role !== "admin") {
+  if ((isAdminApi || isAdminContactRead) && !isAdminRole(session.role)) {
     const doctorMayListStaff =
-      session.role === "doctor" && request.method === "GET" && pathname.startsWith("/api/admin/staff");
+      normalizeRole(session.role) === "doctor" && request.method === "GET" && pathname.startsWith("/api/admin/staff");
     if (!doctorMayListStaff) {
       return unauthorizedJson("Administrator access required.", 403);
     }

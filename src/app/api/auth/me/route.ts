@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
-import { COOKIE_NAME, verifySession } from "@/lib/authCookie";
+import { COOKIE_NAME, verifySession, attachAuthCookie } from "@/lib/authCookie";
+import { isAdminRole, normalizeRole } from "@/lib/roles";
 
 function profileFromUser(user: Record<string, unknown> & { _id: unknown; fullName?: string; name?: string; email: string; role?: string }) {
   return {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const requested = String(request.nextUrl.searchParams.get("email") || "").trim().toLowerCase();
-    const email = session.role === "admin" && requested ? requested : session.email;
+    const email = isAdminRole(session.role) && requested ? requested : session.email;
 
     await connectToDatabase();
     const user = await User.findOne({ email });
@@ -55,7 +56,7 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const requested = String(body.email || "").trim().toLowerCase();
-    const email = session.role === "admin" && requested ? requested : session.email;
+    const email = isAdminRole(session.role) && requested ? requested : session.email;
 
     await connectToDatabase();
     const update: Record<string, unknown> = {};
@@ -75,7 +76,15 @@ export async function PATCH(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ success: false, error: "Account not found." }, { status: 404 });
     }
-    return NextResponse.json({ success: true, user: profileFromUser(user) });
+    const res = NextResponse.json({ success: true, user: profileFromUser(user) });
+    if (String(user.email || "").toLowerCase() === String(session.email || "").toLowerCase()) {
+      await attachAuthCookie(res, {
+        email: session.email,
+        role: normalizeRole(user.role || session.role),
+        name: String(user.fullName || user.name || session.name),
+      });
+    }
+    return res;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to save profile";
     return NextResponse.json({ success: false, error: message }, { status: 500 });

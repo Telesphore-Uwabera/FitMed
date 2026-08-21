@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { Stethoscope, Video, Brain, FileSignature, CheckCircle, ArrowRight } from "lucide-react";
+import { getPublicStaff } from "@/lib/publicStaff";
 
 export const metadata: Metadata = {
   title: "Our Doctors — FitMed",
   description: "Join the FitMed doctor network — conduct digital medical fitness assessments and issue certificates through a secure clinical dashboard.",
 };
 
-export default function DoctorsPage() {
+export default async function DoctorsPage() {
+  const { doctors } = await getPublicStaff().catch(() => ({ doctors: [] }));
   return (
     <PageLayout
       title="Our Doctors"
@@ -22,6 +24,24 @@ export default function DoctorsPage() {
             use a purpose-built clinical dashboard to review applicant history, conduct live video
             consultations, and digitally sign certificates — all within a single secure platform.
           </p>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-900 mb-6" style={{ fontFamily: "var(--font-primary)" }}>Licensed doctors on FitMed</h2>
+          {doctors.length === 0 ? (
+            <p className="text-sm text-slate-500">Doctors added in the admin staff directory will appear here.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-5">
+              {doctors.map((doctor) => (
+                <div key={doctor.id} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                  <div className="text-xs font-extrabold uppercase tracking-widest text-[#12B8B0] mb-1">Licensed physician</div>
+                  <h3 className="text-lg font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>{doctor.name}</h3>
+                  <p className="text-sm text-slate-600 mt-1">{doctor.specialty || doctor.role}</p>
+                  {doctor.license ? <p className="text-xs text-slate-500 mt-2 font-mono">{doctor.license}</p> : null}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Requirements */}

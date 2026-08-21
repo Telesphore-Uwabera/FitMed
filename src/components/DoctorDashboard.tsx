@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Activity, Brain, CheckCircle2, ClipboardList, FileSignature, Shield, Video } from "lucide-react";
 import Image from "next/image";
+import type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
 const features = [
   { icon: ClipboardList, title: "Applicant Overview", desc: "Full history, vitals, medications, and AI-flagged red flags before the consultation.", color: "text-sky-600", bg: "bg-sky-50", border: "border-sky-100" },
@@ -19,24 +20,42 @@ const decisions = [
   { label: "NOT FIT", desc: "Not fit at time of assessment", cls: "bg-red-50 text-red-700 border-red-200" },
 ];
 
-const doctors = [
-  { name: "Dr. Eric Kwizera, MD", specialty: "Occupational Medicine Specialist", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=900&q=85&auto=format&fit=crop" },
-  { name: "Dr. Amina Nshimiyimana, MD", specialty: "Telehealth & General Medicine Specialist", image: "https://images.unsplash.com/photo-1594824813566-78853d95c1a8?w=900&q=85&auto=format&fit=crop" },
-  { name: "Dr. Patrick Uwase, MBBS", specialty: "Sports & Physical Fitness Specialist", image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=900&q=85&auto=format&fit=crop" },
-  { name: "Dr. Claire Akamanzi, MD", specialty: "General Practice & Referral Specialist", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=900&q=85&auto=format&fit=crop" },
-];
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
 
-export default function DoctorDashboard() {
+export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?: PublicTeamMember[] }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const [doctors, setDoctors] = useState<PublicTeamMember[]>(initialDoctors || []);
   const [currentDoctor, setCurrentDoctor] = useState(0);
 
   useEffect(() => {
+    if (initialDoctors?.length) {
+      setDoctors(initialDoctors);
+      return;
+    }
+    fetch("/api/public/staff")
+      .then((res) => res.json())
+      .then((data) => setDoctors(Array.isArray(data.doctors) ? data.doctors : []))
+      .catch(() => setDoctors([]));
+  }, [initialDoctors]);
+
+  useEffect(() => {
+    if (doctors.length < 2) return;
     const timer = window.setInterval(() => {
       setCurrentDoctor((current) => (current + 1) % doctors.length);
     }, 5000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [doctors.length]);
+
+  const doctor = doctors[currentDoctor] || doctors[0];
+  const photo = doctor?.image && !doctor.image.includes("images.unsplash.com") ? doctor.image : "";
 
   return (
     <section className="relative py-28 section-light overflow-hidden">
@@ -66,17 +85,30 @@ export default function DoctorDashboard() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, x: 50 }} animate={isInView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.8, delay: 0.2 }} className="relative">
-            <div className="relative rounded-3xl overflow-hidden aspect-[4/5] shadow-2xl border border-slate-200 bg-slate-900">
-              <AnimatePresence mode="wait">
-                <motion.div key={currentDoctor} initial={{ opacity: 0, x: 35 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -35 }} transition={{ duration: 0.55 }} className="absolute inset-0">
-                  <Image src={doctors[currentDoctor].image} alt={doctors[currentDoctor].name} fill className="object-cover object-top" sizes="(max-width:1024px) 100vw, 50vw" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 inset-x-0 p-6 text-white bg-[#0B2D5C]/65 backdrop-blur-md border-t border-[#12B8B0]/40">
-                    <h3 className="text-2xl font-extrabold" style={{ fontFamily: "var(--font-primary)", color: "#FFFFFF" }}>{doctors[currentDoctor].name}</h3>
-                    <p className="mt-1 text-sm text-[#8ff3e8]">{doctors[currentDoctor].specialty}</p>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
+            <div className="relative rounded-3xl overflow-hidden aspect-[4/5] shadow-2xl border border-slate-200 bg-[#0B2D5C]">
+              {!doctor ? (
+                <div className="absolute inset-0 flex items-center justify-center p-8 text-center text-sm text-[#8ff3e8]">
+                  Licensed doctors added in FitMed will appear here.
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.div key={doctor.id} initial={{ opacity: 0, x: 35 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -35 }} transition={{ duration: 0.55 }} className="absolute inset-0">
+                    {photo ? (
+                      <Image src={photo} alt={doctor.name} fill className="object-cover object-top" sizes="(max-width:1024px) 100vw, 50vw" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-7xl font-extrabold text-[#12B8B0]">
+                        {initials(doctor.name)}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 inset-x-0 p-6 text-white bg-[#0B2D5C]/65 backdrop-blur-md border-t border-[#12B8B0]/40">
+                      <h3 className="text-2xl font-extrabold" style={{ fontFamily: "var(--font-primary)", color: "#FFFFFF" }}>{doctor.name}</h3>
+                      <p className="mt-1 text-sm text-[#8ff3e8]">{doctor.specialty || doctor.role}</p>
+                      {doctor.license ? <p className="mt-1 text-xs text-white/80">Licence {doctor.license}</p> : null}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              )}
             </div>
             <motion.div animate={{ y: [-4, 4, -4] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-4 border border-slate-200 shadow-xl max-w-[240px]">
               <div className="flex items-center gap-2 mb-3"><Activity className="w-4 h-4 text-sky-500" /><span className="text-xs font-bold text-slate-700">Vitals Summary</span></div>
@@ -90,9 +122,13 @@ export default function DoctorDashboard() {
             <motion.div animate={{ y: [-3, 5, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -top-5 -left-4 bg-white rounded-2xl p-3.5 border border-slate-200 shadow-xl">
               <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center"><Shield className="w-4 h-4 text-emerald-600" /></div><div><div className="text-xs font-bold text-slate-800">Certificate Issued</div><div className="text-[10px] text-emerald-600">✓ Digitally signed</div></div></div>
             </motion.div>
-            <div className="flex items-center justify-center gap-2 mt-4" aria-label="Doctor profiles">
-              {doctors.map((doctor, index) => <button key={doctor.name} type="button" onClick={() => setCurrentDoctor(index)} aria-label={`Show ${doctor.name}`} className={`h-2 rounded-full transition-all ${index === currentDoctor ? "w-8 bg-[#12B8B0]" : "w-2 bg-slate-300 hover:bg-slate-400"}`} />)}
-            </div>
+            {doctors.length > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-4" aria-label="Doctor profiles">
+                {doctors.map((item, index) => (
+                  <button key={item.id} type="button" onClick={() => setCurrentDoctor(index)} aria-label={`Show ${item.name}`} className={`h-2 rounded-full transition-all ${index === currentDoctor ? "w-8 bg-[#12B8B0]" : "w-2 bg-slate-300 hover:bg-slate-400"}`} />
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
       </div>
