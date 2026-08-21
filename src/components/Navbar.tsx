@@ -37,9 +37,11 @@ export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [onHero,     setOnHero]     = useState(true);
+  const [mounted,    setMounted]    = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
+    setMounted(true);
     const handle = () => {
       const y = window.scrollY;
       setScrolled(y > 40);
@@ -105,7 +107,7 @@ export default function Navbar() {
           {/* ── Logo ─────────────────────────────────────────── */}
           <Link href="/" aria-label="FitMed home" className="flex-shrink-0 block">
             <motion.div
-              animate={{ width: scrolled ? 120 : 180 }}
+              animate={{ width: mounted && scrolled ? 120 : 180 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}

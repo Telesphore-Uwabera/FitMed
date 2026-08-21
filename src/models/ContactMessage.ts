@@ -37,4 +37,8 @@ export const ContactMessage: Model<IContactMessage> =
   mongoose.models.ContactMessage ||
   mongoose.model<IContactMessage>("ContactMessage", ContactMessageSchema);
 
+if (ContactMessage.schema.path("category")) {
+  ContactMessage.schema.path("category").options.enum = undefined;
+}
+
 export default ContactMessage;

@@ -15,16 +15,27 @@ export async function GET(request: NextRequest) {
       await connectToDatabase();
       const query: any = {};
       const doctorEmail = searchParams.get("doctorEmail");
+      const doctorName = searchParams.get("doctorName");
       const doctorKeys = [...new Set([doctorId, doctorEmail].filter(Boolean))] as string[];
-      if (doctorKeys.length) {
-        query.$or = doctorKeys.flatMap((key) => {
-          const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          return [
-            { doctorId: key },
-            { doctorEmail: { $regex: `^${escaped}$`, $options: "i" } },
-          ];
-        });
+      const or: object[] = doctorKeys.flatMap((key) => {
+        const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return [
+          { doctorId: key },
+          { doctorEmail: { $regex: `^${escaped}$`, $options: "i" } },
+        ];
+      });
+      if (doctorName) {
+        const nameKey = doctorName
+          .replace(/\b(dr|md|mbbs)\b\.?/gi, "")
+          .replace(/[,\.]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (nameKey) {
+          const escapedName = nameKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          or.push({ doctorName: { $regex: escapedName, $options: "i" } });
+        }
       }
+      if (or.length) query.$or = or;
       if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
       if (status) query.status = status;
 

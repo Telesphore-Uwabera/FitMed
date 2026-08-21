@@ -54,7 +54,21 @@ export async function POST(request: NextRequest) {
         status: "New",
       });
     } catch (dbError) {
-      console.warn("MongoDB Contact save fallback:", dbError);
+      try {
+        const fallback = new ContactMessage({
+          fullName,
+          email,
+          phone,
+          organization,
+          subject,
+          message,
+          category: resolvedCategory,
+          status: "New",
+        });
+        savedDoc = await fallback.save({ validateBeforeSave: false });
+      } catch (retryErr) {
+        console.warn("MongoDB Contact save fallback:", dbError, retryErr);
+      }
     }
 
     await sendBrevoEmail({

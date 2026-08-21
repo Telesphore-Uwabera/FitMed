@@ -372,7 +372,7 @@ export default function DoctorDashboardPage() {
 
       try {
         const aptRes = await fetch(
-          `/api/appointments?doctorId=${encodeURIComponent(doctorId || doctorEmail)}&doctorEmail=${encodeURIComponent(doctorEmail)}`,
+          `/api/appointments?doctorId=${encodeURIComponent(doctorId || doctorEmail)}&doctorEmail=${encodeURIComponent(doctorEmail)}&doctorName=${encodeURIComponent(doctorName)}`,
           { signal: AbortSignal.timeout(8000) }
         );
         const aptData = await aptRes.json();
