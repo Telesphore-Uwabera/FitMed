@@ -37,6 +37,11 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/auth/me";
   const isAdminContactRead = pathname.startsWith("/api/contact") && request.method !== "POST";
 
+  const isIremboWebhook = pathname.startsWith("/api/payments/irembo/webhook");
+  if (isIremboWebhook) {
+    return NextResponse.next();
+  }
+
   if (!isDashboard && !isMeet && !isAdminApi && !isStaffApi && !isAdminContactRead) {
     return NextResponse.next();
   }

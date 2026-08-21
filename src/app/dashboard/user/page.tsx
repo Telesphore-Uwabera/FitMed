@@ -194,8 +194,6 @@ export default function UserDashboard() {
 
   const [showIremboModal, setShowIremboModal] = useState(false);
   const [certToPay, setCertToPay] = useState<any | null>(null);
-  const [iremboChannel, setIremboChannel] = useState<"momo" | "airtel" | "card">("momo");
-  const [momoNumber, setMomoNumber] = useState("");
   const [isPayingIrembo, setIsPayingIrembo] = useState(false);
   const [paymentSuccessAlert, setPaymentSuccessAlert] = useState<string | null>(null);
 
@@ -385,50 +383,115 @@ export default function UserDashboard() {
     }
   };
 
-  const handlePayIrembo = (e: React.FormEvent) => {
+  const handlePayIrembo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!certToPay) return;
     setIsPayingIrembo(true);
-
-      setTimeout(async () => {
-      let txRef = `IREMBO-RW-${new Date().getFullYear()}-00001`;
-      try {
-        const res = await fetch("/api/certificates", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            certificateId: certToPay.id,
-            paymentStatus: "PAID",
-            channel: iremboChannel === "momo" ? "MTN Mobile Money" : iremboChannel === "airtel" ? "Airtel Money" : "Card",
-            status: certToPay.status === "submitted" ? "approved" : certToPay.status,
-          }),
-        });
-        const paid = await res.json().catch(() => ({}));
-        if (paid?.certificate?.iremboRef) txRef = paid.certificate.iremboRef;
-      } catch {
-        /* local dashboard state still updates below */
+    try {
+      const res = await fetch("/api/payments/irembo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ certificateId: certToPay.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        error("IremboPay not started", data.error || "Could not open IremboPay checkout.");
+        setIsPayingIrembo(false);
+        return;
       }
-      setActiveCerts((prev) =>
-        prev.map((c) =>
-          c.id === certToPay.id
-            ? { ...c, status: "VERIFIED FIT", paymentStatus: "PAID", iremboRef: txRef }
-            : c
-        )
-      );
-      setHistory((prev) =>
-        prev.map((h) =>
-          h.id === certToPay.id
-            ? { ...h, status: "Active (Paid)", outcome: "Fit for Activity" }
-            : h
-        )
-      );
+      if (data.alreadyPaid) {
+        setActiveCerts((prev) =>
+          prev.map((c) =>
+            c.id === certToPay.id
+              ? { ...c, status: "VERIFIED FIT", paymentStatus: "PAID", iremboRef: data.invoice?.paymentReference }
+              : c
+          )
+        );
+        setShowIremboModal(false);
+        success("Already paid", "IremboPay already confirmed this certificate.");
+        setIsPayingIrembo(false);
+        return;
+      }
+
+      const invoiceNumber = data.invoice?.invoiceNumber;
+      const paymentLink = data.invoice?.paymentLinkUrl;
+      const publicKey = data.checkout?.publicKey;
+      const widgetSrc = data.checkout?.widgetSrc;
+
+      const applyPaid = async () => {
+        const confirmRes = await fetch("/api/payments/irembo/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ certificateId: certToPay.id, invoiceNumber }),
+        });
+        const confirmData = await confirmRes.json().catch(() => ({}));
+        if (!confirmRes.ok || !confirmData.success) {
+          error("Payment pending", confirmData.error || "Complete payment in IremboPay, then return here.");
+          return false;
+        }
+        const txRef = String(confirmData.certificate?.iremboRef || invoiceNumber || "");
+        setActiveCerts((prev) =>
+          prev.map((c) => (c.id === certToPay.id ? { ...c, status: "VERIFIED FIT", paymentStatus: "PAID", iremboRef: txRef } : c))
+        );
+        setHistory((prev) =>
+          prev.map((h) => (h.id === certToPay.id ? { ...h, status: "Active (Paid)", outcome: "Fit for Activity" } : h))
+        );
+        setShowIremboModal(false);
+        setPaymentSuccessAlert(
+          `Payment of 5,000 FRW confirmed via IremboPay (${txRef}). Certificate ${certToPay.id} is now active.`
+        );
+        setTimeout(() => setPaymentSuccessAlert(null), 8000);
+        return true;
+      };
+
+      const startWidget = () => {
+        const pay = (window as typeof window & { IremboPay?: any }).IremboPay;
+        if (!pay || !publicKey || !invoiceNumber) {
+          if (paymentLink) window.location.href = paymentLink;
+          else error("IremboPay unavailable", "Checkout could not open.");
+          setIsPayingIrembo(false);
+          return;
+        }
+        pay.initiate({
+          publicKey,
+          invoiceNumber,
+          locale: pay.locale?.EN || "EN",
+          callback: async (err: unknown) => {
+            if (err) {
+              error("Payment not completed", "Finish the IremboPay checkout to unlock your certificate.");
+              setIsPayingIrembo(false);
+              return;
+            }
+            pay.closeModal?.();
+            await applyPaid();
+            setIsPayingIrembo(false);
+          },
+        });
+      };
+
+      if (typeof window !== "undefined" && (window as typeof window & { IremboPay?: unknown }).IremboPay) {
+        startWidget();
+        return;
+      }
+      if (!widgetSrc) {
+        if (paymentLink) window.location.href = paymentLink;
+        setIsPayingIrembo(false);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = widgetSrc;
+      script.async = true;
+      script.onload = startWidget;
+      script.onerror = () => {
+        if (paymentLink) window.location.href = paymentLink;
+        else error("IremboPay unavailable", "Could not load the IremboPay checkout.");
+        setIsPayingIrembo(false);
+      };
+      document.body.appendChild(script);
+    } catch {
+      error("IremboPay not started", "Could not reach FitMed.");
       setIsPayingIrembo(false);
-      setShowIremboModal(false);
-      setPaymentSuccessAlert(
-        `Payment of 5,000 FRW successfully confirmed via IremboPay (${txRef})! Certificate ${certToPay.id} is now active, with downloadable PDF and verifiable QR code unlocked.`
-      );
-      setTimeout(() => setPaymentSuccessAlert(null), 8000);
-    }, 1500);
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -1752,17 +1815,16 @@ export default function UserDashboard() {
 
       {/* Interactive IremboPay Checkout Modal (Pay-On-Approval) */}
       {showIremboModal && certToPay && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-6 shadow-2xl relative border border-slate-200 text-slate-800">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl relative border border-slate-200 text-slate-800 overflow-hidden">
             <button
               onClick={() => setShowIremboModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+              className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Header with IremboPay Branding */}
-            <div className="space-y-1">
+            <div className="p-6 sm:p-8 pb-4 space-y-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-extrabold uppercase tracking-wider border border-teal-200">
                   Official Government Gateway
@@ -1775,141 +1837,56 @@ export default function UserDashboard() {
               <p className="text-xs text-slate-500">
                 Approved by <strong>{certToPay.doctor}</strong> · Certificate ID: <strong>{certToPay.id}</strong>
               </p>
-            </div>
-
-            {/* Invoice Card */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Service:</span>
-                <span className="font-bold text-slate-800">{certToPay.purpose}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Government Clinical Fee:</span>
-                <span className="font-bold text-slate-800">5,000 FRW</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span>Payment Gate:</span>
-                <span className="font-bold text-teal-700">Pay-On-Approval (Zero Risk)</span>
-              </div>
-              <div className="pt-2 border-t border-slate-200 flex justify-between items-center font-extrabold text-[#0B2D5C] text-sm">
-                <span>Total Amount Due:</span>
-                <span className="text-lg text-emerald-600">5,000 FRW</span>
+              <div className="flex justify-between items-center text-sm pt-2">
+                <span className="font-bold text-slate-600">Total amount due</span>
+                <span className="text-lg font-black text-emerald-600">5,000 FRW</span>
               </div>
             </div>
 
-            {/* Payment Channel Selection */}
-            <form onSubmit={handlePayIrembo} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Select Payment Method
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "momo", label: "MTN MoMo", desc: "*182# USSD Push", color: "border-amber-400 bg-amber-50/50" },
-                    { id: "airtel", label: "Airtel Money", desc: "*500# USSD Push", color: "border-rose-400 bg-rose-50/50" },
-                    { id: "card", label: "Bank Card", desc: "Visa / MasterCard", color: "border-sky-400 bg-sky-50/50" },
-                  ].map((ch) => (
-                    <button
-                      key={ch.id}
-                      type="button"
-                      onClick={() => setIremboChannel(ch.id as any)}
-                      className={`p-3 rounded-2xl text-left border-2 transition-all ${
-                        iremboChannel === ch.id
-                          ? `${ch.color} shadow-sm border-current`
-                          : "border-slate-200 hover:border-slate-300 bg-white"
-                      }`}
-                    >
-                      <div className="text-xs font-bold text-[#0B2D5C]">{ch.label}</div>
-                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">{ch.desc}</div>
-                    </button>
-                  ))}
-                </div>
+            <form onSubmit={handlePayIrembo} className="grid md:grid-cols-[240px_1fr]">
+              <div className="bg-slate-50 p-5 sm:p-6 border-b md:border-b-0 md:border-r border-slate-200 space-y-4">
+                <h4 className="text-sm font-extrabold text-slate-800">IremboPay methods</h4>
+                <ul className="space-y-2 text-sm text-slate-600">
+                  <li>MTN Mobile Money</li>
+                  <li>Airtel Money</li>
+                  <li>Debit / Credit card</li>
+                  <li>Cash / Agents</li>
+                  <li>Bank Accounts</li>
+                  <li>Bank Transfer</li>
+                </ul>
+                <p className="text-[11px] font-black tracking-tight pt-4">
+                  <span className="text-[#0B2D5C]">irembo</span>
+                  <span className="text-sky-600">Pay</span>
+                </p>
               </div>
 
-              {/* Channel Input Fields */}
-              {iremboChannel === "momo" && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    MTN Mobile Money Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={momoNumber}
-                    onChange={(e) => setMomoNumber(e.target.value)}
-                    placeholder="078... or 079..."
-                    className="w-full p-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#12B8B0]"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    A secure USSD PIN prompt will be sent to your MTN handset to authorize 5,000 FRW.
-                  </p>
+              <div className="p-5 sm:p-6 space-y-4">
+                <h4 className="text-sm font-extrabold text-slate-800">Pay with IremboPay</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  FitMed uses the official IremboPay gateway. Continue to choose MTN Mobile Money, Airtel Money, card, cash/agent, or bank payment on the IremboPay page. Your certificate unlocks only after IremboPay confirms the 5,000 FRW payment.
+                </p>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+                  <div className="flex justify-between"><span className="text-slate-500">Service</span><span className="font-bold">{certToPay.purpose}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Amount</span><span className="font-black text-emerald-600">5,000 FRW</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Gateway</span><span className="font-bold">IremboPay</span></div>
                 </div>
-              )}
-
-              {iremboChannel === "airtel" && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Airtel Money Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    defaultValue="0733123456"
-                    placeholder="073... or 072..."
-                    className="w-full p-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#12B8B0]"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Enter Airtel Money PIN on your phone to complete payment.
-                  </p>
-                </div>
-              )}
-
-              {iremboChannel === "card" && (
-                <div className="space-y-2 text-xs">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Card Number</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="4111 2222 3333 4444"
-                      className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Expiry (MM/YY)</label>
-                      <input type="text" placeholder="12/28" className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold" />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">CVV</label>
-                      <input type="password" placeholder="123" maxLength={3} className="w-full p-2.5 rounded-xl border border-slate-200 font-semibold" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isPayingIrembo}
-                className="w-full py-4 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.99] disabled:opacity-50"
-              >
-                {isPayingIrembo ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-[#0B2D5C]/30 border-t-[#0B2D5C] rounded-full animate-spin" />
-                    <span>Processing with IremboPay Gateway...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Authorize &amp; Pay 5,000 FRW</span>
-                  </>
-                )}
-              </button>
+                <button
+                  type="submit"
+                  disabled={isPayingIrembo}
+                  className="w-full py-3.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-white font-black text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] disabled:opacity-50"
+                >
+                  {isPayingIrembo ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      <span>Opening IremboPay...</span>
+                    </>
+                  ) : (
+                    <span>Continue to IremboPay · RWF 5000</span>
+                  )}
+                </button>
+                <p className="text-center text-[10px] text-slate-400">PCI DSS compliant · processed by IremboPay</p>
+              </div>
             </form>
-
-            <div className="text-center text-[10px] text-slate-400">
-              Transactions are encrypted using 256-bit SSL and processed via the official IremboPay Gateway.
-            </div>
           </div>
         </div>
       )}

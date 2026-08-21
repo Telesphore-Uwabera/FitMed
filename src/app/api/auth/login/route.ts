@@ -37,6 +37,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ success: false, error: "No account found with that email address." }, { status: 404 });
     }
+    if (String(user.role || "").toLowerCase() === "staff") {
+      return NextResponse.json(
+        { success: false, error: "Team directory profiles are listed on About Us and do not use the FitMed dashboards." },
+        { status: 403 }
+      );
+    }
 
     const status = String(user.status || "").toLowerCase();
     if (status === "pending" || status === "pending_approval") {

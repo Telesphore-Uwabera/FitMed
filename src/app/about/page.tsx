@@ -195,9 +195,9 @@ export default async function AboutPage() {
               </div>
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <div className="text-2xl sm:text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
-                  3 Roles
+                  Rwanda
                 </div>
-                <div className="text-xs text-slate-300 mt-1">Admin, Doctor & User</div>
+                <div className="text-xs text-slate-300 mt-1">Built for workers nationwide</div>
               </div>
             </div>
           </div>
@@ -250,10 +250,10 @@ export default async function AboutPage() {
             <div className="relative">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3]">
                 <Image
-                  src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1200&q=85&auto=format&fit=crop"
-                  alt="Doctor conducting telemedicine consultation"
+                  src="/about-consultation.png"
+                  alt="FitMed doctor consulting with patients"
                   fill
-                  className="object-cover"
+                  className="object-cover object-center"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/75 via-transparent to-transparent" />
@@ -325,7 +325,7 @@ export default async function AboutPage() {
               Meet Our Healthcare & Leadership Team
             </h2>
             <p className="text-slate-600 text-base sm:text-lg">
-              Our administrators and licensed doctors, loaded live from FitMed records.
+              Our administrators, leadership team, and licensed doctors — added by FitMed admin with their titles and bios.
             </p>
           </div>
 

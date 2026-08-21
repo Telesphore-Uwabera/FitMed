@@ -6,7 +6,7 @@ export type PublicTeamMember = {
   bio: string;
   image: string;
   badge: string;
-  kind: "admin" | "doctor";
+  kind: "admin" | "doctor" | "staff";
   license?: string;
   specialty?: string;
 };

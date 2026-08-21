@@ -6,13 +6,25 @@ import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
 import { ensureDoctorIds, nextDoctorId } from "@/lib/sequentialIds";
+import StaffTitle, { DEFAULT_STAFF_TITLES } from "@/models/StaffTitle";
+
+async function listStaffTitles() {
+  await StaffTitle.bulkWrite(
+    DEFAULT_STAFF_TITLES.map((title) => ({
+      updateOne: { filter: { title }, update: { $setOnInsert: { title } }, upsert: true },
+    })),
+    { ordered: false }
+  ).catch(() => null);
+  const rows = await StaffTitle.find({}).sort({ title: 1 }).select("title").lean();
+  return rows.map((row) => String(row.title));
+}
 
 export async function GET() {
   try {
     await connectToDatabase();
 
-    const users = await User.find({ role: { $in: ["admin", "doctor"] } })
-      .select("fullName name email role status createdAt")
+    const users = await User.find({ role: { $nin: ["user", "applicant"] } })
+      .select("fullName name email role status createdAt jobTitle bio avatarUrl")
       .sort({ createdAt: -1 })
       .lean();
     await ensureDoctorIds();
@@ -25,6 +37,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       admins: users.filter((u) => u.role === "admin"),
+      teamMembers: users.filter((u) => String(u.role || "").toLowerCase() === "staff"),
       doctors: doctors.map((d) => {
         const linked = userByEmail.get(String(d.email || "").toLowerCase());
         const suspended = String(linked?.status || "").toLowerCase() === "suspended";
@@ -44,6 +57,7 @@ export async function GET() {
         };
       }),
       staff: users,
+      titles: await listStaffTitles(),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load staff.";
@@ -54,19 +68,30 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const role = body.role === "admin" ? "admin" : "doctor";
+    const requestedRole = String(body.role || "doctor").trim().toLowerCase();
+    const role = requestedRole === "admin" ? "admin" : requestedRole === "staff" ? "staff" : "doctor";
     const name = String(body.name || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const phone = String(body.phone || "").trim();
     const license = String(body.license || body.licenseNumber || "").trim();
     const specialty = String(body.specialty || "Occupational Medicine & Telehealth").trim();
     const avatarUrl = String(body.avatarUrl || "").trim();
+    const jobTitle = String(body.jobTitle || body.title || "").trim();
+    const bio = String(body.bio || "").trim();
+    const newTitle = String(body.newTitle || "").trim();
+    const resolvedTitle = newTitle || jobTitle;
 
     if (!name || !email) {
       return NextResponse.json({ success: false, error: "Name and email are required." }, { status: 400 });
     }
     if (role === "doctor" && !license) {
       return NextResponse.json({ success: false, error: "Doctor license number is required." }, { status: 400 });
+    }
+    if (role === "staff" && !resolvedTitle) {
+      return NextResponse.json({ success: false, error: "Choose a staff title, or add a new one." }, { status: 400 });
+    }
+    if (role === "staff" && !bio) {
+      return NextResponse.json({ success: false, error: "Add a short bio for the About Us page." }, { status: 400 });
     }
 
     await connectToDatabase();
@@ -87,9 +112,18 @@ export async function POST(request: NextRequest) {
       role,
       status: "active",
       avatarUrl: avatarUrl || undefined,
-      requiresPasswordReset: !body.password,
-      temporaryPassword: body.password ? undefined : plainPassword,
+      jobTitle: resolvedTitle || (role === "admin" ? "Platform Administrator" : specialty),
+      bio,
+      showOnAbout: true,
+      requiresPasswordReset: role !== "staff" && !body.password,
+      temporaryPassword: role !== "staff" && !body.password ? plainPassword : undefined,
     });
+
+    if (resolvedTitle) {
+      await StaffTitle.updateOne({ title: resolvedTitle }, { $setOnInsert: { title: resolvedTitle } }, { upsert: true }).catch(
+        () => null
+      );
+    }
 
     if (role === "doctor") {
       await Doctor.create({
@@ -106,12 +140,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    await sendBrevoEmail({
-      toEmail: email,
-      toName: name,
-      subject: role === "admin" ? "Your FitMed administrator account" : "Your FitMed doctor account",
-      htmlContent: EmailTemplates.staffAccountCreated(name, email, role, plainPassword),
-    });
+    if (role !== "staff") {
+      await sendBrevoEmail({
+        toEmail: email,
+        toName: name,
+        subject: role === "admin" ? "Your FitMed administrator account" : "Your FitMed doctor account",
+        htmlContent: EmailTemplates.staffAccountCreated(name, email, role, plainPassword),
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -121,6 +157,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         role,
+        jobTitle: resolvedTitle,
         license,
         status: "Active",
       },

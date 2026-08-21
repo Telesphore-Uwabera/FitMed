@@ -5,6 +5,7 @@ import Doctor from "@/models/Doctor";
 import Payment from "@/models/Payment";
 import AuditLog from "@/models/AuditLog";
 import User from "@/models/User";
+import mongoose from "mongoose";
 import { runClinicalEngine, WizardData } from "@/lib/clinicalEngine";
 import { pickOnDutyDoctor } from "@/lib/assignDoctor";
 import crypto from "crypto";
@@ -24,9 +25,13 @@ export async function GET(request: NextRequest) {
     const applicantEmail = searchParams.get("applicantEmail");
     const assignedDoctorId = searchParams.get("assignedDoctorId");
 
-    try {
+      try {
       await connectToDatabase();
-      await normalizeCertificateKeys();
+      try {
+        await normalizeCertificateKeys();
+      } catch (normErr) {
+        console.warn("Certificate key normalize skipped:", normErr);
+      }
       const query: any = {};
       if (status) query.status = status;
       if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
@@ -279,22 +284,62 @@ export async function PATCH(request: NextRequest) {
     }
 
     const certKey = String(certificateId).toUpperCase();
+    const escapedId = String(certificateId).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     try {
       await connectToDatabase();
+      const certDoc = await Certificate.findOne({
+        $or: [
+          { certificateId: certKey },
+          { certificateId: { $regex: `^${escapedId}$`, $options: "i" } },
+        ],
+      });
+
       if (action === "payment-reminder") {
-        const cert = await Certificate.findOne({ certificateId: certKey });
-        if (!cert) {
+        if (!certDoc) {
           return NextResponse.json({ success: false, error: "Certificate not found." }, { status: 404 });
         }
-        await notifyCertificateEmails(cert.toObject(), { status: "approved" });
+        if (String(certDoc.paymentStatus || "").toUpperCase() === "PAID") {
+          return NextResponse.json({ success: false, error: "This certificate is already paid." }, { status: 400 });
+        }
+        const approvedAt = certDoc.approvedAt;
+        if (approvedAt && Date.now() - new Date(approvedAt).getTime() > 60 * 60 * 1000) {
+          return NextResponse.json(
+            { success: false, error: "Payment reminders can only be sent within one hour of approval." },
+            { status: 400 }
+          );
+        }
+        if (!approvedAt && String(certDoc.status || "").toLowerCase() !== "approved") {
+          return NextResponse.json({ success: false, error: "This certificate is not waiting for payment." }, { status: 400 });
+        }
+        const name = String(certDoc.candidateName || "Applicant");
+        const certId = String(certDoc.certificateId || certKey);
+        const purpose = String(certDoc.purpose || "Medical fitness");
+        const payLink = `${FITMED_APP_URL}/dashboard/user?pay=${encodeURIComponent(certId)}`;
+        await notifyPerson({
+          toEmail: String(certDoc.applicantEmail || ""),
+          toName: name,
+          role: "user",
+          subject: `Payment reminder for certificate ${certId}`,
+          htmlContent: EmailTemplates.paymentReminder(name, certId, purpose, payLink),
+          snippet: `Complete 5,000 FRW to unlock ${certId}.`,
+          href: payLink,
+        });
+        certDoc.lastPaymentReminderAt = new Date();
+        await Certificate.updateOne({ _id: certDoc._id }, { $set: { lastPaymentReminderAt: new Date() } }).catch(() => null);
         return NextResponse.json({ success: true });
       }
-      const updateData: any = {};
+
+      const updateData: Record<string, unknown> = {};
       if (decision) updateData.decision = decision;
       if (restrictions !== undefined) updateData.restrictions = restrictions;
       if (decisionNotes !== undefined) updateData.decisionNotes = decisionNotes;
-      if (status) updateData.status = status;
+      if (status) {
+        updateData.status = status;
+        if (String(status).toLowerCase() === "approved") {
+          updateData.approvedAt = new Date();
+        }
+      }
       if (paymentStatus) updateData.paymentStatus = paymentStatus;
       if (String(paymentStatus || "").toUpperCase() === "PAID") {
         updateData.iremboRef = await nextKey("irembo");
@@ -305,7 +350,7 @@ export async function PATCH(request: NextRequest) {
       if (structuredAssessment) updateData.structuredAssessment = structuredAssessment;
 
       const updated = await Certificate.findOneAndUpdate(
-        { certificateId: certKey },
+        certDoc ? { _id: certDoc._id } : { certificateId: certKey },
         updateData,
         { new: true }
       );
@@ -373,7 +418,7 @@ async function notifyCertificateEmails(
   if (!email || !certId) return;
 
   let doctorEmail = FITMED_DOCTOR_EMAIL;
-  if (cert.assignedDoctorId) {
+  if (cert.assignedDoctorId && mongoose.isValidObjectId(String(cert.assignedDoctorId))) {
     const assigned = await Doctor.findById(cert.assignedDoctorId).select("email").lean();
     if (assigned?.email) doctorEmail = String(assigned.email);
   }

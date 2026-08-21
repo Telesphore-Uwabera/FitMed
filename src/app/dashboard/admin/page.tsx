@@ -466,15 +466,28 @@ export default function AdminDashboardPage() {
     setPortalReady(true);
   }, []);
   const [addDoctorForm, setAddDoctorForm] = useState({
-    role: "doctor" as "admin" | "doctor",
+    role: "doctor" as "admin" | "doctor" | "staff",
     name: "",
     email: "",
     license: "",
     specialty: "",
     phone: "",
     password: "",
+    jobTitle: "Licensed Physician",
+    newTitle: "",
+    bio: "",
     avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
   });
+  const [staffTitles, setStaffTitles] = useState<string[]>([
+    "Managing Director & Clinical Director",
+    "Chief Operations Officer (COO) & Program Manager",
+    "ICT & Digital Health",
+    "Legal & Compliance Officer",
+    "Marketing & Sales Business Development",
+    "Platform Administrator",
+    "Licensed Physician",
+  ]);
+  const [teamDirectory, setTeamDirectory] = useState<{ name: string; email: string; jobTitle?: string }[]>([]);
   const [doctorWebpResult, setDoctorWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingDoctorImg, setIsConvertingDoctorImg] = useState(false);
   const [showAddDoctor, setShowAddDoctor] = useState(false);
@@ -519,6 +532,7 @@ export default function AdminDashboardPage() {
       doctorName: string;
       doctorPayout: number;
       platformFee: number;
+      approvedAt?: string;
     }[]
   >([]);
 
@@ -612,6 +626,16 @@ export default function AdminDashboardPage() {
               status: a.status,
             }))
           );
+          setTeamDirectory(
+            (staffData.teamMembers || []).map((a: { fullName?: string; name?: string; email: string; jobTitle?: string }) => ({
+              name: a.fullName || a.name || "Team member",
+              email: a.email,
+              jobTitle: a.jobTitle,
+            }))
+          );
+          if (Array.isArray(staffData.titles) && staffData.titles.length) {
+            setStaffTitles(staffData.titles);
+          }
         }
       } catch {
         setVerifiedDoctors([]);
@@ -676,6 +700,7 @@ export default function AdminDashboardPage() {
         doctorName: displayDoctorName(String(c.assignedDoctor || "—")) || "—",
                 doctorPayout: Math.round(amount * 0.8),
                 platformFee: Math.round(amount * 0.2),
+                approvedAt: c.approvedAt ? String(c.approvedAt) : "",
               };
             })
           );
@@ -759,7 +784,6 @@ export default function AdminDashboardPage() {
 
   const paidTransactions = transactions.filter((t) => t.status === "PAID");
   const grossRevenue = paidTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const platformMargin = paidTransactions.reduce((sum, t) => sum + t.platformFee, 0);
   const purposeRows = (() => {
     const counts = new Map<string, number>();
     for (const t of transactions) {
@@ -1147,8 +1171,8 @@ export default function AdminDashboardPage() {
                     <div className="text-lg font-black text-[#0B2D5C] mt-1">{grossRevenue.toLocaleString()} FRW</div>
                   </div>
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Platform margin</div>
-                    <div className="text-lg font-black text-[#12B8B0] mt-1">{platformMargin.toLocaleString()} FRW</div>
+                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Waiting collection</div>
+                    <div className="text-lg font-black text-amber-700 mt-1">{transactions.filter((t) => t.status === "WAITING").reduce((sum, t) => sum + t.amount, 0).toLocaleString()} FRW</div>
                   </div>
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                     <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Doctors</div>
@@ -1456,6 +1480,17 @@ export default function AdminDashboardPage() {
                   ))}
                 </div>
               )}
+              {teamDirectory.length > 0 && (
+                <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#12B8B0]">About Us team ({teamDirectory.length})</div>
+                  {teamDirectory.map((member) => (
+                    <div key={member.email} className="flex items-center justify-between text-xs gap-3">
+                      <span className="font-bold text-white">{member.name}</span>
+                      <span className="text-slate-300 truncate">{member.jobTitle || member.email}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {showAddDoctor && (
                 <form
@@ -1480,6 +1515,9 @@ export default function AdminDashboardPage() {
                           phone: addDoctorForm.phone,
                           password: addDoctorForm.password || undefined,
                           avatarUrl: finalAvatar,
+                          jobTitle: addDoctorForm.jobTitle === "__new__" ? "" : addDoctorForm.jobTitle,
+                          newTitle: addDoctorForm.newTitle,
+                          bio: addDoctorForm.bio,
                         }),
                       });
                       const data = await res.json();
@@ -1498,16 +1536,33 @@ export default function AdminDashboardPage() {
                             status: "Active",
                           },
                         ]);
+                      } else if (addDoctorForm.role === "staff") {
+                        setTeamDirectory((prev) => [
+                          ...prev,
+                          {
+                            name: addDoctorForm.name,
+                            email: addDoctorForm.email.toLowerCase(),
+                            jobTitle: addDoctorForm.newTitle || addDoctorForm.jobTitle,
+                          },
+                        ]);
                       } else {
                         setAdminAccounts((prev) => [
-                          ...prev,
                           { name: addDoctorForm.name, email: addDoctorForm.email.toLowerCase(), role: "admin", status: "active" },
+                          ...prev,
                         ]);
                       }
-                      const extra = data.oneTimePassword
-                        ? " We emailed them a first-time sign-in password."
-                        : " They can sign in with the password you set.";
-                      success("Account created", `${addDoctorForm.name} can now sign in as ${addDoctorForm.role === "admin" ? "an administrator" : "a doctor"}.${extra}`);
+                      const extra =
+                        addDoctorForm.role === "staff"
+                          ? " They will appear on the About Us team page."
+                          : data.oneTimePassword
+                            ? " We emailed them a first-time sign-in password."
+                            : " They can sign in with the password you set.";
+                      success(
+                        "Account created",
+                        addDoctorForm.role === "staff"
+                          ? `${addDoctorForm.name} was added to the FitMed team directory.${extra}`
+                          : `${addDoctorForm.name} can now sign in as ${addDoctorForm.role === "admin" ? "an administrator" : "a doctor"}.${extra}`
+                      );
                       setAdminRefresh((n) => n + 1);
                       setShowAddDoctor(false);
                       setAddDoctorForm({
@@ -1518,6 +1573,9 @@ export default function AdminDashboardPage() {
                         specialty: "",
                         phone: "",
                         password: "",
+                        jobTitle: "Licensed Physician",
+                        newTitle: "",
+                        bio: "",
                         avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
                       });
                       setDoctorWebpResult(null);
@@ -1564,10 +1622,22 @@ export default function AdminDashboardPage() {
                         variant="dark"
                         label="Account Type"
                         value={addDoctorForm.role}
-                        onChange={(v) => setAddDoctorForm({ ...addDoctorForm, role: v as "admin" | "doctor" })}
+                        onChange={(v) =>
+                          setAddDoctorForm({
+                            ...addDoctorForm,
+                            role: v as "admin" | "doctor" | "staff",
+                            jobTitle:
+                              v === "admin"
+                                ? "Platform Administrator"
+                                : v === "staff"
+                                  ? "Managing Director & Clinical Director"
+                                  : "Licensed Physician",
+                          })
+                        }
                         options={[
                           { value: "doctor", label: "Doctor" },
-                          { value: "admin", label: "Admin" },
+                          { value: "admin", label: "Administrator" },
+                          { value: "staff", label: "Team member (About Us)" },
                         ]}
                       />
                     </div>
@@ -1597,9 +1667,47 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Password (optional)</label>
                       <input
                         type="text"
-                        placeholder="Leave blank to auto-generate"
+                        placeholder={addDoctorForm.role === "staff" ? "Not required for team directory" : "Leave blank to auto-generate"}
                         value={addDoctorForm.password}
                         onChange={(e) => setAddDoctorForm({ ...addDoctorForm, password: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <BrandSelect
+                        variant="dark"
+                        label="Public title (About Us)"
+                        value={addDoctorForm.jobTitle}
+                        onChange={(v) => setAddDoctorForm({ ...addDoctorForm, jobTitle: v, newTitle: v === "__new__" ? addDoctorForm.newTitle : "" })}
+                        options={[
+                          ...staffTitles.map((title) => ({ value: title, label: title })),
+                          { value: "__new__", label: "Add a new title…" },
+                        ]}
+                      />
+                    </div>
+                    {addDoctorForm.jobTitle === "__new__" && (
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">New title</label>
+                        <input
+                          required
+                          type="text"
+                          placeholder="e.g. Head of Partnerships"
+                          value={addDoctorForm.newTitle}
+                          onChange={(e) => setAddDoctorForm({ ...addDoctorForm, newTitle: e.target.value })}
+                          className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
+                        />
+                      </div>
+                    )}
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Bio for About Us {addDoctorForm.role === "staff" ? "" : "(optional)"}
+                      </label>
+                      <textarea
+                        required={addDoctorForm.role === "staff"}
+                        rows={3}
+                        placeholder="Short biography shown on the public About Us team section."
+                        value={addDoctorForm.bio}
+                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, bio: e.target.value })}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
@@ -1637,7 +1745,13 @@ export default function AdminDashboardPage() {
                       className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs transition-colors flex items-center gap-2 disabled:opacity-60"
                     >
                       <UserPlus className="w-4 h-4" />
-                      {creatingStaff ? "Saving…" : addDoctorForm.role === "admin" ? "Create Admin Account" : "Create Doctor Account"}
+                      {creatingStaff
+                        ? "Saving…"
+                        : addDoctorForm.role === "admin"
+                          ? "Create Admin Account"
+                          : addDoctorForm.role === "staff"
+                            ? "Add team member"
+                            : "Create Doctor Account"}
                     </button>
                   </div>
                 </form>
@@ -2372,7 +2486,15 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="py-4 px-6 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {txn.status === "WAITING" && (
+                              {txn.status === "WAITING" && (() => {
+                                const withinHour =
+                                  !txn.approvedAt || Date.now() - new Date(txn.approvedAt).getTime() <= 60 * 60 * 1000;
+                                if (!withinHour) {
+                                  return (
+                                    <span className="text-[10px] text-slate-400 font-bold pr-1">Reminder window ended</span>
+                                  );
+                                }
+                                return (
                                 <button
                                   onClick={async () => {
                                     try {
@@ -2381,8 +2503,8 @@ export default function AdminDashboardPage() {
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({ certificateId: txn.certId, action: "payment-reminder" }),
                                       });
-                                      const data = await res.json();
-                                      if (!data.success) {
+                                      const data = await res.json().catch(() => ({ success: false }));
+                                      if (!res.ok || !data.success) {
                                         error("Reminder not sent", data.error || "Please try again.");
                                         return;
                                       }
@@ -2395,7 +2517,8 @@ export default function AdminDashboardPage() {
                                 >
                                   Remind Pay
                                 </button>
-                              )}
+                                );
+                              })()}
                               <button
                                 onClick={() => {
                                   setSelectedTxn(txn);
@@ -2421,14 +2544,10 @@ export default function AdminDashboardPage() {
         {activeNav === "revenue" && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-lg font-bold text-[#0B2D5C]">Financial Performance & Revenue Distribution</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-1 gap-4">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-400 uppercase font-bold">Total Gross Revenue</div>
                 <div className="text-2xl font-extrabold text-[#0B2D5C] mt-1">{grossRevenue.toLocaleString()} FRW</div>
-              </div>
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="text-xs text-slate-400 uppercase font-bold">Platform Margin (20%)</div>
-                <div className="text-2xl font-extrabold text-[#12B8B0] mt-1">{platformMargin.toLocaleString()} FRW</div>
               </div>
             </div>
           </div>
@@ -2588,10 +2707,6 @@ export default function AdminDashboardPage() {
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">Evaluating Doctor:</span>
                 <span className="font-bold text-slate-800">{displayDoctorName(selectedTxn.doctorName) || "—"}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-200">
-                <span className="text-slate-500">Platform Margin (20%):</span>
-                <span className="font-bold text-[#12B8B0]">{selectedTxn.platformFee.toLocaleString()} FRW</span>
               </div>
               <div className="flex justify-between pt-2 text-sm font-black text-[#0B2D5C]">
                 <span>Total Amount:</span>

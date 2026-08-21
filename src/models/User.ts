@@ -14,7 +14,10 @@ export interface IUser extends Document {
   dateOfBirth?: string;
   gender?: string;
   address?: string;
-  role: "applicant" | "doctor" | "admin" | "user";
+  role: "applicant" | "doctor" | "admin" | "user" | "staff";
+  jobTitle?: string;
+  bio?: string;
+  showOnAbout?: boolean;
   avatarUrl: string;
   avatarPublicId?: string;
   status: "Active" | "Suspended" | "Pending" | "pending_approval" | "active";
@@ -52,6 +55,9 @@ const UserSchema = new Schema<IUser>(
     gender: { type: String, trim: true },
     address: { type: String, trim: true },
     role: { type: String, default: "applicant" },
+    jobTitle: { type: String, trim: true },
+    bio: { type: String, trim: true },
+    showOnAbout: { type: Boolean, default: true },
     avatarUrl: {
       type: String,
       default: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80&auto=format&fit=crop",

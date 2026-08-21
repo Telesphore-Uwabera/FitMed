@@ -71,7 +71,7 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
   if (!members.length) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-600">
-        Team profiles will appear here once administrators and licensed doctors are added in FitMed.
+        Team profiles will appear here once staff are added in FitMed.
       </div>
     );
   }
@@ -127,8 +127,14 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
               </div>
               <p className="text-slate-300 text-base md:text-lg leading-relaxed font-normal">{member.bio}</p>
               <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <span>{member.kind === "doctor" ? "FitMed clinical network" : "FitMed administration"}</span>
-                <span>Role: {member.kind === "doctor" ? "Clinical Team" : "Leadership"}</span>
+                <span>
+                  {member.kind === "doctor"
+                    ? "FitMed clinical network"
+                    : member.kind === "staff"
+                      ? "FitMed leadership team"
+                      : "FitMed administration"}
+                </span>
+                <span>Role: {member.role}</span>
               </div>
             </div>
           </motion.div>

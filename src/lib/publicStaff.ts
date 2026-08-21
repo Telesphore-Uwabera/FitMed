@@ -32,9 +32,10 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
 
   const [users, doctorDocs] = await Promise.all([
     User.find({
-      $or: [{ role: { $in: ["admin", "doctor", "administrator"] } }, { role: { $regex: /^(admin|doctor|administrator)$/i } }],
+      role: { $nin: ["user", "applicant"] },
+      showOnAbout: { $ne: false },
     })
-      .select("fullName name email role status avatarUrl")
+      .select("fullName name email role status avatarUrl jobTitle bio")
       .sort({ createdAt: 1 })
       .lean(),
     Doctor.find({})
@@ -54,14 +55,17 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
     .map((doc) => {
       const linked = userByEmail.get(String(doc.email || "").toLowerCase());
       const name = displayName(doc.fullName || linked?.fullName || linked?.name, "FitMed doctor");
-      const specialty = String(doc.specialty || "Occupational Medicine & Telehealth");
+      const specialty = String(linked?.jobTitle || doc.specialty || "Occupational Medicine & Telehealth");
       const license = String(doc.licenseNumber || "");
+      const bio =
+        String(linked?.bio || "").trim() ||
+        `${name} is a licensed FitMed physician providing telehealth fitness assessments.`;
       return {
         id: String(doc._id),
         name,
         role: specialty,
         qualifications: license ? `RMDC ${license}` : "Licensed physician",
-        bio: `${name} is a licensed FitMed physician providing telehealth fitness assessments.`,
+        bio,
         image: publicPhoto(doc.avatarUrl, linked?.avatarUrl),
         badge: "Licensed Physician",
         kind: "doctor" as const,
@@ -70,21 +74,25 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
       };
     });
 
-  const admins: PublicTeamMember[] = users
-    .filter((user) => isAdminRole(user.role) && isActiveStatus(String(user.status || "active")))
+  const leadership: PublicTeamMember[] = users
+    .filter((user) => isActiveStatus(String(user.status || "active")))
+    .filter((user) => String(user.role || "").toLowerCase() !== "doctor")
     .map((user) => {
-      const name = displayName(user.fullName || user.name, "FitMed administrator");
+      const name = displayName(user.fullName || user.name, "FitMed team");
+      const title = String(user.jobTitle || (isAdminRole(user.role) ? "Platform Administrator" : "FitMed Team")).trim();
+      const bio = String(user.bio || "").trim() || `${name} is part of the FitMed leadership team.`;
+      const kind = isAdminRole(user.role) ? ("admin" as const) : ("staff" as const);
       return {
         id: String(user._id),
         name,
-        role: "Platform Administrator",
-        qualifications: "FitMed operations & clinical network",
-        bio: `${name} oversees FitMed account approval, doctor onboarding, and platform operations.`,
+        role: title,
+        qualifications: title,
+        bio,
         image: publicPhoto(user.avatarUrl),
-        badge: "Leadership",
-        kind: "admin" as const,
+        badge: kind === "admin" ? "Leadership" : "Team",
+        kind,
       };
     });
 
-  return { team: [...admins, ...doctors], doctors };
+  return { team: [...leadership, ...doctors], doctors };
 }

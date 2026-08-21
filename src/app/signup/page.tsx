@@ -242,7 +242,7 @@ export default function SignUpPage() {
                 Create Your Applicant Account
               </h1>
               <p className="text-slate-500 text-sm max-w-md mx-auto">
-                Register as an applicant to access medical fitness certification services, telehealth consultations, and digital health records.
+                Register as an applicant to access medical fitness certification services.
               </p>
             </div>
 
