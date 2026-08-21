@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
@@ -45,6 +45,7 @@ import {
   CreditCard,
   Download,
   Calendar,
+  Filter,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
@@ -475,6 +476,21 @@ export default function AdminDashboardPage() {
   const [paymentSort, setPaymentSort] = useState<"newest" | "oldest" | "amount_high" | "applicant">("newest");
   const [selectedTxn, setSelectedTxn] = useState<any | null>(null);
   const [showTxnModal, setShowTxnModal] = useState(false);
+  const [reportTab, setReportTab] = useState<"certificates" | "payments" | "applicants" | "meetings" | "activity">("certificates");
+  const [reportSearch, setReportSearch] = useState("");
+  const [reportStatus, setReportStatus] = useState("ALL");
+  const [certificateRows, setCertificateRows] = useState<
+    {
+      id: string;
+      applicant: string;
+      email: string;
+      purpose: string;
+      status: string;
+      payment: string;
+      doctor: string;
+      date: string;
+    }[]
+  >([]);
 
   const [transactions, setTransactions] = useState<
     {
@@ -606,6 +622,22 @@ export default function AdminDashboardPage() {
       try {
         const certRes = await fetch("/api/certificates");
         const certData = await certRes.json();
+        if (certData.success && Array.isArray(certData.certificates)) {
+          setCertificateRows(
+            certData.certificates.map((c: Record<string, unknown>) => ({
+              id: String(c.certificateId || ""),
+              applicant: String(c.candidateName || "Applicant"),
+              email: String(c.applicantEmail || ""),
+              purpose: String(c.purpose || "—"),
+              status: String(c.status || "submitted"),
+              payment: String(c.paymentStatus || "UNPAID").toUpperCase(),
+              doctor: displayDoctorName(String(c.assignedDoctor || "")) || "Unassigned",
+              date: c.appliedDate ? new Date(String(c.appliedDate)).toLocaleString() : "—",
+            }))
+          );
+        } else {
+          setCertificateRows([]);
+        }
         const payRes = await fetch("/api/payments");
         const payData = await payRes.json();
         if (payData.success && Array.isArray(payData.payments) && payData.payments.length > 0) {
@@ -716,7 +748,6 @@ export default function AdminDashboardPage() {
   const paidTransactions = transactions.filter((t) => t.status === "PAID");
   const grossRevenue = paidTransactions.reduce((sum, t) => sum + t.amount, 0);
   const platformMargin = paidTransactions.reduce((sum, t) => sum + t.platformFee, 0);
-  const platformMargin = paidTransactions.reduce((sum, t) => sum + t.platformFee, 0);
   const purposeRows = (() => {
     const counts = new Map<string, number>();
     for (const t of transactions) {
@@ -747,6 +778,79 @@ export default function AdminDashboardPage() {
       detail: `${d.name}${d.license ? ` · ${d.license}` : ""}`,
     })),
   ].slice(0, 8);
+
+  const reportStatusOptions = useMemo(() => {
+    if (reportTab === "certificates") return ["ALL", "submitted", "issued", "approved", "pending"];
+    if (reportTab === "payments") return ["ALL", "PAID", "WAITING", "EXPIRED"];
+    if (reportTab === "applicants") return ["ALL", "Active", "Pending", "Suspended"];
+    if (reportTab === "meetings") return ["ALL", "scheduled", "in-progress", "completed", "overdue", "rescheduled"];
+    return ["ALL"];
+  }, [reportTab]);
+
+  const filteredReportRows = useMemo(() => {
+    const q = reportSearch.trim().toLowerCase();
+    const matches = (values: string[]) => !q || values.some((v) => String(v || "").toLowerCase().includes(q));
+    const statusOk = (status: string) =>
+      reportStatus === "ALL" || String(status || "").toLowerCase() === reportStatus.toLowerCase();
+
+    if (reportTab === "certificates") {
+      return certificateRows
+        .filter((row) => statusOk(row.status) && matches([row.id, row.applicant, row.email, row.purpose, row.doctor, row.payment]))
+        .map((row) => ({
+          key: row.id,
+          cells: [row.id, row.applicant, row.email, row.purpose, row.doctor, row.status, row.payment, row.date],
+        }));
+    }
+    if (reportTab === "payments") {
+      return transactions
+        .filter((row) => statusOk(row.status) && matches([row.certId, row.applicantName, row.applicantEmail, row.purpose, row.doctorName, row.iremboRef]))
+        .map((row) => ({
+          key: row.id,
+          cells: [row.certId, row.applicantName, row.applicantEmail, row.purpose, displayDoctorName(row.doctorName), row.status, `${row.amount.toLocaleString()} FRW`, row.date],
+        }));
+    }
+    if (reportTab === "applicants") {
+      return applicants
+        .filter((row) => statusOk(row.status) && matches([row.name, row.email, row.nationalId, row.phone]))
+        .map((row) => ({
+          key: row.id,
+          cells: [row.name, row.email, row.phone, row.nationalId || "—", row.status, String(row.certs), row.joined],
+        }));
+    }
+    if (reportTab === "meetings") {
+      return platformAppointments
+        .filter((row: any) => statusOk(String(row.status || "scheduled")) && matches([row.applicantName, row.applicantEmail, row.doctorName, row.purpose, row.appointmentId]))
+        .map((row: any) => ({
+          key: String(row.appointmentId || row._id),
+          cells: [
+            row.appointmentId || "—",
+            row.applicantName || "—",
+            row.doctorName || "—",
+            row.purpose || "—",
+            `${row.scheduledDate || "—"} ${row.scheduledTime || ""}`.trim(),
+            row.status || "scheduled",
+            `${row.durationMinutes || 15} min`,
+          ],
+        }));
+    }
+    return recentEvents
+      .filter((row) => matches([row.event, row.detail, row.time]))
+      .map((row, index) => ({
+        key: `${row.time}-${row.event}-${index}`,
+        cells: [row.event, row.detail, row.time],
+      }));
+  }, [reportTab, reportSearch, reportStatus, certificateRows, transactions, applicants, platformAppointments, recentEvents]);
+
+  const reportHeaders =
+    reportTab === "certificates"
+      ? ["Official No.", "Applicant", "Email", "Purpose", "Doctor", "Status", "Payment", "Date"]
+      : reportTab === "payments"
+        ? ["Certificate", "Applicant", "Email", "Purpose", "Doctor", "Status", "Amount", "Date"]
+        : reportTab === "applicants"
+          ? ["Name", "Email", "Phone", "National ID", "Status", "Certificates", "Joined"]
+          : reportTab === "meetings"
+            ? ["Meeting ID", "Applicant", "Doctor", "Purpose", "When", "Status", "Duration"]
+            : ["Event", "Detail", "Time"];
 
   const toggleApplicantStatus = async (id: string, name: string, currentStatus: string, email?: string) => {
     const action = isActiveAccount(currentStatus) ? "suspend" : "activate";
@@ -970,32 +1074,31 @@ export default function AdminDashboardPage() {
                   Platform Reports &amp; Activity History
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Operational snapshot of certificates, physician throughput, applicant activity, and settlements.
+                  Filter certificates, payments, applicants, meetings, and system events. Export the table you are viewing.
                 </p>
               </div>
               <button
                 onClick={() => {
-                  info("Preparing report", "Building a spreadsheet of current activity…");
                   downloadCsv(
-                    "fitmed_activity_report.csv",
-                    ["Event", "Detail", "Time"],
-                    recentEvents.map((row) => [row.event, row.detail, row.time])
+                    `fitmed_${reportTab}_report.csv`,
+                    reportHeaders,
+                    filteredReportRows.map((row) => row.cells)
                   );
-                  success("Report ready", "Your activity spreadsheet has been downloaded.");
+                  success("Report ready", `${filteredReportRows.length} ${reportTab} row(s) downloaded.`);
                 }}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 self-start"
               >
                 <Download className="w-3.5 h-3.5 text-[#12B8B0]" />
-                Export monthly report
+                Export filtered table
               </button>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Certificates this month", value: String(transactions.length), hint: "From live certificate records", color: "text-emerald-600" },
+                { label: "Certificates on file", value: String(certificateRows.length), hint: `${certificateRows.filter((c) => String(c.payment).toUpperCase() === "PAID").length} paid`, color: "text-emerald-600" },
                 { label: "Pending clinical reviews", value: String(pendingApplicants.length + pendingDoctors.length), hint: "Awaiting admin or doctor action", color: "text-amber-600" },
-                { label: "Active applicants", value: String(applicants.filter((a) => a.status === "Active").length), hint: `${applicants.length} total accounts`, color: "text-[#0B2D5C]" },
-                { label: "Paid transactions", value: String(transactions.filter((t) => t.status === "PAID").length), hint: `${transactions.filter((t) => t.status === "WAITING").length} waiting payment`, color: "text-[#12B8B0]" },
+                { label: "Applicants", value: String(applicants.length), hint: `${applicants.filter((a) => isActiveAccount(a.status)).length} active accounts`, color: "text-[#0B2D5C]" },
+                { label: "Meetings booked", value: String(platformAppointments.length), hint: `${transactions.filter((t) => t.status === "PAID").length} paid transactions`, color: "text-[#12B8B0]" },
               ].map((card) => (
                 <div key={card.label} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm">
                   <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{card.label}</div>
@@ -1020,21 +1123,115 @@ export default function AdminDashboardPage() {
                   </div>
                 ))}
               </div>
-
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <h3 className="text-sm font-extrabold text-[#0B2D5C]">Recent system events</h3>
-                <div className="divide-y divide-slate-100 text-xs">
-                  {(recentEvents.length > 0 ? recentEvents : [{ time: "—", event: "No recent activity", detail: "Events appear here as certificates, applicants, and staff are created." }]).map((row) => (
-                    <div key={row.time + row.event} className="py-3 flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-bold text-[#0B2D5C]">{row.event}</div>
-                        <div className="text-slate-500 mt-0.5">{row.detail}</div>
-                      </div>
-                      <span className="text-[11px] text-slate-400 whitespace-nowrap">{row.time}</span>
-                    </div>
-                  ))}
+                <h3 className="text-sm font-extrabold text-[#0B2D5C]">Revenue snapshot</h3>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Gross paid</div>
+                    <div className="text-lg font-black text-[#0B2D5C] mt-1">{grossRevenue.toLocaleString()} FRW</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Platform margin</div>
+                    <div className="text-lg font-black text-[#12B8B0] mt-1">{platformMargin.toLocaleString()} FRW</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Doctors</div>
+                    <div className="text-lg font-black text-[#0B2D5C] mt-1">{verifiedDoctors.length}</div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Partner clinics</div>
+                    <div className="text-lg font-black text-[#0B2D5C] mt-1">{clinics.length}</div>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {[
+                    { id: "certificates", label: `Certificates (${certificateRows.length})` },
+                    { id: "payments", label: `Payments (${transactions.length})` },
+                    { id: "applicants", label: `Applicants (${applicants.length})` },
+                    { id: "meetings", label: `Meetings (${platformAppointments.length})` },
+                    { id: "activity", label: "Activity log" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setReportTab(tab.id as typeof reportTab);
+                        setReportStatus("ALL");
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                        reportTab === tab.id ? "bg-[#0B2D5C] text-white" : "bg-slate-50 text-slate-600 border border-slate-200"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={reportSearch}
+                      onChange={(e) => setReportSearch(e.target.value)}
+                      placeholder="Search this table..."
+                      className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0] w-56"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-slate-400" />
+                    <select
+                      value={reportStatus}
+                      onChange={(e) => setReportStatus(e.target.value)}
+                      className="py-2 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white"
+                    >
+                      {reportStatusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {status === "ALL" ? "All statuses" : status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[720px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-400">
+                      {reportHeaders.map((header) => (
+                        <th key={header} className="pb-3 pr-4 font-extrabold">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredReportRows.length === 0 && (
+                      <tr>
+                        <td colSpan={reportHeaders.length} className="py-8 text-center text-slate-400">
+                          No {reportTab} records match the current search or status filter.
+                        </td>
+                      </tr>
+                    )}
+                    {filteredReportRows.map((row) => (
+                      <tr key={row.key} className="text-slate-700">
+                        {row.cells.map((cell, index) => (
+                          <td key={`${row.key}-${index}`} className={`py-3 pr-4 ${index === 0 ? "font-bold text-[#0B2D5C]" : ""}`}>
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Showing {filteredReportRows.length} row{filteredReportRows.length === 1 ? "" : "s"} in {reportTab}.
+              </p>
             </div>
           </div>
         )}
