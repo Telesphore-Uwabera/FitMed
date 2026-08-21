@@ -13,8 +13,9 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.remove("dark");
-  document.documentElement.style.colorScheme = "light";
+  const root = document.documentElement;
+  root.classList.toggle("dark", theme === "dark");
+  root.style.colorScheme = theme === "dark" ? "dark" : "light";
   localStorage.setItem("fitmed_theme", theme);
   document.querySelectorAll(".dashboard-app").forEach((el) => {
     el.classList.toggle("dark", theme === "dark");

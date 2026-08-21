@@ -64,19 +64,19 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
         <div className="grid lg:grid-cols-2 gap-16 xl:gap-24 items-center">
           <motion.div ref={ref} initial={{ opacity: 0, x: -50 }} animate={isInView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.8 }}>
             <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-teal">For Licensed Doctors</span>
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-6" style={{ fontFamily: "var(--font-primary)", color: "#0B2D5C" }}>The Clinical <span className="gradient-text">Workspace</span></h2>
-            <p className="text-lg leading-relaxed mb-10" style={{ color: "#5b6f86" }}>Everything you need — applicant history, vitals, AI summaries, video consultation, and certificate issuance — in one secure, well-designed place.</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold mb-6 text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>The Clinical <span className="gradient-text">Workspace</span></h2>
+            <p className="text-lg leading-relaxed mb-10 text-slate-500 dark:text-slate-300">Everything you need — applicant history, vitals, AI summaries, video consultation, and certificate issuance — in one secure, well-designed place.</p>
             <div className="grid sm:grid-cols-2 gap-4 mb-10">
               {features.map((feature, index) => (
                 <motion.div key={feature.title} initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.2 + index * 0.1 }} className={`rounded-2xl p-5 border ${feature.border} ${feature.bg} transition-all group`}>
                   <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform"><feature.icon className={`w-4.5 h-4.5 ${feature.color}`} strokeWidth={1.5} /></div>
-                  <h4 className="text-sm font-bold mb-1" style={{ fontFamily: "var(--font-primary)", color: "#0B2D5C" }}>{feature.title}</h4>
-                  <p className="text-xs leading-relaxed" style={{ color: "#5b6f86" }}>{feature.desc}</p>
+                  <h4 className="text-sm font-bold mb-1 text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>{feature.title}</h4>
+                  <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-300">{feature.desc}</p>
                 </motion.div>
               ))}
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#7a8ea3" }}>Decision Framework</p>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3 text-slate-400">Decision Framework</p>
               <div className="grid grid-cols-2 gap-2">
                 {decisions.map((decision) => (
                   <div key={decision.label} className={`px-3 py-2.5 rounded-xl border text-center ${decision.cls}`}><div className="text-[10px] font-extrabold tracking-wide">{decision.label}</div><div className="text-[10px] mt-0.5 font-medium opacity-90">{decision.desc}</div></div>

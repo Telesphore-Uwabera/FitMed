@@ -7,6 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 
 const navLinks = [
   { label: "Home",          href: "/" },
@@ -37,6 +39,7 @@ export default function Navbar() {
   const [onHero,     setOnHero]     = useState(true);
   const [mounted,    setMounted]    = useState(false);
   const pathname = usePathname();
+  const { theme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
@@ -96,7 +99,7 @@ export default function Navbar() {
           scrolled
             ? onHero
               ? "bg-[#071d3d]/95 backdrop-blur-xl shadow-xl shadow-black/30"
-              : "bg-white/97 backdrop-blur-xl shadow-md"
+              : "bg-white/97 dark:bg-[#08162c]/95 backdrop-blur-xl shadow-md dark:shadow-black/30"
             : "bg-transparent"
         )}
       >
@@ -116,7 +119,7 @@ export default function Navbar() {
                * Both have transparent backgrounds — no filter needed.
                */}
               <Image
-                src={scrolled ? "/logo-2.webp" : "/logo-4.webp"}
+                src={scrolled && theme !== "dark" ? "/logo-2.webp" : "/logo-4.webp"}
                 alt="FitMed"
                 width={641}
                 height={390}
@@ -138,24 +141,14 @@ export default function Navbar() {
                     "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 rounded-xl text-[13px] 2xl:text-[0.9rem] font-semibold transition-all duration-200",
                     onHero
                       ? "text-white/85 hover:text-white hover:bg-white/12"
-                      : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6]"
+                      : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6] dark:text-white/85 dark:hover:text-white dark:hover:bg-white/12"
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
             </nav>
-            <Link
-              href="/signin"
-              className={cn(
-                "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 text-[13px] 2xl:text-sm font-semibold rounded-xl transition-all duration-200",
-                onHero
-                  ? "text-white/70 hover:text-white hover:bg-white/10"
-                  : "text-[#0B2D5C]/70 hover:text-[#0B2D5C]"
-              )}
-            >
-              Sign In
-            </Link>
+            <ThemeToggle variant={onHero ? "hero" : "nav"} className="ml-1" />
             <motion.div
               whileHover={{ scale: 1.04, boxShadow: "0 8px 30px rgba(14,165,233,.35)" }}
               whileTap={{ scale: 0.97 }}
@@ -174,13 +167,22 @@ export default function Navbar() {
           {/* ── Hamburger — visible below lg (< 1024px) ─────────
               Shows icon + "MENU" / "CLOSE" label.
           ─────────────────────────────────────────────────── */}
-          <button
+          <div className="xl:hidden flex items-center gap-1.5 flex-shrink-0">
+            <ThemeToggle
+              variant="icon"
+              className={
+                onHero
+                  ? "text-white hover:bg-white/12 border border-white/20"
+                  : "text-[#0B2D5C] dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600"
+              }
+            />
+            <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={cn(
-              "xl:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase flex-shrink-0",
+              "flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase flex-shrink-0",
               onHero
                 ? "text-white hover:bg-white/12"
-                : "text-[#0B2D5C] hover:bg-[#edf6f6]"
+                : "text-[#0B2D5C] hover:bg-[#edf6f6] dark:text-white dark:hover:bg-white/12"
             )}
             aria-label="Toggle menu"
           >
@@ -209,6 +211,7 @@ export default function Navbar() {
             </AnimatePresence>
             <span>{mobileOpen ? "CLOSE" : "MENU"}</span>
           </button>
+          </div>
         </div>
       </motion.header>
 
@@ -231,10 +234,10 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white shadow-2xl xl:hidden flex flex-col"
+              className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white dark:bg-[#0c1c33] shadow-2xl xl:hidden flex flex-col"
             >
               {/* Drawer header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
                 <Image
                   src="/logo-4.webp"
                   alt="FitMed"
@@ -244,9 +247,9 @@ export default function Navbar() {
                 />
                 <button
                   onClick={() => setMobileOpen(false)}
-                  className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
-                  <X className="w-5 h-5 text-slate-500" />
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-300" />
                 </button>
               </div>
 
@@ -262,7 +265,7 @@ export default function Navbar() {
                     <Link
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
-                      className="block px-4 py-3.5 text-slate-700 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all text-sm font-semibold"
+                      className="block px-4 py-3.5 text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-[#12B8B0] hover:bg-sky-50 dark:hover:bg-white/10 rounded-xl transition-all text-sm font-semibold"
                     >
                       {link.label}
                     </Link>
@@ -271,14 +274,7 @@ export default function Navbar() {
               </div>
 
               {/* Bottom actions */}
-              <div className="p-4 border-t border-slate-100 flex flex-col gap-3">
-                <Link
-                  href="/signin"
-                  onClick={() => setMobileOpen(false)}
-                  className="py-3 text-center text-slate-600 rounded-xl border border-slate-200 hover:border-slate-300 text-sm font-semibold transition-all"
-                >
-                  Sign In
-                </Link>
+              <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex flex-col gap-3">
                 <Link
                   href="/signin"
                   onClick={() => setMobileOpen(false)}

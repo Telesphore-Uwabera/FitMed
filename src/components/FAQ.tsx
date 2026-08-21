@@ -49,7 +49,7 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
-      className="bg-white rounded-2xl border border-slate-200 hover:border-sky-200 transition-all duration-300 overflow-hidden shadow-sm h-fit"
+      className="bg-white dark:bg-[#12253d] rounded-2xl border border-slate-200 dark:border-slate-600 hover:border-sky-200 dark:hover:border-[#12B8B0]/40 transition-all duration-300 overflow-hidden shadow-sm h-fit"
     >
       <button
         onClick={() => setOpen(!open)}
@@ -57,8 +57,8 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
         aria-expanded={open}
       >
         <span
-          className="text-sm md:text-base font-semibold leading-snug flex-1"
-          style={{ fontFamily: "var(--font-primary)", color: "#0B2D5C" }}
+          className="text-sm md:text-base font-semibold leading-snug flex-1 text-[#0B2D5C] dark:text-slate-100"
+          style={{ fontFamily: "var(--font-primary)" }}
         >
           {faq.q}
         </span>
@@ -66,7 +66,7 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.3 }}
           className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors mt-0.5 ${
-            open ? "bg-sky-100 text-sky-600" : "bg-slate-100 text-slate-400"
+            open ? "bg-sky-100 text-sky-600 dark:bg-[#12B8B0]/20 dark:text-[#12B8B0]" : "bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-300"
           }`}
         >
           <ChevronDown className="w-4 h-4" />
@@ -83,8 +83,8 @@ function FAQItem({ faq, index }: { faq: (typeof faqs)[0]; index: number }) {
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             <div className="px-5 md:px-6 pb-5 md:pb-6">
-              <div className="w-full h-px bg-slate-100 mb-4" />
-              <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
+              <div className="w-full h-px bg-slate-100 dark:bg-slate-600 mb-4" />
+              <p className="text-sm text-slate-500 dark:text-slate-300 leading-relaxed">{faq.a}</p>
             </div>
           </motion.div>
         )}
@@ -110,12 +110,12 @@ export default function FAQ() {
           className="text-center mb-16"
         >
           <h2
-            className="text-4xl md:text-5xl font-extrabold mb-5"
-            style={{ fontFamily: "var(--font-primary)", color: "#0B2D5C" }}
+            className="text-4xl md:text-5xl font-extrabold mb-5 text-[#0B2D5C] dark:text-slate-100"
+            style={{ fontFamily: "var(--font-primary)" }}
           >
             Got <span className="gradient-text">Questions?</span>
           </h2>
-          <p className="text-lg max-w-xl mx-auto leading-relaxed" style={{ color: "#5b6f86" }}>
+          <p className="text-lg max-w-xl mx-auto leading-relaxed text-slate-500 dark:text-slate-300">
             Everything you need to know about FitMed.{" "}
             <Link
               href="/contact"

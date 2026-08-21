@@ -90,6 +90,15 @@ html {
   scroll-margin-top: 88px;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #071422;
+  color: #dbe7f3;
+}
+
 body {
   background-color: #ffffff;
   color: #0B2D5C;
@@ -106,6 +115,9 @@ body {
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-manrope), "Manrope", system-ui, -apple-system, sans-serif;
     color: #0B2D5C;
+  }
+  html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+    color: #eaf2fb;
   }
 }
 
@@ -675,4 +687,83 @@ textarea {
 .dashboard-app.dark select {
   border-bottom-color: #3d5a78 !important;
   color: #eaf2fb !important;
+}
+
+/* ─── Public pages dark mode (home, about, contact, etc.) ───────── */
+html.dark:not(:has(.dashboard-app)) .section-white { background: #08111f; }
+html.dark:not(:has(.dashboard-app)) .section-gray { background: #0a1628; }
+html.dark:not(:has(.dashboard-app)) .section-light { background: #0c1c33; }
+html.dark:not(:has(.dashboard-app)) .section-slate { background: #0e1c31; }
+
+html.dark:not(:has(.dashboard-app)) .section-white h1,
+html.dark:not(:has(.dashboard-app)) .section-white h2,
+html.dark:not(:has(.dashboard-app)) .section-white h3,
+html.dark:not(:has(.dashboard-app)) .section-white h4,
+html.dark:not(:has(.dashboard-app)) .section-gray h1,
+html.dark:not(:has(.dashboard-app)) .section-gray h2,
+html.dark:not(:has(.dashboard-app)) .section-gray h3,
+html.dark:not(:has(.dashboard-app)) .section-gray h4,
+html.dark:not(:has(.dashboard-app)) .section-light h1,
+html.dark:not(:has(.dashboard-app)) .section-light h2,
+html.dark:not(:has(.dashboard-app)) .section-light h3,
+html.dark:not(:has(.dashboard-app)) .section-light h4,
+html.dark:not(:has(.dashboard-app)) .section-slate h1,
+html.dark:not(:has(.dashboard-app)) .section-slate h2,
+html.dark:not(:has(.dashboard-app)) .section-slate h3,
+html.dark:not(:has(.dashboard-app)) .section-slate h4 {
+  color: #eaf2fb;
+}
+
+html.dark:not(:has(.dashboard-app)) .card-white {
+  background: #12253d;
+  border-color: #243a57;
+}
+
+html.dark:not(:has(.dashboard-app)) .bg-white,
+html.dark:not(:has(.dashboard-app)) .bg-white\/90,
+html.dark:not(:has(.dashboard-app)) .bg-white\/97 {
+  background-color: #12253d;
+}
+
+html.dark:not(:has(.dashboard-app)) .bg-slate-50,
+html.dark:not(:has(.dashboard-app)) .bg-\[\#f4f7fb\] {
+  background-color: #0a1628;
+}
+
+html.dark:not(:has(.dashboard-app)) .bg-sky-50,
+html.dark:not(:has(.dashboard-app)) .bg-teal-50,
+html.dark:not(:has(.dashboard-app)) .bg-violet-50,
+html.dark:not(:has(.dashboard-app)) .bg-emerald-50,
+html.dark:not(:has(.dashboard-app)) .bg-amber-50,
+html.dark:not(:has(.dashboard-app)) .bg-rose-50,
+html.dark:not(:has(.dashboard-app)) .bg-indigo-50 {
+  background-color: #0e1c31;
+}
+
+html.dark:not(:has(.dashboard-app)) .text-\[\#0B2D5C\],
+html.dark:not(:has(.dashboard-app)) .text-slate-900,
+html.dark:not(:has(.dashboard-app)) .text-slate-800,
+html.dark:not(:has(.dashboard-app)) .text-slate-700 {
+  color: #eaf2fb;
+}
+
+html.dark:not(:has(.dashboard-app)) .text-slate-600,
+html.dark:not(:has(.dashboard-app)) .text-slate-500 {
+  color: #94a3b8;
+}
+
+html.dark:not(:has(.dashboard-app)) .border-slate-200,
+html.dark:not(:has(.dashboard-app)) .border-slate-100,
+html.dark:not(:has(.dashboard-app)) .border-sky-100,
+html.dark:not(:has(.dashboard-app)) .border-slate-200\/80 {
+  border-color: #243a57;
+}
+
+html.dark:not(:has(.dashboard-app)) .border-teal-200,
+html.dark:not(:has(.dashboard-app)) .border-sky-200,
+html.dark:not(:has(.dashboard-app)) .border-emerald-200,
+html.dark:not(:has(.dashboard-app)) .border-amber-200,
+html.dark:not(:has(.dashboard-app)) .border-rose-200,
+html.dark:not(:has(.dashboard-app)) .border-indigo-200 {
+  border-color: #2d4a6a;
 }

@@ -121,7 +121,7 @@ export default function CertificateCategories() {
         </motion.div>
 
         {/* Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
           {categories.map((cat, i) => {
             const typeData = typeInfo[cat.type as keyof typeof typeInfo];
             return (
@@ -189,21 +189,6 @@ export default function CertificateCategories() {
             );
           })}
         </div>
-
-        {/* Legend */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ delay: 0.8 }}
-          className="flex flex-wrap justify-center gap-6"
-        >
-          {Object.entries(typeInfo).map(([k, info]) => (
-            <div key={k} className={`flex items-center gap-2 text-sm font-medium ${info.color}`}>
-              <info.icon className="w-4 h-4" />
-              <span>{info.label}</span>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );
