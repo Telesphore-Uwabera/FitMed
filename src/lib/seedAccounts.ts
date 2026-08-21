@@ -153,6 +153,7 @@ export async function seedFitMedAccounts(): Promise<void> {
       fullName: "Dr. Telesphore Uwabera, MD",
       email: doctorEmail,
       licenseNumber: "RW-RMDC-4091",
+      doctorId: "DOC-RW-0001",
       specialty: "Occupational Medicine & Telehealth",
       isVerified: true,
       status: "ONLINE",

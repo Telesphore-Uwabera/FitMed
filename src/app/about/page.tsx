@@ -124,6 +124,9 @@ function Shield(props: any) {
   return <ShieldCheck {...props} />;
 }
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AboutPage() {
   const { team } = await getPublicStaff().catch(() => ({ team: [] }));
   return (

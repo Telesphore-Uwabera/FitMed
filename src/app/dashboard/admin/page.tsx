@@ -50,6 +50,7 @@ import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/i
 import { useToast } from "@/components/ToastProvider";
 import { useDialog } from "@/components/DialogProvider";
 import { useSession } from "@/lib/useSession";
+import { displayDoctorName } from "@/lib/certificateDisplay";
 
 type ApplicantRecord = {
   id: string;
@@ -163,6 +164,7 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: profileToSave.name,
+          email: session.email,
           avatarUrl: profileToSave.avatarUrl,
         }),
       });
@@ -263,22 +265,24 @@ export default function AdminDashboardPage() {
 
   // Pending Doctor Approvals
   const [pendingDoctors, setPendingDoctors] = useState<
-    { id: string; name: string; specialty?: string; license?: string; applied?: string; status: string }[]
+    { id: string; doctorId?: string; name: string; specialty?: string; license?: string; applied?: string; status: string }[]
   >([]);
 
   const [verifiedDoctors, setVerifiedDoctors] = useState<
-    { id: string; name: string; role?: string; license?: string; status: string }[]
+    { id: string; doctorId?: string; name: string; role?: string; license?: string; status: string }[]
   >([]);
 
   const [showAddClinic, setShowAddClinic] = useState(false);
-  const [clinicForm, setClinicForm] = useState({
+  const [editingClinicId, setEditingClinicId] = useState<string | null>(null);
+  const emptyClinicForm = {
     name: "",
     city: "",
     status: "Active Partner",
     capacity: "Medium",
     phone: "",
     type: "",
-  });
+  };
+  const [clinicForm, setClinicForm] = useState(emptyClinicForm);
   const [clinics, setClinics] = useState<
     { id: string; name: string; city: string; status: string; capacity: string; phone?: string; type?: string }[]
   >([]);
@@ -562,8 +566,9 @@ export default function AdminDashboardPage() {
           setPendingDoctors(
             doctors
               .filter((d: { status?: string }) => d.status === "Pending")
-              .map((d: { id: string; name: string; role?: string; license?: string; status: string }) => ({
+              .map((d: { id: string; doctorId?: string; name: string; role?: string; license?: string; status: string }) => ({
                 id: d.id,
+                doctorId: d.doctorId,
                 name: d.name,
                 specialty: d.role,
                 license: d.license,
@@ -624,7 +629,7 @@ export default function AdminDashboardPage() {
                 iremboRef: String(c.iremboRef || c.certificateId || "—"),
                 date: applied,
                 status,
-                doctorName: String(c.assignedDoctor || "—"),
+        doctorName: displayDoctorName(String(c.assignedDoctor || "—")) || "—",
                 doctorPayout: Math.round(amount * 0.8),
                 platformFee: Math.round(amount * 0.2),
               };
@@ -710,7 +715,7 @@ export default function AdminDashboardPage() {
 
   const paidTransactions = transactions.filter((t) => t.status === "PAID");
   const grossRevenue = paidTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const doctorPayoutTotal = paidTransactions.reduce((sum, t) => sum + t.doctorPayout, 0);
+  const platformMargin = paidTransactions.reduce((sum, t) => sum + t.platformFee, 0);
   const platformMargin = paidTransactions.reduce((sum, t) => sum + t.platformFee, 0);
   const purposeRows = (() => {
     const counts = new Map<string, number>();
@@ -1449,7 +1454,7 @@ export default function AdminDashboardPage() {
                   className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
                 >
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-[#0B2D5C]">{doc.name} ({doc.id})</h4>
+                    <h4 className="text-sm font-bold text-[#0B2D5C]">{doc.name} ({doc.doctorId || doc.id})</h4>
                     <div className="text-xs text-slate-600">Specialty: {doc.specialty} · License: {doc.license}</div>
                   </div>
                   <button
@@ -1470,7 +1475,7 @@ export default function AdminDashboardPage() {
                     <div>
                       <div className="font-bold text-[#0B2D5C] flex items-center gap-2">
                         <span>{d.name}</span>
-                        <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: {d.id}</span>
+                        <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: {d.doctorId || d.id}</span>
                         <span className="text-xs text-slate-500">· {d.license}</span>
                       </div>
                       <div className="text-slate-400 text-[11px] mt-0.5">{d.role}</div>
@@ -1674,14 +1679,18 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-[#0B2D5C]">Accredited Partner Clinic Network</h3>
-                <p className="text-xs text-slate-500">Facilities receiving automated risk-based candidate referrals.</p>
+                <p className="text-xs text-slate-500">Add, edit, activate, deactivate, or remove facilities that receive risk-based referrals.</p>
               </div>
               <button
-                onClick={() => setShowAddClinic((open) => !open)}
+                onClick={() => {
+                  setEditingClinicId(null);
+                  setClinicForm(emptyClinicForm);
+                  setShowAddClinic((open) => !open);
+                }}
                 className="px-4 py-2 rounded-xl bg-[#0B2D5C] text-white font-bold text-xs flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
-                <span>{showAddClinic ? "Cancel" : "Add Partner Clinic"}</span>
+                <span>{showAddClinic && !editingClinicId ? "Cancel" : "Add Partner Clinic"}</span>
               </button>
             </div>
 
@@ -1691,18 +1700,25 @@ export default function AdminDashboardPage() {
                   e.preventDefault();
                   try {
                     const res = await fetch("/api/clinics", {
-                      method: "POST",
+                      method: editingClinicId ? "PATCH" : "POST",
+                      credentials: "include",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(clinicForm),
+                      body: JSON.stringify(editingClinicId ? { id: editingClinicId, ...clinicForm } : clinicForm),
                     });
                     const data = await res.json();
                     if (!data.success) {
-                      error("Clinic not saved", data.error || "Please try again.");
+                      error(editingClinicId ? "Clinic not updated" : "Clinic not saved", data.error || "Please try again.");
                       return;
                     }
-                    setClinics((prev) => [data.clinic, ...prev]);
-                    success("Clinic added", `${clinicForm.name} is now in the referral network.`);
-                    setClinicForm({ name: "", city: "", status: "Active Partner", capacity: "Medium", phone: "", type: "" });
+                    if (editingClinicId) {
+                      setClinics((prev) => prev.map((row) => (row.id === editingClinicId ? data.clinic : row)));
+                      success("Clinic updated", `${data.clinic.name} was saved.`);
+                    } else {
+                      setClinics((prev) => [data.clinic, ...prev]);
+                      success("Clinic added", `${clinicForm.name} is now in the referral network.`);
+                    }
+                    setClinicForm(emptyClinicForm);
+                    setEditingClinicId(null);
                     setShowAddClinic(false);
                   } catch {
                     error("Clinic not saved", "Could not reach the server.");
@@ -1715,23 +1731,29 @@ export default function AdminDashboardPage() {
                   placeholder="Clinic name"
                   value={clinicForm.name}
                   onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })}
-                  className="p-2.5 text-xs font-semibold"
+                  className="p-2.5 rounded-xl border border-slate-200 text-xs font-semibold"
                 />
                 <input
                   required
                   placeholder="City / district"
                   value={clinicForm.city}
                   onChange={(e) => setClinicForm({ ...clinicForm, city: e.target.value })}
-                  className="p-2.5 text-xs font-semibold"
-                />
-                <input
-                  placeholder="Partnership status"
-                  value={clinicForm.status}
-                  onChange={(e) => setClinicForm({ ...clinicForm, status: e.target.value })}
                   className="p-2.5 rounded-xl border border-slate-200 text-xs font-semibold"
                 />
-                <button type="submit" className="p-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-black text-xs">
-                  Save clinic
+                <input
+                  placeholder="Phone"
+                  value={clinicForm.phone}
+                  onChange={(e) => setClinicForm({ ...clinicForm, phone: e.target.value })}
+                  className="p-2.5 rounded-xl border border-slate-200 text-xs font-semibold"
+                />
+                <input
+                  placeholder="Type (e.g. Referral hospital)"
+                  value={clinicForm.type}
+                  onChange={(e) => setClinicForm({ ...clinicForm, type: e.target.value })}
+                  className="p-2.5 rounded-xl border border-slate-200 text-xs font-semibold"
+                />
+                <button type="submit" className="p-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-black text-xs sm:col-span-2">
+                  {editingClinicId ? "Update clinic" : "Save clinic"}
                 </button>
               </form>
             )}
@@ -1740,17 +1762,109 @@ export default function AdminDashboardPage() {
               {clinics.length === 0 && (
                 <div className="py-6 text-slate-400">No partner clinics in the database yet.</div>
               )}
-              {clinics.map((c) => (
-                <div key={c.id} className="py-3.5 flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-[#0B2D5C]">{c.name}</div>
-                    <div className="text-slate-400">{c.city}{c.phone ? ` · ${c.phone}` : ""}</div>
+              {clinics.map((c) => {
+                const active = !String(c.status || "").toLowerCase().includes("inactive");
+                return (
+                  <div key={c.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="font-bold text-[#0B2D5C]">{c.name}</div>
+                      <div className="text-slate-400">
+                        {c.city}
+                        {c.phone ? ` · ${c.phone}` : ""}
+                        {c.type ? ` · ${c.type}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`px-2.5 py-1 rounded-full font-bold border text-[10px] ${
+                          active
+                            ? "bg-teal-50 text-teal-800 border-teal-200"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        {active ? "Active Partner" : "Inactive"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Edit clinic"
+                        onClick={() => {
+                          setEditingClinicId(c.id);
+                          setClinicForm({
+                            name: c.name,
+                            city: c.city,
+                            status: c.status,
+                            capacity: c.capacity || "Medium",
+                            phone: c.phone || "",
+                            type: c.type || "",
+                          });
+                          setShowAddClinic(true);
+                        }}
+                        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#12B8B0] transition-colors"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        title={active ? "Deactivate clinic" : "Activate clinic"}
+                        onClick={async () => {
+                          try {
+                            const res = await fetch("/api/clinics", {
+                              method: "PATCH",
+                              credentials: "include",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: c.id, action: active ? "deactivate" : "activate" }),
+                            });
+                            const data = await res.json();
+                            if (!data.success) {
+                              error("Clinic not updated", data.error || "Please try again.");
+                              return;
+                            }
+                            setClinics((prev) => prev.map((row) => (row.id === c.id ? data.clinic : row)));
+                            success(
+                              active ? "Clinic deactivated" : "Clinic activated",
+                              `${c.name} is now ${active ? "inactive" : "an active partner"}.`
+                            );
+                          } catch {
+                            error("Clinic not updated", "Could not reach the server.");
+                          }
+                        }}
+                        className={`p-2 rounded-lg border transition-colors ${
+                          active
+                            ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                            : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        }`}
+                      >
+                        {active ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        title="Delete clinic"
+                        onClick={async () => {
+                          if (!window.confirm(`Delete ${c.name} from the partner network?`)) return;
+                          try {
+                            const res = await fetch(`/api/clinics?id=${encodeURIComponent(c.id)}`, {
+                              method: "DELETE",
+                              credentials: "include",
+                            });
+                            const data = await res.json();
+                            if (!data.success) {
+                              error("Clinic not deleted", data.error || "Please try again.");
+                              return;
+                            }
+                            setClinics((prev) => prev.filter((row) => row.id !== c.id));
+                            success("Clinic deleted", `${c.name} was removed.`);
+                          } catch {
+                            error("Clinic not deleted", "Could not reach the server.");
+                          }
+                        }}
+                        className="p-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 font-bold border border-teal-200 text-[10px]">
-                    {c.status}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -1894,7 +2008,7 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Financial Overview Metrics Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-1">
                 <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Collected (Paid)</div>
                 <div className="text-2xl font-black text-emerald-600">
@@ -1925,13 +2039,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-1">
-                <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Doctor Payouts (80%)</div>
-                <div className="text-2xl font-black text-[#0B2D5C]">
-                  {transactions.filter(t => t.status === "PAID").reduce((sum, t) => sum + t.doctorPayout, 0).toLocaleString()} FRW
-                </div>
-                <div className="text-[11px] text-[#12B8B0] font-semibold">Platform: {transactions.filter(t => t.status === "PAID").reduce((sum, t) => sum + t.platformFee, 0).toLocaleString()} FRW</div>
-              </div>
             </div>
 
             {/* Filter & Search Bar */}
@@ -2097,14 +2204,10 @@ export default function AdminDashboardPage() {
         {activeNav === "revenue" && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <h3 className="text-lg font-bold text-[#0B2D5C]">Financial Performance & Revenue Distribution</h3>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-400 uppercase font-bold">Total Gross Revenue</div>
                 <div className="text-2xl font-extrabold text-[#0B2D5C] mt-1">{grossRevenue.toLocaleString()} FRW</div>
-              </div>
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="text-xs text-slate-400 uppercase font-bold">Doctor Payouts (80%)</div>
-                <div className="text-2xl font-extrabold text-emerald-600 mt-1">{doctorPayoutTotal.toLocaleString()} FRW</div>
               </div>
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-400 uppercase font-bold">Platform Margin (20%)</div>
@@ -2267,11 +2370,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">Evaluating Doctor:</span>
-                <span className="font-bold text-slate-800">{selectedTxn.doctorName}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-200">
-                <span className="text-slate-500">Doctor Payout (80%):</span>
-                <span className="font-bold text-emerald-600">{selectedTxn.doctorPayout.toLocaleString()} FRW</span>
+                <span className="font-bold text-slate-800">{displayDoctorName(selectedTxn.doctorName) || "—"}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">Platform Margin (20%):</span>

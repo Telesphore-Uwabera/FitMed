@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
-import Image from "next/image";
 import type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
 export type TeamMember = PublicTeamMember;
@@ -27,20 +26,17 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (initialMembers?.length) {
-      setMembers(initialMembers);
-      setLoading(false);
-      return;
-    }
     let active = true;
-    fetch("/api/public/staff")
+    fetch("/api/public/staff", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
-        setMembers(Array.isArray(data.team) ? data.team : []);
+        const live = Array.isArray(data.team) ? data.team : [];
+        if (live.length) setMembers(live);
+        else if (initialMembers?.length) setMembers(initialMembers);
       })
       .catch(() => {
-        if (active) setMembers([]);
+        if (active && initialMembers?.length) setMembers(initialMembers);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -100,14 +96,9 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
             <div className="lg:col-span-5 relative">
               <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-slate-700 shadow-xl group bg-[#0B2D5C]">
                 {photo ? (
-                  <Image
-                    src={photo}
-                    alt={member.name}
-                    fill
-                    className="object-cover object-top transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 1024px) 100vw, 40vw"
-                    priority
-                  />
+                  // User-uploaded Cloudinary photos must not go through the Next image optimizer.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt={member.name} className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-5xl font-extrabold text-[#12B8B0]">
                     {initials(member.name)}

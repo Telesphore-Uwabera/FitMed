@@ -1,7 +1,14 @@
 import Certificate from "@/models/Certificate";
 import Appointment from "@/models/Appointment";
 import Payment from "@/models/Payment";
+import Doctor from "@/models/Doctor";
 import { FITMED_APP_URL } from "@/lib/brevo";
+
+const DOCTOR_PREFIX = "DOC-RW-";
+
+export function formatDoctorId(n: number) {
+  return `${DOCTOR_PREFIX}${padSerial(n, 4)}`;
+}
 
 function padSerial(n: number, width = 5) {
   return String(n).padStart(width, "0");
@@ -123,4 +130,38 @@ export async function nextKey(
     if (n && n > max) max = n;
   }
   return formatKey("irembo", max + 1, year);
+}
+
+export async function ensureDoctorIds() {
+  const docs = await Doctor.find({}).sort({ createdAt: 1, _id: 1 }).select("_id doctorId").lean();
+  const used = new Set(
+    docs
+      .map((d) => String(d.doctorId || "").toUpperCase())
+      .filter((id) => /^DOC-RW-\d{4}$/.test(id))
+  );
+  let cursor = 1;
+  const takeNext = () => {
+    while (used.has(formatDoctorId(cursor))) cursor += 1;
+    const id = formatDoctorId(cursor);
+    used.add(id);
+    cursor += 1;
+    return id;
+  };
+  for (const doc of docs) {
+    if (/^DOC-RW-\d{4}$/i.test(String(doc.doctorId || ""))) continue;
+    await Doctor.updateOne({ _id: doc._id }, { $set: { doctorId: takeNext() } });
+  }
+}
+
+export async function nextDoctorId() {
+  await ensureDoctorIds();
+  const docs = await Doctor.find({ doctorId: { $regex: /^DOC-RW-\d{4}$/i } })
+    .select("doctorId")
+    .lean();
+  let max = 0;
+  for (const row of docs) {
+    const n = Number(String(row.doctorId).slice(DOCTOR_PREFIX.length));
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return formatDoctorId(max + 1);
 }

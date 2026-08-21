@@ -5,6 +5,7 @@ import { generateTempPassword, hashPassword } from "@/lib/password";
 import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
+import { ensureDoctorIds, nextDoctorId } from "@/lib/sequentialIds";
 
 export async function GET() {
   try {
@@ -14,8 +15,10 @@ export async function GET() {
       .select("fullName name email role status createdAt")
       .sort({ createdAt: -1 })
       .lean();
+    await ensureDoctorIds();
     const doctors = await Doctor.find({})
-      .select("fullName email licenseNumber specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued")
+      .select("fullName email licenseNumber doctorId specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued")
+      .sort({ createdAt: 1 })
       .lean();
     const userByEmail = new Map(users.map((u) => [String(u.email || "").toLowerCase(), u]));
 
@@ -27,6 +30,7 @@ export async function GET() {
         const suspended = String(linked?.status || "").toLowerCase() === "suspended";
         return {
           id: String(d._id),
+          doctorId: String(d.doctorId || ""),
           name: d.fullName,
           email: d.email,
           license: d.licenseNumber,
@@ -94,6 +98,7 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         licenseNumber: license,
+        doctorId: await nextDoctorId(),
         specialty,
         avatarUrl: avatarUrl || undefined,
         isVerified: true,

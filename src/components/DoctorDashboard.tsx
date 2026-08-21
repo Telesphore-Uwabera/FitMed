@@ -36,14 +36,15 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
   const [currentDoctor, setCurrentDoctor] = useState(0);
 
   useEffect(() => {
-    if (initialDoctors?.length) {
-      setDoctors(initialDoctors);
-      return;
-    }
-    fetch("/api/public/staff")
+    if (initialDoctors?.length) setDoctors(initialDoctors);
+    fetch("/api/public/staff", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data) => setDoctors(Array.isArray(data.doctors) ? data.doctors : []))
-      .catch(() => setDoctors([]));
+      .then((data) => {
+        if (Array.isArray(data.doctors) && data.doctors.length) setDoctors(data.doctors);
+      })
+      .catch(() => {
+        if (initialDoctors?.length) setDoctors(initialDoctors);
+      });
   }, [initialDoctors]);
 
   useEffect(() => {

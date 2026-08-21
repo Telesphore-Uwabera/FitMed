@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Payment from "@/models/Payment";
+import { displayDoctorName } from "@/lib/certificateDisplay";
 
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
         iremboRef: p.iremboRef || p.certificateId,
         date: p.paidAt || p.createdAt ? new Date(String(p.paidAt || p.createdAt)).toLocaleString() : "—",
         status: p.status,
-        doctorName: p.doctorName || "—",
+        doctorName: displayDoctorName(p.doctorName) || "—",
         doctorPayout: Math.round((p.amount || 0) * 0.8),
         platformFee: Math.round((p.amount || 0) * 0.2),
       })),

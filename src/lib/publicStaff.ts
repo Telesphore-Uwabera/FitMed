@@ -8,9 +8,14 @@ export type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
 const PLACEHOLDER = "";
 
-function isStockAvatar(url?: string) {
-  const value = String(url || "");
-  return !value || value.includes("images.unsplash.com");
+function publicPhoto(...urls: Array<string | undefined>) {
+  for (const url of urls) {
+    const value = String(url || "").trim();
+    if (!value) continue;
+    if (value.includes("images.unsplash.com")) continue;
+    return value;
+  }
+  return PLACEHOLDER;
 }
 
 function isActiveStatus(status?: string) {
@@ -57,7 +62,7 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         role: specialty,
         qualifications: license ? `RMDC ${license}` : "Licensed physician",
         bio: `${name} is a licensed FitMed physician providing telehealth fitness assessments${license ? ` (licence ${license})` : ""}.`,
-        image: isStockAvatar(doc.avatarUrl || linked?.avatarUrl) ? PLACEHOLDER : String(doc.avatarUrl || linked?.avatarUrl),
+        image: publicPhoto(doc.avatarUrl, linked?.avatarUrl),
         badge: "Licensed Physician",
         kind: "doctor" as const,
         license,
@@ -75,7 +80,7 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         role: "Platform Administrator",
         qualifications: "FitMed operations & clinical network",
         bio: `${name} oversees FitMed account approval, doctor onboarding, and platform operations.`,
-        image: isStockAvatar(user.avatarUrl) ? PLACEHOLDER : String(user.avatarUrl),
+        image: publicPhoto(user.avatarUrl),
         badge: "Leadership",
         kind: "admin" as const,
       };
