@@ -7,7 +7,7 @@ export interface IContactMessage extends Document {
   organization?: string;
   subject: string;
   message: string;
-  category: "general" | "enterprise" | "partnership" | "support" | "doctor_inquiry";
+  category: string;
   status: "New" | "In Review" | "Resolved";
   adminNotes?: string;
   createdAt: Date;
@@ -22,11 +22,7 @@ const ContactMessageSchema = new Schema<IContactMessage>(
     organization: { type: String, trim: true },
     subject: { type: String, required: true },
     message: { type: String, required: true },
-    category: {
-      type: String,
-      enum: ["general", "enterprise", "partnership", "support", "doctor_inquiry"],
-      default: "general",
-    },
+    category: { type: String, default: "general", trim: true },
     status: {
       type: String,
       enum: ["New", "In Review", "Resolved"],

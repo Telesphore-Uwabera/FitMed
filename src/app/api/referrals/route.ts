@@ -7,7 +7,13 @@ export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
     const email = String(request.nextUrl.searchParams.get("applicantEmail") || "").trim().toLowerCase();
-    const query = email ? { applicantEmail: email } : {};
+    const session = await verifySession(request.cookies.get(COOKIE_NAME)?.value);
+    const query: Record<string, string> = {};
+    if (session?.role === "user") {
+      query.applicantEmail = session.email.toLowerCase();
+    } else if (email) {
+      query.applicantEmail = email;
+    }
     const referrals = await Referral.find(query).sort({ createdAt: -1 }).lean();
     return NextResponse.json({
       success: true,

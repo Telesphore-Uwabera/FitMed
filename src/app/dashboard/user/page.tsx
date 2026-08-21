@@ -213,6 +213,7 @@ export default function UserDashboard() {
   const [history, setHistory] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [partnerClinics, setPartnerClinics] = useState<{ name: string; city: string; phone?: string; type?: string; status?: string }[]>([]);
+  const [myReferrals, setMyReferrals] = useState<{ id: string; clinicName: string; reason: string; status?: string; date?: string; doctorName?: string }[]>([]);
 
   // Load profile, appointments, and certificates from MongoDB
   useEffect(() => {
@@ -275,6 +276,14 @@ export default function UserDashboard() {
         setPartnerClinics(clinicData.success ? clinicData.clinics || [] : []);
       } catch {
         setPartnerClinics([]);
+      }
+
+      try {
+        const refRes = await fetch(`/api/referrals?applicantEmail=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+        const refData = await refRes.json();
+        setMyReferrals(refData.success ? refData.referrals || [] : []);
+      } catch {
+        setMyReferrals([]);
       }
 
       try {
@@ -1350,6 +1359,22 @@ export default function UserDashboard() {
                     {c.type ? <div>Type: <strong>{c.type}</strong></div> : null}
                     {c.phone ? <div>Contact: <strong>{c.phone}</strong></div> : null}
                     {c.status ? <div>{c.status}</div> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-[#0B2D5C]">Your in-person referrals</h3>
+              {myReferrals.length === 0 && (
+                <p className="text-xs text-slate-400">No clinic referral has been issued for your account yet.</p>
+              )}
+              {myReferrals.map((r) => (
+                <div key={r.id} className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200">
+                  <div className="text-sm font-bold text-[#0B2D5C]">{r.clinicName}</div>
+                  <div className="text-xs text-slate-600 mt-1">Reason: {r.reason}</div>
+                  <div className="text-[11px] text-slate-500 mt-1">
+                    {r.doctorName ? `Doctor: ${r.doctorName} · ` : ""}
+                    {r.date || ""} · {r.status || "Pending"}
                   </div>
                 </div>
               ))}

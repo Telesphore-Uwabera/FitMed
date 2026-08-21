@@ -94,6 +94,34 @@ export async function ensureFitMedCollections(): Promise<string[]> {
 
 export async function seedFitMedAccounts(): Promise<void> {
   await ensureFitMedCollections();
+  if ((await Clinic.countDocuments()) === 0) {
+    await Clinic.insertMany([
+      {
+        name: "King Faisal Hospital, Kigali",
+        city: "Kigali",
+        status: "Active Partner",
+        capacity: "High",
+        phone: "+250 788 123 000",
+        type: "Referral hospital",
+      },
+      {
+        name: "CHUK (University Teaching Hospital)",
+        city: "Kigali",
+        status: "Active Partner",
+        capacity: "High",
+        phone: "+250 788 123 001",
+        type: "Public teaching hospital",
+      },
+      {
+        name: "Rwanda Military Hospital",
+        city: "Kigali",
+        status: "Active Partner",
+        capacity: "Medium",
+        phone: "+250 788 123 002",
+        type: "Occupational health clinic",
+      },
+    ]);
+  }
   if (global.fitmedAccountsSeeded) return;
 
   const passwordHash = hashPassword(SEED_PASSWORD);

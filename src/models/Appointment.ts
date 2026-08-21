@@ -7,6 +7,7 @@ export interface IAppointment extends Document {
   applicantEmail: string;
   applicantPhone?: string;
   doctorId: string;
+  doctorEmail?: string;
   doctorName: string;
   doctorSpecialty?: string;
   purpose: string;
@@ -31,6 +32,7 @@ const AppointmentSchema = new Schema<IAppointment>(
     applicantEmail: { type: String, required: true },
     applicantPhone: { type: String },
     doctorId: { type: String, required: true },
+    doctorEmail: { type: String, default: "" },
     doctorName: { type: String, required: true },
     doctorSpecialty: { type: String, default: "General Telehealth & Occupational Physician" },
     purpose: { type: String, required: true },

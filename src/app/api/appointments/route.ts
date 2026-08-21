@@ -14,7 +14,17 @@ export async function GET(request: NextRequest) {
     try {
       await connectToDatabase();
       const query: any = {};
-      if (doctorId) query.doctorId = doctorId;
+      const doctorEmail = searchParams.get("doctorEmail");
+      const doctorKeys = [...new Set([doctorId, doctorEmail].filter(Boolean))] as string[];
+      if (doctorKeys.length) {
+        query.$or = doctorKeys.flatMap((key) => {
+          const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          return [
+            { doctorId: key },
+            { doctorEmail: { $regex: `^${escaped}$`, $options: "i" } },
+          ];
+        });
+      }
       if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
       if (status) query.status = status;
 
@@ -62,6 +72,7 @@ export async function POST(request: NextRequest) {
       applicantEmail: String(applicantEmail).toLowerCase(),
       applicantPhone: applicantPhone || "",
       doctorId: doctorId || "",
+      doctorEmail: String(body.doctorEmail || doctorId || "").toLowerCase(),
       doctorName: doctorName || "",
       doctorSpecialty: doctorSpecialty || "",
       purpose: purpose || "Medical Fitness Review",

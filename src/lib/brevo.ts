@@ -322,4 +322,20 @@ export const EmailTemplates = {
        <p>${String(message || "").replace(/\n/g, "<br/>")}</p>
        <p>You received this because you subscribed to FitMed updates. Reply to this email if you have questions.</p>`
     ),
+
+  newsletterWelcome: (name: string) =>
+    brandedEmail(
+      "You are subscribed",
+      `<p>Hello <strong>${name || "there"}</strong>,</p>
+       <p>You are now subscribed to FitMed news. We will email you about certificate processing, doctor availability, and platform announcements.</p>
+       <p>If you did not subscribe, reply to this message and we will remove your address.</p>`
+    ),
+
+  contactReply: (fullName: string, reply: string) =>
+    brandedEmail(
+      "Reply from FitMed",
+      `<p>Dear <strong>${fullName}</strong>,</p>
+       <p>${String(reply || "").replace(/\n/g, "<br/>")}</p>
+       <p>You can reply to this email, or write to <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;">hello@fitmed.rw</a>.</p>`
+    ),
 };

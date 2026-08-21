@@ -17,26 +17,31 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase();
+    await connectToDatabase();
 
     // Step 1: Request OTP
     if (action === "request_otp") {
+      const user = await User.findOne({ email: cleanEmail }).select("email name fullName");
+      if (!user) {
+        return NextResponse.json({ success: false, error: "No FitMed account uses this email." }, { status: 404 });
+      }
+
       const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
       otpStore.set(cleanEmail, {
         otp: generatedOtp,
         expiresAt: Date.now() + 15 * 60 * 1000, // 15 mins
       });
 
-      const emailResult = await sendBrevoEmail({
+      await sendBrevoEmail({
         toEmail: cleanEmail,
-        toName: "FitMed User",
+        toName: user.fullName || user.name || "FitMed User",
         subject: "FitMed Password Reset Verification Code",
-        htmlContent: EmailTemplates.forgotPasswordOTP(cleanEmail.split("@")[0], generatedOtp),
+        htmlContent: EmailTemplates.forgotPasswordOTP((user.fullName || user.name || cleanEmail.split("@")[0]) as string, generatedOtp),
       });
 
       return NextResponse.json({
         success: true,
         message: `6-digit reset code sent to ${cleanEmail}.`,
-        otpForDev: generatedOtp, // For quick testing convenience
       });
     }
 
@@ -56,15 +61,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Verification code has expired." }, { status: 400 });
       }
 
-      try {
-        await connectToDatabase();
-        await User.findOneAndUpdate(
-          { email: cleanEmail },
-          { password: hashPassword(newPassword), requiresPasswordReset: false, temporaryPassword: undefined },
-          { new: true }
-        );
-      } catch (dbErr) {
-        console.warn("MongoDB password reset fallback:", dbErr);
+      const user = await User.findOneAndUpdate(
+        { email: cleanEmail },
+        { password: hashPassword(newPassword), requiresPasswordReset: false, temporaryPassword: undefined },
+        { new: true }
+      );
+      if (!user) {
+        return NextResponse.json({ success: false, error: "No FitMed account uses this email." }, { status: 404 });
       }
 
       otpStore.delete(cleanEmail);

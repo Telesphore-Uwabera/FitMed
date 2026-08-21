@@ -210,6 +210,7 @@ export default function DoctorDashboardPage() {
             applicantEmail: selectedCandidate.applicantEmail,
             applicantPhone: selectedCandidate.phone || "",
             doctorId: doctorProfile.id || session?.email || "",
+            doctorEmail: session?.email || "",
             doctorName: session?.name || doctorProfile.name || "Physician",
             purpose: selectedCandidate.purpose || "Medical fitness review",
             scheduledDate: new Date().toISOString().split("T")[0],
@@ -370,7 +371,10 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const aptRes = await fetch(`/api/appointments?doctorId=${encodeURIComponent(doctorEmail)}`, { signal: AbortSignal.timeout(8000) });
+        const aptRes = await fetch(
+          `/api/appointments?doctorId=${encodeURIComponent(doctorId || doctorEmail)}&doctorEmail=${encodeURIComponent(doctorEmail)}`,
+          { signal: AbortSignal.timeout(8000) }
+        );
         const aptData = await aptRes.json();
         if (aptData.success) {
           setDoctorAppointments(aptData.appointments || []);
@@ -467,7 +471,8 @@ export default function DoctorDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...scheduleForm,
-          doctorId: session?.email || "",
+          doctorId: session?.email || doctorProfile.id || "",
+          doctorEmail: session?.email || "",
           doctorName: session?.name || "Physician",
           doctorSpecialty: "Occupational Health & Telehealth Physician",
         }),
@@ -1901,6 +1906,7 @@ export default function DoctorDashboardPage() {
             >
               <input required placeholder="Applicant name" value={referralForm.applicantName} onChange={(e) => setReferralForm({ ...referralForm, applicantName: e.target.value })} className="text-xs" />
               <input placeholder="Applicant email" value={referralForm.applicantEmail} onChange={(e) => setReferralForm({ ...referralForm, applicantEmail: e.target.value })} className="text-xs" />
+              {partnerClinics.length > 0 ? (
               <select
                 required
                 value={referralForm.clinicName}
@@ -1915,6 +1921,15 @@ export default function DoctorDashboardPage() {
                   <option key={c.id} value={c.name}>{c.name} — {c.city}</option>
                 ))}
               </select>
+              ) : (
+                <input
+                  required
+                  placeholder="Clinic name and city"
+                  value={referralForm.clinicName}
+                  onChange={(e) => setReferralForm({ ...referralForm, clinicName: e.target.value })}
+                  className="text-xs"
+                />
+              )}
               <input required placeholder="Clinical reason" value={referralForm.reason} onChange={(e) => setReferralForm({ ...referralForm, reason: e.target.value })} className="text-xs" />
               <button type="submit" className="sm:col-span-2 px-4 py-2 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold">Save referral</button>
             </form>

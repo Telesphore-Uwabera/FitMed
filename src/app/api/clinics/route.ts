@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Clinic from "@/models/Clinic";
 import { COOKIE_NAME, verifySession } from "@/lib/authCookie";
+import { seedFitMedAccounts } from "@/lib/seedAccounts";
 
 export async function GET() {
   try {
     await connectToDatabase();
+    await seedFitMedAccounts();
     const clinics = await Clinic.find({}).sort({ createdAt: -1 }).lean();
     return NextResponse.json({
       success: true,

@@ -3,6 +3,18 @@ import { connectToDatabase } from "@/lib/mongodb";
 import ContactMessage from "@/models/ContactMessage";
 import { sendBrevoEmail, EmailTemplates, FITMED_ADMIN_EMAIL } from "@/lib/brevo";
 
+function categoryFromSubject(subject: string, category?: string) {
+  if (category && category !== "general") return String(category);
+  const value = String(subject || "").toLowerCase();
+  if (value.includes("doctor")) return "doctors";
+  if (value.includes("employer") || value.includes("corporate")) return "employers";
+  if (value.includes("technical") || value.includes("issue")) return "report";
+  if (value.includes("privacy")) return "privacy";
+  if (value.includes("legal")) return "legal";
+  if (value.includes("other") || value.includes("clinic")) return "others";
+  return "general";
+}
+
 export async function GET() {
   try {
     try {
@@ -24,9 +36,10 @@ export async function POST(request: NextRequest) {
     const { fullName, email, phone, organization, subject, message, category } = body;
 
     if (!fullName || !email || !subject || !message) {
-      return NextResponse.json({ error: "Please fill in all required fields" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Please fill in all required fields" }, { status: 400 });
     }
 
+    const resolvedCategory = categoryFromSubject(subject, category);
     let savedDoc = null;
     try {
       await connectToDatabase();
@@ -37,14 +50,13 @@ export async function POST(request: NextRequest) {
         organization,
         subject,
         message,
-        category: category || "general",
+        category: resolvedCategory,
         status: "New",
       });
     } catch (dbError) {
       console.warn("MongoDB Contact save fallback:", dbError);
     }
 
-    // Send email alert to Admin and auto-responder to user via Brevo
     await sendBrevoEmail({
       toEmail: email,
       toName: fullName,
@@ -61,7 +73,7 @@ export async function POST(request: NextRequest) {
         phone || "",
         subject,
         message,
-        category || "general"
+        resolvedCategory
       ),
     });
 
@@ -73,5 +85,46 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Contact submission error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const id = String(body.id || "").trim();
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Inquiry id is required." }, { status: 400 });
+    }
+
+    await connectToDatabase();
+    const inquiry = await ContactMessage.findById(id);
+    if (!inquiry) {
+      return NextResponse.json({ success: false, error: "Inquiry not found." }, { status: 404 });
+    }
+
+    if (body.action === "reply") {
+      const reply = String(body.message || "").trim();
+      if (!reply) {
+        return NextResponse.json({ success: false, error: "Reply message is required." }, { status: 400 });
+      }
+      await sendBrevoEmail({
+        toEmail: inquiry.email,
+        toName: inquiry.fullName,
+        subject: `Re: ${inquiry.subject}`,
+        htmlContent: EmailTemplates.contactReply(inquiry.fullName, reply),
+      });
+      inquiry.status = "Resolved";
+      inquiry.adminNotes = reply;
+      await inquiry.save();
+      return NextResponse.json({ success: true, inquiry });
+    }
+
+    if (body.status) inquiry.status = body.status;
+    if (typeof body.adminNotes === "string") inquiry.adminNotes = body.adminNotes;
+    await inquiry.save();
+    return NextResponse.json({ success: true, inquiry });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Could not update inquiry.";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

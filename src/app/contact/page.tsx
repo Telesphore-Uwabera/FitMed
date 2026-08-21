@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -88,11 +88,34 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    const params = new URLSearchParams(window.location.search);
+    const subjectParam = params.get("subject");
+    const hashToSubject: Record<string, string> = {
+      doctors: "Doctor Network Application",
+      employers: "Employer Corporate Account (5,000 FRW)",
+      report: "Technical support",
+      privacy: "Others",
+      legal: "Others",
+    };
+    setFormData((prev) => ({
+      ...prev,
+      category: hash && contactDepartments.some((d) => d.id === hash) ? hash : prev.category,
+      subject: subjectParam || hashToSubject[hash] || prev.subject,
+    }));
+    if (hash) {
+      requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitSuccess(null);
+    setSubmitError(null);
 
     try {
       const res = await fetch("/api/contact", {
@@ -104,7 +127,7 @@ export default function ContactPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSubmitSuccess(
-          `Thank you ${formData.fullName}! Your message has been saved to the admin queue and a confirmation email was sent to you.`
+          `Thank you ${formData.fullName}! Your message is in the FitMed inbox and a confirmation email was sent to you.`
         );
         setFormData({
           fullName: "",
@@ -116,10 +139,10 @@ export default function ContactPage() {
           message: "",
         });
       } else {
-        setSubmitSuccess(`Inquiry received: ${data.message || "Saved to administrative log."}`);
+        setSubmitError(data.error || "Could not send your message. Please try again.");
       }
-    } catch (err) {
-      setSubmitSuccess("Your message has been dispatched to the FitMed clinical support team.");
+    } catch {
+      setSubmitError("Could not reach FitMed. Check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -207,7 +230,7 @@ export default function ContactPage() {
               <div
                 key={dept.id}
                 id={dept.id}
-                className="bg-slate-50 rounded-3xl border border-slate-200 p-8 flex flex-col justify-between hover:border-[#12B8B0] hover:shadow-lg transition-all duration-300 group"
+                className="bg-slate-50 rounded-3xl border border-slate-200 p-8 flex flex-col justify-between hover:border-[#12B8B0] hover:shadow-lg transition-all duration-300 group scroll-mt-28"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -285,12 +308,17 @@ export default function ContactPage() {
                 </h3>
 
                 {submitSuccess && (
-                  <div className="p-4 rounded-xl bg-teal-900/60 border border-[#12B8B0] text-xs text-teal-200 font-semibold space-y-1 animate-in fade-in">
+                  <div className="p-4 rounded-xl bg-teal-900/60 border border-[#12B8B0] text-xs text-teal-200 font-semibold space-y-1">
                     <div className="flex items-center gap-2 font-bold text-[#12B8B0]">
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Message Dispatched</span>
+                      <span>Message sent</span>
                     </div>
                     <p>{submitSuccess}</p>
+                  </div>
+                )}
+                {submitError && (
+                  <div className="p-4 rounded-xl bg-rose-900/40 border border-rose-400 text-xs text-rose-100 font-semibold">
+                    {submitError}
                   </div>
                 )}
 

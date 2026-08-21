@@ -1567,16 +1567,26 @@ export default function AdminDashboardPage() {
                             variant: "info",
                           });
                           if (!reply) return;
-                          success(
-                            "Reply sent",
-                            `To: ${inq.email}\n\n${reply}`,
-                            10000
-                          );
-                          setInquiries((prev) =>
-                            prev.map((i) =>
-                              i.id === inq.id ? { ...i, status: "Resolved", lastReply: reply } : i
-                            )
-                          );
+                          try {
+                            const res = await fetch("/api/contact", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: inq.id, action: "reply", message: reply }),
+                            });
+                            const data = await res.json();
+                            if (!data.success) {
+                              error("Reply not sent", data.error || "Please try again.");
+                              return;
+                            }
+                            success("Reply sent", `Email delivered to ${inq.email}.`);
+                            setInquiries((prev) =>
+                              prev.map((i) =>
+                                i.id === inq.id ? { ...i, status: "Resolved", lastReply: reply } : i
+                              )
+                            );
+                          } catch {
+                            error("Reply not sent", "Could not reach the server.");
+                          }
                         }}
                         className="px-4 py-2 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs transition-colors flex items-center gap-1.5 shadow-xs"
                       >
@@ -1586,9 +1596,23 @@ export default function AdminDashboardPage() {
 
                       {inq.status !== "Resolved" && (
                         <button
-                          onClick={() => {
-                            setInquiries((prev) => prev.map((i) => (i.id === inq.id ? { ...i, status: "Resolved" } : i)));
-                            success("Inquiry resolved", `${inq.subject} from ${inq.name} is now marked resolved.`);
+                          onClick={async () => {
+                            try {
+                              const res = await fetch("/api/contact", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ id: inq.id, status: "Resolved" }),
+                              });
+                              const data = await res.json();
+                              if (!data.success) {
+                                error("Not updated", data.error || "Please try again.");
+                                return;
+                              }
+                              setInquiries((prev) => prev.map((i) => (i.id === inq.id ? { ...i, status: "Resolved" } : i)));
+                              success("Inquiry resolved", `${inq.subject} from ${inq.name} is now marked resolved.`);
+                            } catch {
+                              error("Not updated", "Could not reach the server.");
+                            }
                           }}
                           className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
                         >

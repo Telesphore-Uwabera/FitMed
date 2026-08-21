@@ -62,7 +62,7 @@ export default function CareersPage() {
                   <p className="text-xs text-slate-400 mb-2 font-medium">{role.type}</p>
                   <p className="text-sm text-slate-500 leading-relaxed">{role.desc}</p>
                 </div>
-                <Link href="/contact" className="flex-shrink-0 flex items-center gap-1.5 text-sm font-bold text-sky-600 hover:text-sky-700 transition-colors group-hover:translate-x-0.5 duration-200">
+                <Link href={`/contact?subject=${encodeURIComponent(`${role.title} application`)}#general`} className="flex-shrink-0 flex items-center gap-1.5 text-sm font-bold text-sky-600 hover:text-sky-700 transition-colors group-hover:translate-x-0.5 duration-200">
                   Apply <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
