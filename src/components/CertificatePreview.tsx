@@ -103,15 +103,16 @@ export default function CertificatePreview() {
             <div className="relative rounded-2xl overflow-hidden h-36 flex-shrink-0">
               <Image
                 src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=800&q=70&auto=format&fit=crop"
-                alt="Black employer scanning medical fitness certificate QR code for instant verification"
+                alt="Employer scanning a FitMed medical fitness certificate QR code for instant verification"
                 fill
                 className="object-cover"
                 sizes="(max-width:1024px) 100vw, 50vw"
+                loading="lazy"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-white/90 to-transparent flex items-center px-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-white/90 dark:from-[#071d3d]/92 to-transparent flex items-center px-6">
                 <div>
-                  <p className="text-xs text-slate-400 mb-0.5">Employer QR scan</p>
-                  <p className="text-sm font-bold text-slate-800">Verified in seconds, anywhere.</p>
+                  <p className="text-xs text-slate-500 dark:text-[#8ff3e8] mb-0.5">Employer QR scan</p>
+                  <p className="text-sm font-bold text-[#0B2D5C] dark:text-white">Verified in seconds, anywhere.</p>
                 </div>
               </div>
             </div>

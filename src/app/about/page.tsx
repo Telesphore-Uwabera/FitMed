@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -27,11 +27,12 @@ import {
   Check,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "About Us | FitMed Medical Certification Platform",
+export const metadata = pageMeta({
+  title: "About",
   description:
-    "Learn about FitMed — a secure digital medical assessment and certification platform connecting individuals with qualified healthcare professionals through risk-based clinical screening.",
-};
+    "FitMed is a digital medical fitness platform in Rwanda. Licensed doctors assess applicants by video and issue QR-verifiable certificates.",
+  path: "/about",
+});
 
 const pillars = [
   {
@@ -140,7 +141,7 @@ export default async function AboutPage() {
         <div className="absolute inset-0 z-0">
           <Image
             src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1800&q=85&auto=format&fit=crop"
-            alt="Medical team background"
+            alt="Medical team providing digital fitness assessments in Rwanda"
             fill
             className="object-cover object-center opacity-25"
             priority
@@ -251,10 +252,11 @@ export default async function AboutPage() {
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[4/3]">
                 <Image
                   src="/about-consultation.png"
-                  alt="FitMed doctor consulting with patients"
+                  alt="FitMed licensed doctor consulting with an applicant by telemedicine"
                   fill
                   className="object-cover object-center"
                   sizes="(max-width: 1024px) 100vw, 50vw"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/75 via-transparent to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white space-y-1">

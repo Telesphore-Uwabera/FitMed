@@ -54,7 +54,7 @@ export default function Testimonials() {
               <p className="text-sm text-slate-600 leading-relaxed mb-6 flex-1 italic">&ldquo;{t.text}&rdquo;</p>
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <div className="relative w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
-                  <Image src={t.img} alt={t.name} fill className="object-cover" sizes="40px" />
+                  <Image src={t.img} alt={t.name} fill className="object-cover" sizes="40px" loading="lazy" />
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-800" style={{ fontFamily: "var(--font-primary)" }}>{t.name}</div>

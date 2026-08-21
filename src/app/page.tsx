@@ -1,54 +1,40 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import HowItWorks from "@/components/HowItWorks";
-import CertificateCategories from "@/components/CertificateCategories";
-import EmployerPortal from "@/components/EmployerPortal";
-import DoctorDashboard from "@/components/DoctorDashboard";
-import { getPublicStaff } from "@/lib/publicStaff";
-import TechFeatures from "@/components/TechFeatures";
-import CertificatePreview from "@/components/CertificatePreview";
-import Pricing from "@/components/Pricing";
-import Testimonials from "@/components/Testimonials";
-import FAQ from "@/components/FAQ";
 import Footer from "@/components/Footer";
+import { getPublicStaff } from "@/lib/publicStaff";
+import { pageMeta } from "@/lib/seo";
+import dynamic from "next/dynamic";
 
-/*
- * Section order matches the navbar links exactly:
- *   1. How It Works   → #how-it-works
- *   2. Certificates   → #certificates      (CertificateCategories)
- *   3. For Employers  → #employers         (EmployerPortal)
- *   4. Technology     → #technology        (DoctorDashboard + TechFeatures + CertificatePreview)
- *   5. Pricing        → #pricing
- *
- * DoctorDashboard, TechFeatures, CertificatePreview all sit under
- * the Technology anchor so scrolling to #technology leads naturally
- * through all three.
- */
+const HowItWorks = dynamic(() => import("@/components/HowItWorks"));
+const CertificateCategories = dynamic(() => import("@/components/CertificateCategories"));
+const CertificatePreview = dynamic(() => import("@/components/CertificatePreview"));
+const EmployerPortal = dynamic(() => import("@/components/EmployerPortal"));
+const DoctorDashboard = dynamic(() => import("@/components/DoctorDashboard"));
+const TechFeatures = dynamic(() => import("@/components/TechFeatures"));
+const Pricing = dynamic(() => import("@/components/Pricing"));
+const Testimonials = dynamic(() => import("@/components/Testimonials"));
+const FAQ = dynamic(() => import("@/components/FAQ"));
+
+export const metadata = pageMeta({
+  title: "Medical Fitness Certificate Online",
+  description:
+    "Request a medical fitness certificate online in Rwanda. A licensed doctor assesses you by video and issues a digitally signed, QR-verifiable certificate.",
+  path: "/",
+});
+
 export default async function Home() {
   const { doctors } = await getPublicStaff().catch(() => ({ doctors: [] }));
   return (
     <main className="min-h-screen w-full overflow-x-hidden">
       <Navbar />
       <Hero />
-
-      {/* How It Works */}
       <HowItWorks />
-
-      {/* Certificates */}
       <CertificateCategories />
       <CertificatePreview />
-
-      {/* For Employers */}
       <EmployerPortal />
-
-      {/* Technology */}
       <DoctorDashboard doctors={doctors} />
       <TechFeatures />
-
-      {/* Pricing */}
       <Pricing />
-
-      {/* Social proof & conversion */}
       <Testimonials />
       <FAQ />
       <Footer />

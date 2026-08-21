@@ -140,10 +140,11 @@ export default function EmployerPortal() {
             <div className="relative rounded-3xl overflow-hidden aspect-video shadow-xl flex-shrink-0">
               <Image
                 src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80&auto=format&fit=crop"
-                alt="Black African HR team managing employee health certifications on employer portal"
+                alt="HR team reviewing employee medical fitness certificates on the FitMed employer portal"
                 fill
                 className="object-cover"
                 sizes="(max-width:1024px) 100vw, 50vw"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent" />
               <div className="absolute bottom-4 left-5 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-sm">

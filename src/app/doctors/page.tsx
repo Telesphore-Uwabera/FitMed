@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { Stethoscope, Video, Brain, FileSignature, CheckCircle, ArrowRight } from "lucide-react";
 import { getPublicStaff } from "@/lib/publicStaff";
 
-export const metadata: Metadata = {
-  title: "Our Doctors — FitMed",
-  description: "Join the FitMed doctor network — conduct digital medical fitness assessments and issue certificates through a secure clinical dashboard.",
-};
+export const metadata = pageMeta({
+  title: "Our Doctors",
+  description:
+    "Meet FitMed licensed doctors and apply to join the network for digital medical fitness assessments in Rwanda.",
+  path: "/doctors",
+});
 
 export default async function DoctorsPage() {
   const { doctors } = await getPublicStaff().catch(() => ({ doctors: [] }));

@@ -95,7 +95,7 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
                 <AnimatePresence mode="wait">
                   <motion.div key={doctor.id} initial={{ opacity: 0, x: 35 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -35 }} transition={{ duration: 0.55 }} className="absolute inset-0">
                     {photo ? (
-                      <Image src={photo} alt={doctor.name} fill className="object-cover object-top" sizes="(max-width:1024px) 100vw, 50vw" />
+                      <Image src={photo} alt={doctor.name} fill className="object-cover object-top" sizes="(max-width:1024px) 100vw, 50vw" loading="lazy" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-7xl font-extrabold text-[#12B8B0]">
                         {initials(doctor.name)}

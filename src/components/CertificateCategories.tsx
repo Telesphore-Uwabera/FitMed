@@ -143,6 +143,7 @@ export default function CertificateCategories() {
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700"
                     sizes="(max-width:768px) 100vw, 33vw"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/20 to-black/65" />
                   <div className={`absolute top-3 left-3 w-10 h-10 rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center shadow-lg`}>

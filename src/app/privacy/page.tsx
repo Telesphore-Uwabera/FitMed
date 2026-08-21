@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -6,11 +6,12 @@ import {
   ArrowLeft, Key, AlertCircle, CheckCircle,
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy — FitMed",
+export const metadata = pageMeta({
+  title: "Privacy Policy",
   description:
-    "FitMed Privacy Policy: How we collect, use, protect, and secure your personal and health information.",
-};
+    "How FitMed collects, uses, and protects personal and health information for medical fitness certificates in Rwanda.",
+  path: "/privacy",
+});
 
 /* ── Policy sections 1-6 ─────────────────────────────────────────── */
 const policySections = [

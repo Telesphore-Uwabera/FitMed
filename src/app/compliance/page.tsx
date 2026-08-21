@@ -1,12 +1,14 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { CheckCircle } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Compliance — FitMed",
-  description: "FitMed regulatory compliance — Rwandan health law, telemedicine, data protection, and electronic signature requirements.",
-};
+export const metadata = pageMeta({
+  title: "Compliance",
+  description:
+    "FitMed compliance with Rwandan health, telemedicine, data protection, and electronic signature requirements.",
+  path: "/compliance",
+});
 
 const frameworks = [
   { color: "bg-sky-50 border-sky-100", heading: "bg-sky-50 border-sky-100", title: "Rwandan Health Law", items: ["Ministry of Health telemedicine guidelines", "Medical practice and licensing requirements", "Occupational health standards", "Professional medical certification rules"] },

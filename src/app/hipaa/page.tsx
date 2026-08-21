@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { Shield, Lock, Eye, Server, CheckCircle } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "HIPAA Notice — FitMed",
-  description: "FitMed HIPAA-aligned security notice — how we protect your health information.",
-};
+export const metadata = pageMeta({
+  title: "Health Data Notice",
+  description: "How FitMed protects health information with encryption, access control, and audit logging.",
+  path: "/hipaa",
+});
 
 export default function HipaaPage() {
   return (

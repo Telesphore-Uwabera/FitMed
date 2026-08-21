@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { Briefcase, Heart, Globe, Zap, ArrowRight, Mail } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Careers — FitMed",
-  description: "Join the FitMed team — help build Rwanda's leading digital medical fitness certification platform.",
-};
+export const metadata = pageMeta({
+  title: "Careers",
+  description: "Join FitMed in Kigali and help build Rwanda’s digital medical fitness certification platform.",
+  path: "/careers",
+});
 
 const openRoles = [
   { title: "Senior Full-Stack Developer", dept: "Engineering", type: "Full-time · Remote", desc: "Build and scale the FitMed platform using Next.js, TypeScript, and modern cloud infrastructure." },

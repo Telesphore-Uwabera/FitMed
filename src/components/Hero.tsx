@@ -123,6 +123,7 @@ export default function Hero() {
                   fill
                   className="object-cover object-center"
                   priority={i === 0}
+                  loading={i === 0 ? "eager" : "lazy"}
                   sizes="100vw"
                 />
               </motion.div>

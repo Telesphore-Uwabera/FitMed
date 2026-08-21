@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 
-export const metadata: Metadata = {
-  title: "Terms of Service — FitMed",
-  description: "FitMed Terms of Service: The terms and conditions governing your use of the FitMed platform.",
-};
+export const metadata = pageMeta({
+  title: "Terms of Service",
+  description: "Terms governing use of the FitMed medical fitness certification platform.",
+  path: "/terms",
+});
 
 const sections = [
   {

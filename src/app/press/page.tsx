@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { Mail, Download, ArrowRight } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Press — FitMed",
-  description: "FitMed press resources, media kit, and brand assets for journalists and media professionals.",
-};
+export const metadata = pageMeta({
+  title: "Press",
+  description: "FitMed press resources, media kit, and brand assets for journalists covering digital health in Rwanda.",
+  path: "/press",
+});
 
 const pressItems = [
   { date: "August 2026", headline: "FitMed Launches Digital Medical Fitness Certification Platform in Rwanda", source: "Press Release", summary: "FitMed announces the launch of Rwanda's first digital medical fitness certification platform connecting applicants with licensed doctors through secure video consultations." },

@@ -6,6 +6,24 @@ import Certificate from "@/models/Certificate";
 import Doctor from "@/models/Doctor";
 import User from "@/models/User";
 import { officialDocumentNo, toOfficialCertificateData } from "@/lib/certificateDisplay";
+import { pageMeta } from "@/lib/seo";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ certificateId: string }>;
+}): Promise<Metadata> {
+  const { certificateId } = await params;
+  const id = officialDocumentNo(certificateId);
+  return pageMeta({
+    title: id ? `Verify ${id}` : "Verify Certificate",
+    description: id
+      ? `Check whether FitMed certificate ${id} is valid. Medical history is never shown on this page.`
+      : "Verify a FitMed medical fitness certificate by official document number.",
+    path: `/verify/${encodeURIComponent(id || certificateId || "")}`,
+  });
+}
 
 export default async function VerifyCertificatePage({
   params,

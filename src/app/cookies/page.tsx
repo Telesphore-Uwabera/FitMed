@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 
-export const metadata: Metadata = {
-  title: "Cookie Policy — FitMed",
-  description: "FitMed Cookie Policy: How we use cookies and similar technologies on our platform.",
-};
+export const metadata = pageMeta({
+  title: "Cookie Policy",
+  description: "How FitMed uses cookies and similar technologies on fitnessmed.rw.",
+  path: "/cookies",
+});
 
 export default function CookiesPage() {
   return (
