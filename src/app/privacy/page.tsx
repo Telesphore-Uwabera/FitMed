@@ -142,7 +142,7 @@ export default function PrivacyPage() {
       </header>
 
       {/* ── Body ────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-6 py-16">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-8 sm:py-16">
 
         {/* Intro */}
         <div className="bg-sky-50 border border-sky-100 rounded-2xl p-7 mb-14">

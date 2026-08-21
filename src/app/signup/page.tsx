@@ -222,7 +222,7 @@ export default function SignUpPage() {
         </div>
       </header>
 
-      <div className="py-16 px-6 flex-1 flex items-start justify-center">
+      <div className="py-8 px-3 sm:py-16 sm:px-6 flex-1 flex items-start justify-center">
         {registrationSubmitted ? (
           <div className="w-full max-w-xl bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl space-y-6 text-center animate-in fade-in zoom-in-95">
             <div className="w-16 h-16 rounded-full bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center mx-auto text-emerald-600">

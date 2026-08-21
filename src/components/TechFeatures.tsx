@@ -67,7 +67,7 @@ export default function TechFeatures() {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.65 }}
-          className="rounded-3xl border border-sky-100 bg-sky-50 p-8 mb-14"
+          className="rounded-3xl border border-sky-100 bg-sky-50 p-4 sm:p-8 mb-14"
         >
           <div className="text-center mb-8">
             <h3 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: "var(--font-primary)" }}>Platform Architecture</h3>

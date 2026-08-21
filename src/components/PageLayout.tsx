@@ -14,7 +14,7 @@ export default function PageLayout({ title, subtitle, lastUpdated, children }: P
     <div className="min-h-screen bg-white">
       {/* Dark header */}
       <header className="bg-slate-900 py-14">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-10 group"
@@ -48,7 +48,7 @@ export default function PageLayout({ title, subtitle, lastUpdated, children }: P
       </header>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-6 py-16">{children}</div>
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-8 sm:py-16">{children}</div>
     </div>
   );
 }

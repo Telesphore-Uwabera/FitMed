@@ -245,7 +245,7 @@ function SignInContent() {
         </div>
       </header>
 
-      <div className="py-16 px-6 flex-1 flex items-center justify-center">
+      <div className="py-8 px-3 sm:py-16 sm:px-6 flex-1 flex items-center justify-center">
         <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center space-y-2">

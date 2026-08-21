@@ -177,7 +177,7 @@ export default function ContactPage() {
       </section>
 
       {/* ── QUICK CONTACT INFO BAR ───────────────────────────── */}
-      <section className="py-12 bg-[#f4f7fb] border-b border-slate-200">
+      <section className="py-6 sm:py-12 bg-[#f4f7fb] border-b border-slate-200">
         <div className="container-wide">
           <div className="grid sm:grid-cols-3 gap-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
@@ -230,7 +230,7 @@ export default function ContactPage() {
               <div
                 key={dept.id}
                 id={dept.id}
-                className="bg-slate-50 rounded-3xl border border-slate-200 p-8 flex flex-col justify-between hover:border-[#12B8B0] hover:shadow-lg transition-all duration-300 group scroll-mt-28"
+                className="bg-slate-50 rounded-3xl border border-slate-200 p-4 sm:p-8 flex flex-col justify-between hover:border-[#12B8B0] hover:shadow-lg transition-all duration-300 group scroll-mt-28"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -269,7 +269,7 @@ export default function ContactPage() {
               {/* ── PHYSICAL LOCATION & DIRECT CONTACT FORM ── */}
       <section className="py-20 lg:py-28 bg-[#f4f7fb]">
         <div className="container-wide">
-          <div className="bg-[#0B2D5C] rounded-3xl p-8 sm:p-12 text-white border border-[#12B8B0]/30 shadow-2xl relative overflow-hidden">
+          <div className="bg-[#0B2D5C] rounded-3xl p-3 sm:p-8 lg:p-12 text-white border border-[#12B8B0]/30 shadow-2xl relative overflow-hidden">
             <div className="grid lg:grid-cols-2 gap-10 items-center">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#12B8B0]/15 border border-[#12B8B0]/30 text-[#12B8B0] text-xs font-bold uppercase tracking-wider">
@@ -302,7 +302,7 @@ export default function ContactPage() {
               </div>
 
               {/* Direct Message Form */}
-              <div className="bg-slate-900/90 rounded-2xl p-7 border border-slate-700 space-y-4">
+              <div className="bg-slate-900/90 rounded-2xl p-3 sm:p-7 border border-slate-700 space-y-4">
                 <h3 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-primary)" }}>
                   Send Us a Direct Message
                 </h3>

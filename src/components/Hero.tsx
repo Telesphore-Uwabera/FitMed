@@ -144,7 +144,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 38 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-3 md:mb-5 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
+            className="w-full px-2 sm:px-6 md:px-8 lg:px-10 mb-6 md:mb-10 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
             style={{ fontFamily: "var(--font-primary)" }}
           >
             <span className="block w-full text-center lg:text-justify lg:[text-align-last:justify] text-white">
@@ -158,7 +158,7 @@ export default function Hero() {
             </span>
           </motion.h1>
 
-          <div className="w-full max-w-7xl mx-auto px-4 md:px-6">
+          <div className="w-full max-w-7xl mx-auto px-2 md:px-6">
           <div className="w-full lg:w-[70%]">
 
             {/* Animated slide caption */}

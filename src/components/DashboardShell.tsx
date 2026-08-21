@@ -636,7 +636,7 @@ export default function DashboardShell({
         </header>
 
         {/* ── DASHBOARD BODY ── */}
-        <main className="p-6 sm:p-8 flex-1 max-w-[1600px] w-full mx-auto">{children}</main>
+        <main className="p-3 sm:p-8 flex-1 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
     </div>
   );
