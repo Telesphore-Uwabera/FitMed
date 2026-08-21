@@ -25,7 +25,8 @@ export function qrCodeFallbackUrl(certificateId?: string) {
 
 export function categoryFromPurpose(purpose?: string, category?: string, jobType?: string) {
   const existing = String(category || jobType || "").trim();
-  if (existing && existing !== "—" && existing.toLowerCase() !== "general") return existing;
+  const ignored = !existing || existing === "—" || /^general$/i.test(existing) || /^none of the above$/i.test(existing);
+  if (!ignored) return existing;
   const value = String(purpose || "").toLowerCase();
   if (value.includes("employ") || value.includes("office") || value.includes("workplace")) return "Employment Fitness";
   if (value.includes("school") || value.includes("univers") || value.includes("student")) return "School & University";
@@ -66,7 +67,13 @@ export function displayDoctorName(value?: string) {
     .trim();
 }
 
-type CertSource = Record<string, any>;
+function firstFilled(...values: unknown[]) {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (text && text !== "—") return text;
+  }
+  return "";
+}
 
 export function toOfficialCertificateData(
   source: CertSource,
@@ -84,23 +91,29 @@ export function toOfficialCertificateData(
   const certificateId = officialDocumentNo(cert.certificateId || source.id || source.certificateId);
   const issueRaw = cert.issuedAt || cert.appliedDate || source.date || source.issueDate;
   const doctorName =
-    displayDoctorName(cert.assignedDoctor || extras.doctorName || source.doctor) || "FitMed Physician";
-  const doctorLicense = String(
-    cert.assignedDoctorLicense || cert.structuredAssessment?.licenseNumber || extras.doctorLicense || source.license || ""
-  ).trim();
+    displayDoctorName(
+      firstFilled(cert.assignedDoctor, extras.doctorName, source.doctor)
+    ) || "FitMed Physician";
+  const doctorLicense = firstFilled(
+    cert.assignedDoctorLicense,
+    cert.structuredAssessment?.licenseNumber,
+    extras.doctorLicense,
+    source.license
+  );
+  const photo = firstFilled(cert.avatarUrl, extras.applicantImageUrl, source.avatarUrl, source.applicantImageUrl);
 
   return {
     certificateId,
     candidateName: String(cert.candidateName || extras.candidateName || source.candidate || source.name || "Applicant"),
-    applicantImageUrl: cert.avatarUrl || extras.applicantImageUrl || source.avatarUrl,
-    nationalId: String(cert.candidateIdNumber || extras.nationalId || "—"),
+    applicantImageUrl: photo || undefined,
+    nationalId: firstFilled(cert.candidateIdNumber, extras.nationalId) || "—",
     purpose: String(cert.purpose || source.purpose || "Medical fitness assessment"),
     category: categoryFromPurpose(cert.purpose || source.purpose, cert.category, cert.jobType),
     decision: String(cert.decision || source.decision || "FIT").includes("RESTRICT")
       ? ("FIT_RESTRICTED" as const)
       : ("FIT" as const),
     doctorName,
-    doctorLicense,
+    doctorLicense: doctorLicense || "—",
     doctorId: String(cert.assignedDoctorId || extras.doctorId || ""),
     doctorSpecialty: String(extras.doctorSpecialty || "Occupational Medicine & Telehealth"),
     hospitalPartner: "FitMed Rwanda · Licensed telehealth",

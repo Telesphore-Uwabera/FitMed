@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment";
-import { sendBrevoEmail, EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
+import { EmailTemplates, FITMED_APP_URL } from "@/lib/brevo";
 import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memoryStore";
 import { nextKey, normalizeAppointmentKeys } from "@/lib/sequentialIds";
+import { notifyPerson } from "@/lib/notify";
 
 export async function GET(request: NextRequest) {
   try {
@@ -113,17 +114,23 @@ export async function POST(request: NextRequest) {
     const meetingLink = `${FITMED_APP_URL}${roomUrl}`;
     const formattedTime = `${scheduledDate} at ${scheduledTime}`;
     const physician = doctorName || "FitMed Physician";
-    await sendBrevoEmail({
+    await notifyPerson({
       toEmail: applicantEmail,
       toName: applicantName,
+      role: "user",
       subject: `FitMed video consultation scheduled with ${physician}`,
       htmlContent: EmailTemplates.telehealthInvite(applicantName, physician, meetingLink, formattedTime),
+      snippet: `Consultation with ${physician} on ${formattedTime}.`,
+      href: meetingLink,
     });
-    await sendBrevoEmail({
+    await notifyPerson({
       toEmail: applicantEmail,
       toName: applicantName,
+      role: "user",
       subject: `Reminder: FitMed consultation ${formattedTime}`,
       htmlContent: EmailTemplates.appointmentReminder(applicantName, physician, meetingLink, formattedTime),
+      snippet: `Join your video consultation with ${physician}.`,
+      href: meetingLink,
     });
 
     return NextResponse.json({
@@ -157,9 +164,10 @@ export async function PATCH(request: NextRequest) {
       if (action === "remind") {
         const time = `${appointment.scheduledDate || ""} ${appointment.scheduledTime || ""}`.trim() || "as scheduled";
         const meetingLink = `${FITMED_APP_URL}${appointment.roomUrl || "/dashboard/user?tab=consultation"}`;
-        await sendBrevoEmail({
+        await notifyPerson({
           toEmail: appointment.applicantEmail,
           toName: appointment.applicantName,
+          role: "user",
           subject: "Reminder: your FitMed video visit",
           htmlContent: EmailTemplates.appointmentReminder(
             appointment.applicantName,
@@ -167,6 +175,8 @@ export async function PATCH(request: NextRequest) {
             meetingLink,
             time
           ),
+          snippet: `Reminder for your consultation ${time}.`,
+          href: meetingLink,
         });
         return NextResponse.json({ success: true, appointment });
       }

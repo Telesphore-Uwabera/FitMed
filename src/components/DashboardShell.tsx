@@ -157,12 +157,28 @@ export default function DashboardShell({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [shellReady, setShellReady] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState<
+    { id: string; subject: string; from: string; date: string; snippet: string; href?: string; unread: boolean }[]
+  >([]);
   const router = useRouter();
   const config = roleConfigs[role];
 
   useEffect(() => {
     setShellReady(true);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/notifications", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.success) setEmailNotifications(data.notifications || []);
+      })
+      .catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, [userProfile.email]);
 
   const handleLogout = async () => {
     try {
@@ -179,8 +195,6 @@ export default function DashboardShell({
 
   const profileImageSrc = userProfile.avatarUrl;
   const profileImageClass = "w-full h-full object-cover";
-
-  const emailNotifications: { id: string; subject: string; from: string; date: string; snippet: string; unread: boolean }[] = [];
 
   if (!shellReady) {
     return <div className={`dashboard-app min-h-screen bg-[#f8fafc] ${theme === "dark" ? "dark" : ""}`} />;
@@ -446,7 +460,10 @@ export default function DashboardShell({
                     {emailNotifications.map((em) => (
                       <div
                         key={em.id}
-                        onClick={() => info(em.subject, `From: ${em.from} — ${em.snippet}`)}
+                        onClick={() => {
+                          if (em.href) window.location.href = em.href;
+                          else info(em.subject, `From: ${em.from} — ${em.snippet}`);
+                        }}
                         className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                           em.unread
                             ? "bg-teal-50/60 border-teal-200 hover:bg-teal-50"
@@ -472,7 +489,9 @@ export default function DashboardShell({
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                     <span>Encrypted Healthcare Delivery</span>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        await fetch("/api/notifications", { method: "PATCH", credentials: "include" }).catch(() => null);
+                        setEmailNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
                         success("Notifications Read", "Marked all system emails and clinical notices as read.");
                         setShowNotifications(false);
                       }}

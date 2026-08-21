@@ -4,16 +4,18 @@ import Certificate from "@/models/Certificate";
 import Doctor from "@/models/Doctor";
 import Payment from "@/models/Payment";
 import AuditLog from "@/models/AuditLog";
+import User from "@/models/User";
 import { runClinicalEngine, WizardData } from "@/lib/clinicalEngine";
 import { pickOnDutyDoctor } from "@/lib/assignDoctor";
 import crypto from "crypto";
 import {
-  sendBrevoEmail,
   EmailTemplates,
   FITMED_APP_URL,
   FITMED_ADMIN_EMAIL,
+  FITMED_DOCTOR_EMAIL,
 } from "@/lib/brevo";
 import { nextKey, normalizeCertificateKeys } from "@/lib/sequentialIds";
+import { notifyPerson } from "@/lib/notify";
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,8 +38,14 @@ export async function GET(request: NextRequest) {
         .lean();
 
       const doctors = await Doctor.find({}).select("_id fullName email licenseNumber specialty").lean();
+      const applicantEmails = [...new Set(certificates.map((c) => String(c.applicantEmail || "").toLowerCase()).filter(Boolean))];
+      const applicants = applicantEmails.length
+        ? await User.find({ email: { $in: applicantEmails } }).select("email avatarUrl nationalId dateOfBirth gender fullName").lean()
+        : [];
       const byId = new Map(doctors.map((d) => [String(d._id), d]));
       const byEmail = new Map(doctors.map((d) => [String(d.email || "").toLowerCase(), d]));
+      const applicantByEmail = new Map(applicants.map((u) => [String(u.email || "").toLowerCase(), u]));
+      const { categoryFromPurpose } = await import("@/lib/certificateDisplay");
       const enriched = certificates.map((cert) => {
         const doctor =
           (cert.assignedDoctorId && byId.get(String(cert.assignedDoctorId))) ||
@@ -47,20 +55,21 @@ export async function GET(request: NextRequest) {
               .toLowerCase()
               .includes(String(d.fullName || "").replace(/\b(dr|md)\b\.?/gi, "").trim().toLowerCase().slice(0, 12))
           );
+        const applicant = applicantByEmail.get(String(cert.applicantEmail || "").toLowerCase());
         const expiresAt = cert.expiresAt || (cert.issuedAt || cert.appliedDate
           ? new Date(new Date(cert.issuedAt || cert.appliedDate).getTime() + 180 * 24 * 60 * 60 * 1000)
           : new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
         return {
           ...cert,
+          avatarUrl: cert.avatarUrl || applicant?.avatarUrl || "",
+          candidateIdNumber: cert.candidateIdNumber || applicant?.nationalId || "",
+          gender: cert.gender || applicant?.gender || "",
           assignedDoctorLicense: cert.assignedDoctorLicense || doctor?.licenseNumber || "",
           assignedDoctor: cert.assignedDoctor || doctor?.fullName || "",
-          category: cert.category && cert.category !== "General" ? cert.category : cert.jobType || cert.category || "Employment Fitness",
+          assignedDoctorSpecialty: doctor?.specialty || "Occupational Medicine & Telehealth",
+          category: categoryFromPurpose(cert.purpose, cert.category, cert.jobType),
           expiresAt,
-          qrCodeUrl:
-            cert.qrCodeUrl ||
-            `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(
-              `${FITMED_APP_URL}/verify/${cert.certificateId}`
-            )}`,
+          qrCodeUrl: `${FITMED_APP_URL}/verify/${cert.certificateId}`,
         };
       });
 
@@ -147,11 +156,17 @@ export async function POST(request: NextRequest) {
 
     await connectToDatabase();
 
+    const applicant = await User.findOne({ email: String(applicantEmail).toLowerCase() })
+      .select("avatarUrl nationalId gender dateOfBirth phone fullName")
+      .lean();
+    const photoUrl = String(avatarUrl || applicant?.avatarUrl || "");
+    const idNumber = String(candidateIdNumber || applicant?.nationalId || "");
+    const applicantPhoneResolved = String(applicantPhone || applicant?.phone || "");
+    const applicantGender = String(gender || applicant?.gender || "");
+
     const certificateId = await nextKey("certificate");
     const sha256Hash = crypto.createHash("sha256").update(JSON.stringify(wizardData)).digest("hex");
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=8&data=${encodeURIComponent(
-      `${FITMED_APP_URL}/verify/${certificateId}`
-    )}`;
+    const qrCodeUrl = `${FITMED_APP_URL}/verify/${certificateId}`;
 
     const assignment = await pickOnDutyDoctor();
     const assignedDoctor = assignment.assignedDoctor;
@@ -161,16 +176,16 @@ export async function POST(request: NextRequest) {
     const newCertificate = {
       certificateId,
       applicantEmail: String(applicantEmail).toLowerCase(),
-      applicantPhone: applicantPhone || "",
+      applicantPhone: applicantPhoneResolved,
       candidateName,
-      candidateIdNumber,
-      avatarUrl: avatarUrl || "",
+      candidateIdNumber: idNumber,
+      avatarUrl: photoUrl,
       nationalIdImageUrl: nationalIdImageUrl || "",
       age,
-      gender,
+      gender: applicantGender,
       purpose,
       jobType,
-      category: jobType || "Employment Fitness",
+      category: jobType && !/^none of the above$/i.test(String(jobType)) ? jobType : purpose || "Employment Fitness",
       decision: "PENDING",
       restrictions: "",
       decisionNotes: "",
@@ -212,37 +227,34 @@ export async function POST(request: NextRequest) {
     }
 
     const doctorName = assignedDoctor.replace(/\s*\(You\)\s*$/, "") || "FitMed Physician";
-    void sendBrevoEmail({
+    const doctorEmail = assignment.assignedDoctorEmail || FITMED_DOCTOR_EMAIL;
+    const dash = `${FITMED_APP_URL}/dashboard/user`;
+    await notifyPerson({
       toEmail: applicantEmail,
       toName: candidateName,
+      role: "user",
       subject: `FitMed received your application ${certificateId}`,
       htmlContent: EmailTemplates.applicationReceived(candidateName, certificateId, purpose),
+      snippet: `Official Document No. ${certificateId} is with a licensed doctor.`,
+      href: dash,
     });
-    if (assignment.assignedDoctorEmail) {
-      void sendBrevoEmail({
-        toEmail: assignment.assignedDoctorEmail,
-        toName: doctorName,
-        subject: `New FitMed queue case ${certificateId}`,
-        htmlContent: EmailTemplates.doctorNewQueueApplication(
-          doctorName,
-          candidateName,
-          certificateId,
-          purpose,
-          riskLevel
-        ),
-      });
-    }
-    void sendBrevoEmail({
+    await notifyPerson({
+      toEmail: doctorEmail,
+      toName: doctorName,
+      role: "doctor",
+      subject: `New FitMed queue case ${certificateId}`,
+      htmlContent: EmailTemplates.doctorNewQueueApplication(doctorName, candidateName, certificateId, purpose, riskLevel),
+      snippet: `${candidateName} submitted ${certificateId} (${purpose}).`,
+      href: `${FITMED_APP_URL}/dashboard/doctor`,
+    });
+    await notifyPerson({
       toEmail: FITMED_ADMIN_EMAIL,
       toName: "FitMed Admin",
+      role: "admin",
       subject: `New application ${certificateId} — ${candidateName}`,
-      htmlContent: EmailTemplates.doctorNewQueueApplication(
-        "FitMed Admin",
-        candidateName,
-        certificateId,
-        purpose,
-        riskLevel
-      ),
+      htmlContent: EmailTemplates.doctorNewQueueApplication("FitMed Admin", candidateName, certificateId, purpose, riskLevel),
+      snippet: `New application ${certificateId} assigned to ${doctorName}.`,
+      href: `${FITMED_APP_URL}/dashboard/admin`,
     });
 
     return NextResponse.json({
@@ -351,74 +363,142 @@ async function notifyCertificateEmails(
   const purpose = String(cert.purpose || "Medical fitness");
   const doctor = String(cert.assignedDoctor || "FitMed Physician").replace(/\s*\(You\)\s*$/, "");
   const dash = `${FITMED_APP_URL}/dashboard/user`;
+  const doctorDash = `${FITMED_APP_URL}/dashboard/doctor`;
   const payLink = `${FITMED_APP_URL}/dashboard/user?pay=${encodeURIComponent(certId)}`;
+  const verifyLink = `${FITMED_APP_URL}/verify/${encodeURIComponent(certId)}`;
+  const status = String(change.status || "").toLowerCase();
+  const decision = String(change.decision || "").toUpperCase();
   const paidNow = String(change.paymentStatus || "").toUpperCase() === "PAID";
-  const alreadyPaid = String(cert.paymentStatus || "").toUpperCase() === "PAID";
 
   if (!email || !certId) return;
 
+  let doctorEmail = FITMED_DOCTOR_EMAIL;
+  if (cert.assignedDoctorId) {
+    const assigned = await Doctor.findById(cert.assignedDoctorId).select("email").lean();
+    if (assigned?.email) doctorEmail = String(assigned.email);
+  }
+
   if (paidNow) {
     const iremboRef = String(cert.iremboRef || cert.paymentReference || "");
-    await sendBrevoEmail({
+    await notifyPerson({
       toEmail: email,
       toName: name,
+      role: "user",
       subject: `Payment confirmed — certificate ${certId} is ready`,
-      htmlContent: EmailTemplates.certificatePaidDelivered(name, certId, purpose, iremboRef, dash),
+      htmlContent: EmailTemplates.certificatePaidDelivered(name, certId, purpose, iremboRef, verifyLink),
+      snippet: `Official certificate ${certId} is ready to view and download.`,
+      href: verifyLink,
     });
-    await sendBrevoEmail({
+    await notifyPerson({
       toEmail: FITMED_ADMIN_EMAIL,
       toName: "FitMed Admin",
+      role: "admin",
       subject: `Payment received for ${certId}`,
       htmlContent: EmailTemplates.paymentReceivedAdmin(name, certId, "5,000 FRW", iremboRef),
+      snippet: `${name} paid 5,000 FRW for ${certId}.`,
+      href: `${FITMED_APP_URL}/dashboard/admin`,
     });
-    await sendBrevoEmail({
-      toEmail: email,
-      toName: name,
-      subject: `Your FitMed certificate ${certId} has been issued`,
+    await notifyPerson({
+      toEmail: doctorEmail,
+      toName: doctor,
+      role: "doctor",
+      subject: `Certificate ${certId} issued after payment`,
       htmlContent: EmailTemplates.certificateIssued(name, certId, purpose, doctor),
+      snippet: `${name} completed payment. ${certId} is issued.`,
+      href: doctorDash,
     });
     return;
   }
 
-  if (change.status === "approved" && !alreadyPaid) {
-    await sendBrevoEmail({
+  if (status === "approved") {
+    await notifyPerson({
       toEmail: email,
       toName: name,
+      role: "user",
       subject: `Certificate ${certId} approved — complete payment`,
       htmlContent: EmailTemplates.certificateApprovedPayLink(name, certId, purpose, doctor, payLink),
+      snippet: `Pay 5,000 FRW to unlock official document ${certId}.`,
+      href: payLink,
+    });
+    await notifyPerson({
+      toEmail: doctorEmail,
+      toName: doctor,
+      role: "doctor",
+      subject: `You approved ${certId}`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        doctor,
+        certId,
+        purpose,
+        "Approved — waiting for payment",
+        doctor,
+        `${name} has been asked to pay 5,000 FRW.`,
+        doctorDash
+      ),
+      snippet: `${name} was notified to pay for ${certId}.`,
+      href: doctorDash,
     });
     return;
   }
 
-  if (change.status && !["approved", "submitted", "pending"].includes(change.status)) {
-    await sendBrevoEmail({
+  if (status === "under-review") {
+    await notifyPerson({
       toEmail: email,
       toName: name,
+      role: "user",
+      subject: `Your application ${certId} is under review`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        name,
+        certId,
+        purpose,
+        "Under review",
+        doctor,
+        "A licensed physician is reviewing your application. You will be notified of the next step.",
+        dash
+      ),
+      snippet: `${certId} is now under doctor review.`,
+      href: dash,
+    });
+    return;
+  }
+
+  if (status === "rejected") {
+    await notifyPerson({
+      toEmail: email,
+      toName: name,
+      role: "user",
       subject: `Update on your FitMed application ${certId}`,
       htmlContent: EmailTemplates.certificateStatusNotification(
         name,
         certId,
         purpose,
-        String(change.status || cert.status || "Updated"),
+        "Not issued",
         doctor,
-        String(change.decisionNotes || cert.decisionNotes || "Please review the decision in your dashboard."),
+        String(change.decisionNotes || cert.decisionNotes || "Please open your dashboard for the physician's notes."),
         dash
       ),
+      snippet: `${certId} was not issued. See your dashboard for details.`,
+      href: dash,
     });
-  } else if (change.decision && !["FIT", "PENDING", ""].includes(String(change.decision).toUpperCase())) {
-    await sendBrevoEmail({
+    return;
+  }
+
+  if (decision && decision !== "PENDING") {
+    await notifyPerson({
       toEmail: email,
       toName: name,
-      subject: `Clinical decision on ${certId}`,
+      role: "user",
+      subject: `Clinical decision on ${certId}: ${decision}`,
       htmlContent: EmailTemplates.certificateStatusNotification(
         name,
         certId,
         purpose,
-        String(change.decision),
+        decision,
         doctor,
-        String(change.decisionNotes || "Your doctor has recorded a clinical decision. Open your dashboard for details."),
+        String(change.decisionNotes || "Your doctor has recorded a clinical decision. Open your dashboard for next steps."),
         dash
       ),
+      snippet: `Physician decision for ${certId}: ${decision}.`,
+      href: dash,
     });
   }
 }

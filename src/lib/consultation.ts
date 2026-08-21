@@ -45,6 +45,7 @@ export function formatCertificateCard(cert: any, existing: Record<string, any> =
     notes: existing.notes || cert.decisionNotes || cert.additionalNotes || "",
     qrUrl: cert.qrCodeUrl || existing.qrUrl,
     category: cert.category || cert.jobType || existing.category,
+    avatarUrl: cert.avatarUrl || existing.avatarUrl || "",
     fullCertificate: cert,
   };
 }

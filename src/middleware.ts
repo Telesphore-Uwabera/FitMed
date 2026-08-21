@@ -31,6 +31,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/schedules") ||
     pathname.startsWith("/api/referrals") ||
     pathname.startsWith("/api/payments") ||
+    pathname.startsWith("/api/notifications") ||
     pathname === "/api/auth/me";
   const isAdminContactRead = pathname.startsWith("/api/contact") && request.method !== "POST";
 
@@ -91,6 +92,8 @@ export const config = {
     "/api/referrals/:path*",
     "/api/payments",
     "/api/payments/:path*",
+    "/api/notifications",
+    "/api/notifications/:path*",
     "/api/contact",
     "/api/contact/:path*",
   ],

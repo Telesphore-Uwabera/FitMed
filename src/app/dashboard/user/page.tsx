@@ -8,8 +8,10 @@ import BrandDatePicker from "@/components/BrandDatePicker";
 import FitnessCertificateWizard from "@/components/FitnessCertificateWizard";
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
+import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
+import CertificateQr from "@/components/CertificateQr";
 import { consultationRoomId, formatCertificateCard, formatChatMessages } from "@/lib/consultation";
-import { toOfficialCertificateData } from "@/lib/certificateDisplay";
+import { publicVerifyUrl, toOfficialCertificateData } from "@/lib/certificateDisplay";
 import { useToast } from "@/components/ToastProvider";
 import {
   FileCheck2,
@@ -59,7 +61,6 @@ import {
   Building2,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
-import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
 
 export default function UserDashboard() {
   const { success, error, warning, info } = useToast();
@@ -314,7 +315,10 @@ export default function UserDashboard() {
 
   const handleWizardComplete = async (data: any) => {
     try {
-      // Prepare data for API submission
+      if (!profileData.nationalId) {
+        error("Profile incomplete", "Add your National ID in Profile before applying.");
+        return;
+      }
       const submissionData = {
         applicantEmail: profileData.email,
         applicantPhone: profileData.phone,
@@ -1915,19 +1919,13 @@ export default function UserDashboard() {
               <h3 className="text-xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
                 QR Certificate Code
               </h3>
-              <p className="text-xs text-slate-500">Scan to verify authenticity on fitmed.rw</p>
+              <p className="text-xs text-slate-500">Scan to open the official certificate page</p>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
-              <Image
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(
-                  `${typeof window !== "undefined" ? window.location.origin : ""}/verify/${selectedCert?.id || ""}`
-                )}`}
-                alt={`QR for Official Document No. ${selectedCert?.id || ""}`}
-                width={220}
-                height={220}
-                unoptimized
-                className="mx-auto rounded-xl"
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 inline-block w-[220px] h-[220px]">
+              <CertificateQr
+                value={publicVerifyUrl(selectedCert?.id)}
+                label={`Official Document No. ${selectedCert?.id || ""}`}
               />
             </div>
 
@@ -1952,9 +1950,11 @@ export default function UserDashboard() {
             <OfficialMedicalCertificate
               data={toOfficialCertificateData(selectedCert || {}, {
                 candidateName: profileData.name,
-                applicantImageUrl: profileData.avatarUrl,
+                applicantImageUrl: selectedCert?.avatarUrl || profileData.avatarUrl,
                 nationalId: profileData.nationalId,
                 doctorName: selectedCert?.doctor,
+                doctorLicense: selectedCert?.license,
+              })}
                 doctorLicense: selectedCert?.license,
               })}
               onClose={() => setShowOfficialCertModal(false)}

@@ -191,9 +191,9 @@ export const EmailTemplates = {
     brandedEmail(
       "Application received",
       `<p>Dear <strong>${name}</strong>,</p>
-       <p>We have received your medical fitness application. A licensed doctor will review it and, where required, invite you to a video consultation.</p>
+          <p>We have received your medical fitness application <strong>Official Document No. ${certId}</strong>. A licensed doctor will review it and, where required, invite you to a video consultation.</p>
        <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
-         <tr><td style="padding:6px 0;color:#64748b;">Certificate ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Official Document No.</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Purpose</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${purpose}</td></tr>
        </table>
        ${button(`${FITMED_APP_URL}/dashboard/user`, "Track your application")}`
@@ -206,7 +206,7 @@ export const EmailTemplates = {
        <p>A new fitness certificate application is waiting in your clinical queue.</p>
        <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
          <tr><td style="padding:6px 0;color:#64748b;">Applicant</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${applicantName}</td></tr>
-         <tr><td style="padding:6px 0;color:#64748b;">Certificate ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Official Document No.</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Purpose</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${purpose}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Screening risk</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${riskLevel}</td></tr>
        </table>
@@ -218,7 +218,7 @@ export const EmailTemplates = {
       "Certificate issued",
       `<p>Dear <strong>${candidateName}</strong>,</p>
        <p>Your medical evaluation for <strong>${purpose}</strong> has been completed and digitally signed by <strong>${doctorName}</strong>.</p>
-       <p><strong>Certificate ID:</strong> ${certId}<br/><strong>Status:</strong> Fit for the stated purpose (QR verifiable)</p>
+       <p><strong>Official Document No.:</strong> ${certId}<br/><strong>Status:</strong> Fit for the stated purpose (QR verifiable)</p>
        ${button(`${FITMED_APP_URL}/dashboard/user`, "View and download certificate", true)}`
     ),
 
@@ -228,7 +228,7 @@ export const EmailTemplates = {
       `<p>Dear <strong>${candidateName}</strong>,</p>
        <p><strong>${doctorName}</strong> has approved your medical fitness certificate for <strong>${purpose}</strong>.</p>
        <p>To unlock the digitally signed PDF and verifiable QR code, complete the government fee of <strong>5,000 FRW</strong> via IremboPay (MTN MoMo, Airtel Money, or card).</p>
-       <p><strong>Certificate ID:</strong> ${certId}</p>
+       <p><strong>Official Document No.:</strong> ${certId}</p>
        ${button(payLink, "Pay 5,000 FRW via IremboPay")}`
     ),
 
@@ -237,7 +237,7 @@ export const EmailTemplates = {
       "Payment confirmed",
       `<p>Dear <strong>${candidateName}</strong>,</p>
        <p>We have confirmed your payment of <strong>5,000 FRW</strong>${iremboRef ? ` (reference <strong>${iremboRef}</strong>)` : ""}. Your official medical fitness certificate for <strong>${purpose}</strong> is now available.</p>
-       <p><strong>Certificate ID:</strong> ${certId}</p>
+       <p><strong>Official Document No.:</strong> ${certId}</p>
        ${button(downloadLink, "Download certificate", true)}`
     ),
 
@@ -247,7 +247,7 @@ export const EmailTemplates = {
       `<p>IremboPay settlement has been recorded for a FitMed certificate.</p>
        <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;">
          <tr><td style="padding:6px 0;color:#64748b;">Applicant</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${applicantName}</td></tr>
-         <tr><td style="padding:6px 0;color:#64748b;">Certificate ID</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Official Document No.</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${certId}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${amount}</td></tr>
          <tr><td style="padding:6px 0;color:#64748b;">Reference</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${iremboRef || "—"}</td></tr>
        </table>

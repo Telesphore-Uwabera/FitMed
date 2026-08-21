@@ -219,6 +219,12 @@ export default function FitnessCertificateWizard({
 
   const handleNext = () => {
     setStepError(null);
+    if (currentStep === 1) {
+      if (!purpose.trim()) {
+        setStepError("Please choose a certificate purpose before continuing.");
+        return;
+      }
+    }
     if (currentStep === 2) {
       if (!height || !weight || parseFloat(height) <= 0 || parseFloat(weight) <= 0) {
         setStepError("Please provide valid Height (cm) and Weight (kg) before proceeding.");

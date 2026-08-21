@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import Image from "next/image";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
@@ -12,7 +12,8 @@ import {
   Lock,
   User,
 } from "lucide-react";
-import { publicVerifyUrl, qrCodeFallbackUrl, qrCodeImageUrl } from "@/lib/certificateDisplay";
+import CertificateQr from "@/components/CertificateQr";
+import { publicVerifyUrl } from "@/lib/certificateDisplay";
 
 export interface CertificateData {
   certificateId: string;
@@ -95,15 +96,10 @@ export default function OfficialMedicalCertificate({
     issueDate: data?.issueDate || "—",
     expiryDate: data?.expiryDate || "—",
     sha256Hash: data?.sha256Hash || "—",
-    qrUrl: data?.qrUrl || qrCodeImageUrl(data?.certificateId),
+    qrUrl: data?.qrUrl || "",
   };
 
   const verifyUrl = publicVerifyUrl(cert.certificateId);
-  const [qrSrc, setQrSrc] = useState(cert.qrUrl || qrCodeImageUrl(cert.certificateId));
-
-  useEffect(() => {
-    setQrSrc(cert.qrUrl || qrCodeImageUrl(cert.certificateId));
-  }, [cert.certificateId, cert.qrUrl]);
 
   const handleDownload = async () => {
     if (!certRef.current || isDownloading) return;
@@ -302,24 +298,18 @@ export default function OfficialMedicalCertificate({
             {/* QR Code Verification Link */}
             <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
               <div className="w-20 h-20 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
-                {qrSrc ? (
-                  <img
-                    src={qrSrc}
-                    alt={`QR for Official Document No. ${cert.certificateId}`}
-                    className="w-full h-full object-contain"
-                    onError={() => {
-                      const fallback = qrCodeFallbackUrl(cert.certificateId);
-                      if (qrSrc !== fallback) setQrSrc(fallback);
-                    }}
-                  />
+                {cert.certificateId && cert.certificateId !== "—" ? (
+                  <CertificateQr value={verifyUrl} label={`Official Document No. ${cert.certificateId}`} />
                 ) : (
                   <QrCode className="w-10 h-10 text-[#0B2D5C]" />
                 )}
               </div>
               <div className="space-y-0.5 text-[10px] text-slate-600">
-                <div className="font-extrabold text-[#0B2D5C]">Scan to Verify</div>
+                <div className="font-extrabold text-[#0B2D5C]">Scan to open certificate</div>
                 <div className="font-mono text-[9px] text-[#0B2D5C] break-all">Official Document No. {cert.certificateId}</div>
-                <div className="font-mono text-[8px] text-sky-700 break-all">{verifyUrl.replace(/^https?:\/\//, "")}</div>
+                <a href={verifyUrl} className="font-mono text-[8px] text-sky-700 break-all underline" target="_blank" rel="noreferrer">
+                  {verifyUrl.replace(/^https?:\/\//, "")}
+                </a>
               </div>
             </div>
           </div>

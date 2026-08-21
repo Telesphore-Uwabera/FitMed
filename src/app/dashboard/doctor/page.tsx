@@ -649,6 +649,15 @@ export default function DoctorDashboardPage() {
     fullCertificate: cert,
   });
 
+  const markUnderReview = (certificateId?: string) => {
+    if (!certificateId) return;
+    void fetch("/api/certificates", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ certificateId, status: "under-review" }),
+    });
+  };
+
   const exportApplications = () => {
     const headers = [
       "Certificate ID",
@@ -1002,6 +1011,7 @@ export default function DoctorDashboardPage() {
                           onClick={() => {
                             setSelectedCandidate(candidate);
                             setShowStructuredAssessmentModal(true);
+                            markUnderReview(candidate.id);
                           }}
                           className="px-3 py-2 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                         >
@@ -2406,6 +2416,7 @@ export default function DoctorDashboardPage() {
                   setSelectedCandidate(applicationToCandidate(selectedApplication));
                   setSelectedApplication(null);
                   setShowStructuredAssessmentModal(true);
+                  markUnderReview(selectedApplication.certificateId);
                 }}
                 className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
               >
