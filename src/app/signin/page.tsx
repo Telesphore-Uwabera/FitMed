@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,6 +20,8 @@ import {
 
 import { useToast } from "@/components/ToastProvider";
 import { X, Sparkles, Send } from "lucide-react";
+import { dashboardPath } from "@/lib/roles";
+import { SESSION_TTL_MS } from "@/lib/authCookie";
 
 function SignInContent() {
   const router = useRouter();
@@ -50,8 +52,27 @@ function SignInContent() {
   const [permanentPassword, setPermanentPassword] = useState("");
   const [pendingAccount, setPendingAccount] = useState<any | null>(null);
 
+  useEffect(() => {
+    if (unauthorized || pendingAccess) return;
+    let cancelled = false;
+    fetch("/api/auth/session", { credentials: "include", cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data?.success || !data.user) return;
+        const home = dashboardPath(data.user.role);
+        const allowedNext =
+          nextPath.startsWith("/meet/") ||
+          (nextPath.startsWith("/dashboard/") && nextPath.startsWith(home));
+        router.replace(allowedNext ? nextPath : home);
+      })
+      .catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, [router, nextPath, unauthorized, pendingAccess]);
+
   const persistSession = (role: "admin" | "doctor" | "user", name: string, email: string) => {
-    const ttlMs = role === "user" ? 30 * 24 * 60 * 60 * 1000 : 1 * 24 * 60 * 60 * 1000;
+    const ttlMs = SESSION_TTL_MS;
     const session = {
       role,
       name,

@@ -17,7 +17,7 @@ const SLIDES = [
     // African doctor with applicant — telemedicine consultation
     url: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1800&q=85&auto=format&fit=crop",
     alt: "African doctor conducting a telemedicine consultation with an applicant",
-    caption: "Consult a licensed doctor from anywhere",
+    caption: "Request your verified medical fitness certificate",
   },
   {
     // Black woman running — fitness assessment context
@@ -45,7 +45,7 @@ const SLIDE_DURATION = 6000; // ms
 const stats = [
   { icon: TrendingUp, value: "10,000+", label: "Certificates Issued", color: "text-[#12B8B0]"  },
   { icon: Star,        value: "4.9 / 5",  label: "Doctor Rating",      color: "text-amber-300" },
-  { icon: Clock,       value: "< 2 hrs",  label: "Avg. Turnaround",    color: "text-white"  },
+              { icon: Clock,       value: "< 2 hrs",  label: "Avg. Turnaround",    color: "text-[#0B2D5C] dark:text-white"  },
 ];
 
 const trustBadges = [
@@ -131,10 +131,10 @@ export default function Hero() {
           </AnimatePresence>
         ))}
 
-        {/* Layered overlays — brand navy #0B2D5C with reduced opacity */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0B2D5C]/70 via-[#0B2D5C]/45 to-[#0B2D5C]/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/60 via-transparent to-[#0B2D5C]/10" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#071d3d]/15 to-transparent" />
+        {/* Layered overlays — light wash in light mode, brand navy in dark */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/78 to-white/45 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-white/88 via-transparent to-white/35 dark:from-[#0B2D5C]/60 dark:via-transparent dark:to-[#0B2D5C]/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#edf6f6]/50 to-transparent dark:from-[#071d3d]/15 dark:to-transparent" />
       </div>
 
       {/* ── Hero content ─────────────────────────────────────── */}
@@ -148,16 +148,16 @@ export default function Hero() {
             initial={{ opacity: 0, y: 38 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full mb-6 md:mb-10 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-white text-center lg:text-left"
+            className="w-full mb-6 md:mb-10 text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-[5.25rem] font-extrabold tracking-tight leading-[1.12] text-[#0B2D5C] dark:text-white text-center lg:text-left"
             style={{ fontFamily: "var(--font-primary)" }}
           >
-            <span className="block text-white">
+            <span className="block text-[#0B2D5C] dark:text-white">
               Get Your
             </span>
             <span className="block bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">
               Medical Fitness
             </span>
-            <span className="block text-white">
+            <span className="block text-[#0B2D5C] dark:text-white">
               Certificate Online.
             </span>
           </motion.h1>
@@ -181,10 +181,10 @@ export default function Hero() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 mb-5 md:mb-7 leading-relaxed"
+              className="text-lg text-slate-600 dark:text-slate-300 max-w-xl mx-auto lg:mx-0 mb-5 md:mb-7 leading-relaxed"
             >
               A secure digital medical fitness assessment conducted by a{" "}
-              <span className="text-white font-semibold">licensed doctor</span> — verified,
+              <span className="text-[#0B2D5C] dark:text-white font-semibold">licensed doctor</span> — verified,
               digitally signed, and instantly shareable.
             </motion.p>
 
@@ -224,9 +224,9 @@ export default function Hero() {
                 href="#how-it-works"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                className="group flex-1 min-w-0 inline-flex items-center justify-center gap-2 md:gap-3 px-3 py-2 md:px-7 md:py-4 rounded-2xl font-semibold text-white/90 glass-dark hover:bg-white/12 hover:text-white transition-all duration-300 text-sm"
+                className="group flex-1 min-w-0 inline-flex items-center justify-center gap-2 md:gap-3 px-3 py-2 md:px-7 md:py-4 rounded-2xl font-semibold text-[#0B2D5C] dark:text-white/90 glass-light hover:bg-white dark:hover:bg-white/12 hover:text-[#0B2D5C] dark:hover:text-white transition-all duration-300 text-sm"
               >
-                <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center group-hover:bg-sky-500/30 transition-colors flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-[#12B8B0]/15 dark:bg-white/15 flex items-center justify-center group-hover:bg-[#12B8B0]/25 dark:group-hover:bg-sky-500/30 transition-colors flex-shrink-0">
                   <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
                 </div>
                 <span className="leading-tight text-center">Watch how it works</span>
@@ -246,7 +246,7 @@ export default function Hero() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.82 + i * 0.07 }}
-                  className="flex items-center gap-1.5 text-xs text-slate-400"
+                  className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"
                 >
                   <CheckCircle className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
                   <span>{item}</span>
@@ -268,7 +268,7 @@ export default function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.05 + i * 0.1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="min-w-0 glass-dark rounded-2xl px-2 py-3 md:px-4 md:py-4 flex flex-col items-center justify-center text-center gap-1.5 h-full cursor-default border border-white/10 hover:border-sky-400/35 transition-colors"
+                  className="min-w-0 glass-light rounded-2xl px-2 py-3 md:px-4 md:py-4 flex flex-col items-center justify-center text-center gap-1.5 h-full cursor-default hover:border-[#12B8B0]/50 dark:hover:border-sky-400/35 transition-colors"
                 >
                   <s.icon className={`w-5 h-5 ${s.color} flex-shrink-0`} />
                   <div
@@ -277,7 +277,7 @@ export default function Hero() {
                   >
                     {s.value}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] text-slate-400 leading-snug">{s.label}</div>
+                  <div className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{s.label}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -298,7 +298,7 @@ export default function Hero() {
               className={`block rounded-full transition-all duration-400 ${
                 i === current
                   ? "w-7 h-2.5 bg-[#12B8B0]"
-                  : "w-2.5 h-2.5 bg-white/30 hover:bg-white/55"
+                  : "w-2.5 h-2.5 bg-[#0B2D5C]/25 hover:bg-[#0B2D5C]/45 dark:bg-white/30 dark:hover:bg-white/55"
               }`}
             />
           </button>
@@ -309,20 +309,20 @@ export default function Hero() {
       <button
         onClick={back}
         aria-label="Previous slide"
-        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
+        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-dark border border-white/15 items-center justify-center text-white/60 hover:text-white hover:bg-white/12 transition-all"
+        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all"
       >
         <ChevronRight className="w-5 h-5" />
       </button>
 
       {/* ── Slide progress bar ──────────────────────────────────── */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 h-0.5 bg-white/8">
+      <div className="absolute bottom-0 left-0 right-0 z-10 h-0.5 bg-[#0B2D5C]/10 dark:bg-white/8">
         <motion.div
           key={current}
           className="h-full bg-gradient-to-r from-[#12B8B0] to-[#1dd9d0]"

@@ -12,3 +12,10 @@ export function normalizeRole(role?: string | null): SessionRole {
 export function isAdminRole(role?: string | null) {
   return normalizeRole(role) === "admin";
 }
+
+export function dashboardPath(role?: string | null) {
+  const normalized = normalizeRole(role);
+  if (normalized === "admin") return "/dashboard/admin";
+  if (normalized === "doctor") return "/dashboard/doctor";
+  return "/dashboard/user";
+}

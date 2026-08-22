@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { normalizeRole } from "@/lib/roles";
+import { SESSION_TTL_MS } from "@/lib/authCookie";
 
 export interface FitMedSession {
   role: "admin" | "doctor" | "user";
@@ -19,7 +20,7 @@ export function useSession(requiredRole?: FitMedSession["role"]) {
 
     const verify = async () => {
       try {
-        const res = await fetch("/api/auth/session", { credentials: "include" });
+        const res = await fetch("/api/auth/session", { credentials: "include", cache: "no-store" });
         const data = await res.json().catch(() => ({ success: false }));
 
         if (cancelled) return;
@@ -41,7 +42,7 @@ export function useSession(requiredRole?: FitMedSession["role"]) {
           return;
         }
 
-        const ttlMs = data.user.role === "user" ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+        const ttlMs = SESSION_TTL_MS;
         const nextSession: FitMedSession = {
           role: data.user.role,
           name: data.user.name,

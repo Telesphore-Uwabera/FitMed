@@ -48,9 +48,13 @@ export async function middleware(request: NextRequest) {
 
   if (!session) {
     if (isDashboard || isMeet) {
-      return NextResponse.redirect(signInUrl(request));
+      const redirect = NextResponse.redirect(signInUrl(request));
+      redirect.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+      return redirect;
     }
-    return unauthorizedJson();
+    const denied = unauthorizedJson();
+    denied.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+    return denied;
   }
 
   if (pathname.startsWith("/dashboard/admin") && !isAdminRole(session.role)) {
@@ -70,7 +74,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  const next = NextResponse.next();
+  next.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate, max-age=0");
+  next.headers.set("Vary", "Cookie");
+  return next;
 }
 
 export const config = {

@@ -158,6 +158,10 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(18,184,176,0.2);
 }
+html.dark .glass-light {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+}
 
 /* ─── Cards ──────────────────────────────────────────────────────── */
 .card-white {

@@ -1,4 +1,15 @@
 const COOKIE_NAME = "fitmed_auth";
+const UI_COOKIE_NAME = "fitmed_ui";
+
+export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+export const SESSION_TTL_SECONDS = 24 * 60 * 60;
+
+export const AUTH_NO_STORE_HEADERS = {
+  "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+  Vary: "Cookie",
+} as const;
 
 export type SessionRole = "admin" | "doctor" | "user";
 
@@ -51,11 +62,55 @@ function timingSafeEqual(a: string, b: string) {
   return diff === 0;
 }
 
-export function sessionTtlMs(role: SessionRole) {
-  return role === "user" ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+export function sessionTtlMs(_role?: SessionRole) {
+  return SESSION_TTL_MS;
 }
 
-export async function signSession(payload: Omit<SessionPayload, "exp">, ttlMs = sessionTtlMs(payload.role)) {
+function cookieBase() {
+  return {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+  };
+}
+
+export function authCookieOptions(maxAgeSeconds = SESSION_TTL_SECONDS) {
+  return {
+    ...cookieBase(),
+    httpOnly: true,
+    maxAge: maxAgeSeconds,
+    expires: new Date(Date.now() + maxAgeSeconds * 1000),
+  };
+}
+
+export function uiCookieOptions(maxAgeSeconds = SESSION_TTL_SECONDS) {
+  return {
+    ...cookieBase(),
+    httpOnly: false,
+    maxAge: maxAgeSeconds,
+    expires: new Date(Date.now() + maxAgeSeconds * 1000),
+  };
+}
+
+export function clearAuthCookieOptions() {
+  return {
+    ...cookieBase(),
+    httpOnly: true,
+    maxAge: 0,
+    expires: new Date(0),
+  };
+}
+
+export function clearUiCookieOptions() {
+  return {
+    ...cookieBase(),
+    httpOnly: false,
+    maxAge: 0,
+    expires: new Date(0),
+  };
+}
+
+export async function signSession(payload: Omit<SessionPayload, "exp">, ttlMs = SESSION_TTL_MS) {
   const body: SessionPayload = { ...payload, exp: Date.now() + ttlMs };
   const data = bytesToB64(new TextEncoder().encode(JSON.stringify(body)));
   const signature = await hmac(data);
@@ -77,34 +132,33 @@ export async function verifySession(token: string | undefined | null): Promise<S
   }
 }
 
-export function authCookieOptions(maxAgeSeconds: number) {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: maxAgeSeconds,
+type CookieResponse = {
+  cookies: {
+    set: (name: string, value: string, options: ReturnType<typeof authCookieOptions> | ReturnType<typeof uiCookieOptions>) => void;
   };
-}
+  headers?: { set: (name: string, value: string) => void };
+};
 
-export function clearAuthCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 0,
-  };
-}
-
-export async function attachAuthCookie(
-  response: { cookies: { set: (name: string, value: string, options: ReturnType<typeof authCookieOptions>) => void } },
-  payload: Omit<SessionPayload, "exp">
-) {
-  const ttlMs = sessionTtlMs(payload.role);
-  const token = await signSession(payload, ttlMs);
-  response.cookies.set(COOKIE_NAME, token, authCookieOptions(Math.floor(ttlMs / 1000)));
+export function applyNoStoreHeaders(response: { headers: { set: (name: string, value: string) => void } }) {
+  Object.entries(AUTH_NO_STORE_HEADERS).forEach(([key, value]) => response.headers.set(key, value));
   return response;
 }
 
-export { COOKIE_NAME };
+export function clearAuthCookies(response: CookieResponse) {
+  response.cookies.set(COOKIE_NAME, "", clearAuthCookieOptions());
+  response.cookies.set(UI_COOKIE_NAME, "", clearUiCookieOptions());
+  return response;
+}
+
+export async function attachAuthCookie(
+  response: CookieResponse,
+  payload: Omit<SessionPayload, "exp">
+) {
+  const token = await signSession(payload, SESSION_TTL_MS);
+  response.cookies.set(COOKIE_NAME, token, authCookieOptions(SESSION_TTL_SECONDS));
+  response.cookies.set(UI_COOKIE_NAME, payload.role, uiCookieOptions(SESSION_TTL_SECONDS));
+  if (response.headers) applyNoStoreHeaders(response as { headers: { set: (name: string, value: string) => void } });
+  return response;
+}
+
+export { COOKIE_NAME, UI_COOKIE_NAME };

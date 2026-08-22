@@ -136,18 +136,18 @@ export default async function AboutPage() {
       <Navbar />
 
       {/* ── HERO SECTION — Full bleed brand navy with background image ── */}
-      <section className="relative pt-36 pb-20 lg:pt-44 lg:pb-32 bg-[#0B2D5C] overflow-hidden text-white">
+      <section className="relative pt-36 pb-20 lg:pt-44 lg:pb-32 bg-[#f4f7fb] dark:bg-[#0B2D5C] overflow-hidden text-[#0B2D5C] dark:text-white">
         {/* Full-bleed background image with layered overlays */}
         <div className="absolute inset-0 z-0">
           <Image
             src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1800&q=85&auto=format&fit=crop"
             alt="Medical team providing digital fitness assessments in Rwanda"
             fill
-            className="object-cover object-center opacity-55"
+            className="object-cover object-center opacity-40 dark:opacity-55"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0B2D5C]/70 via-[#0B2D5C]/45 to-[#0B2D5C]/25" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/75 via-transparent to-[#0B2D5C]/35" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/75 to-white/50 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/85 via-transparent to-white/40 dark:from-[#0B2D5C]/75 dark:via-transparent dark:to-[#0B2D5C]/35" />
         </div>
 
         {/* Decorative blur glows */}
@@ -157,16 +157,16 @@ export default async function AboutPage() {
         <div className="container-wide relative z-10">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <h1
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.08] tracking-tight"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-[#0B2D5C] dark:text-white leading-[1.08] tracking-tight"
               style={{ fontFamily: "var(--font-primary)" }}
             >
               Fit, Verified, and <span className="bg-gradient-to-r from-[#12B8B0] via-[#1dd9d0] to-[#12B8B0] bg-clip-text text-transparent">Clinically Assessed.</span>
             </h1>
 
             {/* Core Definition Highlight Card */}
-            <div className="mt-8 p-8 sm:p-10 rounded-3xl bg-white/5 border border-white/15 backdrop-blur-xl shadow-2xl text-left relative overflow-hidden">
+            <div className="mt-8 p-8 sm:p-10 rounded-3xl glass-light shadow-2xl text-left relative overflow-hidden">
               <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-[#12B8B0] to-[#1dd9d0]" />
-              <p className="text-slate-200 text-lg sm:text-xl leading-relaxed font-medium">
+              <p className="text-slate-600 dark:text-slate-200 text-lg sm:text-xl leading-relaxed font-medium">
                 “A secure digital medical assessment and certification platform that connects
                 individuals with qualified healthcare professionals to determine fitness for defined
                 activities, while using structured clinical screening and risk-based referral to
@@ -176,29 +176,29 @@ export default async function AboutPage() {
 
             {/* Key stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 text-center">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div className="p-4 rounded-2xl glass-light">
                 <div className="text-2xl sm:text-3xl font-extrabold text-[#12B8B0]" style={{ fontFamily: "var(--font-primary)" }}>
                   100%
                 </div>
-                <div className="text-xs text-slate-300 mt-1">Licensed Doctors</div>
+                <div className="text-xs text-slate-500 dark:text-slate-300 mt-1">Licensed Doctors</div>
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="text-2xl sm:text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="p-4 rounded-2xl glass-light">
+                <div className="text-2xl sm:text-3xl font-extrabold text-[#0B2D5C] dark:text-white" style={{ fontFamily: "var(--font-primary)" }}>
                   Instant
                 </div>
-                <div className="text-xs text-slate-300 mt-1">QR Verification</div>
+                <div className="text-xs text-slate-500 dark:text-slate-300 mt-1">QR Verification</div>
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div className="p-4 rounded-2xl glass-light">
                 <div className="text-2xl sm:text-3xl font-extrabold text-[#12B8B0]" style={{ fontFamily: "var(--font-primary)" }}>
                   Risk-Based
                 </div>
-                <div className="text-xs text-slate-300 mt-1">Clinical Screening</div>
+                <div className="text-xs text-slate-500 dark:text-slate-300 mt-1">Clinical Screening</div>
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="text-2xl sm:text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="p-4 rounded-2xl glass-light">
+                <div className="text-2xl sm:text-3xl font-extrabold text-[#0B2D5C] dark:text-white" style={{ fontFamily: "var(--font-primary)" }}>
                   Rwanda
                 </div>
-                <div className="text-xs text-slate-300 mt-1">Built for workers nationwide</div>
+                <div className="text-xs text-slate-500 dark:text-slate-300 mt-1">Built for workers nationwide</div>
               </div>
             </div>
           </div>

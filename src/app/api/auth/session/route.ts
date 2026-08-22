@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
-import { COOKIE_NAME, verifySession, clearAuthCookieOptions, attachAuthCookie } from "@/lib/authCookie";
+import { COOKIE_NAME, verifySession, attachAuthCookie, clearAuthCookies, applyNoStoreHeaders } from "@/lib/authCookie";
 import { normalizeRole } from "@/lib/roles";
 
 function blockedStatus(status?: string) {
@@ -18,7 +18,8 @@ function blockedStatus(status?: string) {
 export async function GET(request: NextRequest) {
   const session = await verifySession(request.cookies.get(COOKIE_NAME)?.value);
   if (!session) {
-    return NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
+    const res = NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
+    return applyNoStoreHeaders(res);
   }
 
   try {
@@ -26,15 +27,15 @@ export async function GET(request: NextRequest) {
     const user = await User.findOne({ email: session.email });
     if (!user) {
       const res = NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
-      res.cookies.set(COOKIE_NAME, "", clearAuthCookieOptions());
-      return res;
+      clearAuthCookies(res);
+      return applyNoStoreHeaders(res);
     }
 
     const blocked = blockedStatus(user.status);
     if (blocked) {
       const res = NextResponse.json({ success: false, error: blocked }, { status: 403 });
-      res.cookies.set(COOKIE_NAME, "", clearAuthCookieOptions());
-      return res;
+      clearAuthCookies(res);
+      return applyNoStoreHeaders(res);
     }
 
     const role = normalizeRole(user.role);
@@ -46,11 +47,11 @@ export async function GET(request: NextRequest) {
       status: user.status,
     };
     const res = NextResponse.json({ success: true, user: payload });
-    if (session.role !== role || session.name !== payload.name) {
-      await attachAuthCookie(res, { email: payload.email, role, name: payload.name });
-    }
-    return res;
+    await attachAuthCookie(res, { email: payload.email, role, name: payload.name });
+    return applyNoStoreHeaders(res);
   } catch {
-    return NextResponse.json({ success: false, error: "Could not verify your session." }, { status: 500 });
+    return applyNoStoreHeaders(
+      NextResponse.json({ success: false, error: "Could not verify your session." }, { status: 500 })
+    );
   }
 }

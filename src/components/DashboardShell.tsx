@@ -218,16 +218,16 @@ export default function DashboardShell({
 
       {/* ── FIXED SIDEBAR (DESKTOP & MOBILE DRAWER) ── */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-[#0B2D5C] text-white flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-[#0B2D5C] text-[#0B2D5C] dark:text-white border-r border-slate-200 dark:border-transparent flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "max-lg:-translate-x-full"
         }`}
       >
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Logo & Header */}
-          <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
             <Link href="/" className="inline-block focus:outline-none">
               <Image
-                src="/logo-4.webp"
+                src={theme === "dark" ? "/logo-4.webp" : "/logo-2.webp"}
                 alt="FitMed"
                 width={641}
                 height={390}
@@ -239,16 +239,16 @@ export default function DashboardShell({
 
             <button
               onClick={() => setMobileSidebarOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 lg:hidden"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-[#0B2D5C] hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10 lg:hidden"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* User Profile Card in Sidebar */}
-          <div className="p-4 mx-4 my-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm space-y-3">
+          <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-sm space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-white/20">
+              <div className="w-10 h-10 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-slate-200 dark:border-white/20">
                 {profileImageSrc ? (
                   <img
                     src={profileImageSrc}
@@ -262,7 +262,7 @@ export default function DashboardShell({
                 )}
               </div>
               <div className="overflow-hidden">
-                <div className="text-sm font-bold text-white truncate">{userProfile.name}</div>
+                <div className="text-sm font-bold text-[#0B2D5C] dark:text-white truncate">{userProfile.name}</div>
                 <div className="text-[11px] text-slate-400 truncate">{userProfile.email}</div>
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function DashboardShell({
 
           {/* Navigation Links — Directly activates target view */}
           <div className="px-3 py-2 space-y-1">
-            <div className="px-3 pb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+            <div className="px-3 pb-2 text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
               {config.roleTitle}
             </div>
 
@@ -316,14 +316,14 @@ export default function DashboardShell({
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? "bg-white text-[#0B2D5C] font-black shadow-md"
-                      : "text-slate-300 hover:text-white hover:bg-white/10"
+                      ? "bg-[#0B2D5C] text-white dark:bg-white dark:text-[#0B2D5C] font-black shadow-md"
+                      : "text-slate-600 hover:text-[#0B2D5C] hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon
                       className={`w-4 h-4 ${
-                        isActive ? "text-[#12B8B0]" : "text-slate-400"
+                        isActive ? "text-[#12B8B0]" : "text-slate-400 dark:text-slate-400"
                       }`}
                     />
                     <span>{item.label}</span>
@@ -333,8 +333,8 @@ export default function DashboardShell({
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         isActive
-                          ? "bg-[#0B2D5C] text-[#12B8B0]"
-                          : "bg-white/10 text-slate-300"
+                          ? "bg-white/15 dark:bg-[#0B2D5C] text-[#12B8B0]"
+                          : "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"
                       }`}
                     >
                       {item.badge}
@@ -347,10 +347,10 @@ export default function DashboardShell({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-white/10 space-y-2 bg-[#082247]">
+        <div className="p-4 border-t border-slate-200 dark:border-white/10 space-y-2 bg-slate-50 dark:bg-[#082247]">
           <Link
             href="/"
-            className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors font-medium"
+            className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-slate-600 hover:text-[#0B2D5C] hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors font-medium"
           >
             <ChevronRight className="w-4 h-4 text-[#12B8B0]" />
             <span>Back to Public Homepage</span>
@@ -358,7 +358,7 @@ export default function DashboardShell({
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-rose-300 hover:text-rose-200 hover:bg-rose-500/10 transition-colors"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:text-rose-200 dark:hover:bg-rose-500/10 transition-colors"
           >
             <div className="flex items-center gap-2.5">
               <LogOut className="w-4 h-4 text-rose-400" />

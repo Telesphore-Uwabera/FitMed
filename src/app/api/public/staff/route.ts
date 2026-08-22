@@ -6,7 +6,7 @@ export async function GET() {
     const data = await getPublicStaff();
     return NextResponse.json(
       { success: true, ...data },
-      { headers: { "Cache-Control": "no-store, max-age=0" } }
+      { headers: { "Cache-Control": "public, max-age=60, s-maxage=120, stale-while-revalidate=300" } }
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Could not load staff.";

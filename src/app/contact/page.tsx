@@ -6,6 +6,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BrandSelect from "@/components/BrandSelect";
+import { useTheme } from "@/components/ThemeProvider";
 import {
   Mail,
   Phone,
@@ -27,7 +28,7 @@ const contactDepartments = [
     color: "text-[#12B8B0]",
     badgeBg: "bg-teal-50 border-teal-200 text-teal-800",
     title: "General Enquiries",
-    email: "support@fitnessmed.rw",
+    email: "fixmed@gmail.com",
     desc: "General questions about the FitMed platform, certificate verification, or platform access.",
   },
   {
@@ -36,7 +37,7 @@ const contactDepartments = [
     color: "text-sky-500",
     badgeBg: "bg-sky-50 border-sky-200 text-sky-800",
     title: "Doctor & Clinical Support",
-    email: "support@fitnessmed.rw",
+    email: "fixmed@gmail.com",
     desc: "Support for licensed doctors using FitMed video consultations and applicant reviews.",
   },
   {
@@ -45,7 +46,7 @@ const contactDepartments = [
     color: "text-indigo-500",
     badgeBg: "bg-indigo-50 border-indigo-200 text-indigo-800",
     title: "Employer & Corporate Support",
-    email: "support@fitnessmed.rw",
+    email: "fixmed@gmail.com",
     desc: "Help with company accounts, staff fitness certificates, and verification for HR teams.",
   },
   {
@@ -54,7 +55,7 @@ const contactDepartments = [
     color: "text-rose-500",
     badgeBg: "bg-rose-50 border-rose-200 text-rose-800",
     title: "Report an Issue",
-    email: "support@fitnessmed.rw",
+    email: "fixmed@gmail.com",
     desc: "Report platform technical issues, urgent certificate disputes, or clinical referral queries.",
   },
   {
@@ -63,7 +64,7 @@ const contactDepartments = [
     color: "text-emerald-500",
     badgeBg: "bg-emerald-50 border-emerald-200 text-emerald-800",
     title: "Privacy & Data Protection",
-    email: "support@fitnessmed.rw",
+    email: "fixmed@gmail.com",
     desc: "Questions about how we protect your health information, or requests about your personal data.",
   },
   {
@@ -72,12 +73,13 @@ const contactDepartments = [
     color: "text-amber-500",
     badgeBg: "bg-amber-50 border-amber-200 text-amber-800",
     title: "Legal & Regulatory Compliance",
-    email: "support@fitnessmed.rw",
+    email: "fixmed@gmail.com",
     desc: "Questions about regulations, doctor licensing, or legal documents.",
   },
 ];
 
 export default function ContactPage() {
+  const { theme } = useTheme();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -155,24 +157,24 @@ export default function ContactPage() {
       <Navbar />
 
       {/* ── HERO SECTION — Full bleed brand navy with background image ── */}
-      <section className="relative pt-36 pb-20 lg:pt-44 lg:pb-28 bg-[#0B2D5C] text-white overflow-hidden">
+      <section className="relative pt-36 pb-20 lg:pt-44 lg:pb-28 bg-[#f4f7fb] dark:bg-[#0B2D5C] text-[#0B2D5C] dark:text-white overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
             src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1800&q=85&auto=format&fit=crop"
             alt="FitMed care team ready to help applicants, doctors, and employers"
             fill
-            className="object-cover object-center opacity-55"
+            className="object-cover object-center opacity-40 dark:opacity-55"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0B2D5C]/70 via-[#0B2D5C]/45 to-[#0B2D5C]/25" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/75 via-transparent to-[#0B2D5C]/35" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/75 to-white/50 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/85 via-transparent to-white/40 dark:from-[#0B2D5C]/75 dark:via-transparent dark:to-[#0B2D5C]/35" />
         </div>
         <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#12B8B0]/15 rounded-full blur-[150px] pointer-events-none" />
 
         <div className="container-wide relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-5">
             <h1
-              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight"
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#0B2D5C] dark:text-white leading-tight"
               style={{ fontFamily: "var(--font-primary)" }}
             >
               We're Here to{" "}
@@ -181,7 +183,7 @@ export default function ContactPage() {
               </span>
             </h1>
 
-            <p className="text-slate-300 text-base sm:text-lg leading-relaxed">
+            <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed">
               Connect directly with our applicant care team, clinical operations leads, or corporate support specialists.
             </p>
           </div>
@@ -283,7 +285,7 @@ export default function ContactPage() {
               {/* ── PHYSICAL LOCATION & DIRECT CONTACT FORM ── */}
       <section className="py-20 lg:py-28 bg-[#f4f7fb]">
         <div className="container-wide">
-          <div className="bg-[#0B2D5C] rounded-3xl p-3 sm:p-8 lg:p-12 text-white border-0 shadow-2xl relative overflow-hidden">
+          <div className="bg-white dark:bg-[#0B2D5C] rounded-3xl p-3 sm:p-8 lg:p-12 text-[#0B2D5C] dark:text-white border border-slate-200 dark:border-0 shadow-2xl relative overflow-hidden">
             <div className="grid lg:grid-cols-2 gap-10 items-center">
               <div className="space-y-6">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#12B8B0]/15 border border-[#12B8B0]/30 text-[#12B8B0] text-xs font-bold uppercase tracking-wider">
@@ -291,24 +293,24 @@ export default function ContactPage() {
                   Headquarters & Regional Operations
                 </div>
 
-                <h2 className="text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+                <h2 className="text-3xl font-extrabold text-[#0B2D5C] dark:text-white" style={{ fontFamily: "var(--font-primary)" }}>
                   FitMed Technology Headquarters
                 </h2>
 
-                <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
                   FitMed is a digital medical fitness certification platform connecting applicants with licensed doctors through secure video consultations.
                 </p>
 
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center gap-3 text-sm text-slate-200">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
                     <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
                     <span>Fixed General Service Rate: <strong>5,000 FRW</strong> per assessment</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-200">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
                     <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
                     <span>Automatic email confirmation & admin inquiry queue</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-200">
+                  <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
                     <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
                     <span>Kigali, Rwanda · East Africa Virtual Health Operations</span>
                   </div>
@@ -316,13 +318,13 @@ export default function ContactPage() {
               </div>
 
               {/* Direct Message Form */}
-              <div className="bg-slate-900/90 rounded-2xl p-3 sm:p-7 border border-slate-700 space-y-4">
-                <h3 className="text-lg font-bold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="bg-slate-50 dark:bg-slate-900/90 rounded-2xl p-3 sm:p-7 border border-slate-200 dark:border-slate-700 space-y-4">
+                <h3 className="text-lg font-bold text-[#0B2D5C] dark:text-white" style={{ fontFamily: "var(--font-primary)" }}>
                   Send Us a Direct Message
                 </h3>
 
                 {submitSuccess && (
-                  <div className="p-4 rounded-xl bg-teal-900/60 border border-[#12B8B0] text-xs text-teal-200 font-semibold space-y-1">
+                  <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-900/60 border border-[#12B8B0] text-xs text-teal-800 dark:text-teal-200 font-semibold space-y-1">
                     <div className="flex items-center gap-2 font-bold text-[#12B8B0]">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Message sent</span>
@@ -331,53 +333,54 @@ export default function ContactPage() {
                   </div>
                 )}
                 {submitError && (
-                  <div className="p-4 rounded-xl bg-rose-900/40 border border-rose-400 text-xs text-rose-100 font-semibold">
+                  <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-900/40 border border-rose-300 dark:border-rose-400 text-xs text-rose-800 dark:text-rose-100 font-semibold">
                     {submitError}
                   </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-slate-400 mb-1">Your Full Name</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Your Full Name</label>
                     <input
                       required
                       type="text"
                       placeholder="e.g. Jean Paul Habimana"
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0B2D5C] dark:text-white focus:outline-none focus:border-[#12B8B0]"
                     />
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-400 mb-1">Your Email</label>
+                      <label className="block text-slate-500 dark:text-slate-400 mb-1">Your Email</label>
                       <input
                         required
                         type="email"
                         placeholder="Email address"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0B2D5C] dark:text-white focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 mb-1">Phone Number (Optional)</label>
+                      <label className="block text-slate-500 dark:text-slate-400 mb-1">Phone Number (Optional)</label>
                       <input
                         type="tel"
                         placeholder="+250 782 168 650"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0B2D5C] dark:text-white focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1">Subject / Enquiry Category</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Subject / Enquiry Category</label>
                     <BrandSelect
                       value={formData.subject}
                       onChange={(subject) => setFormData({ ...formData, subject })}
+                      variant={theme === "dark" ? "dark" : "light"}
                       options={[
                         "General Certificate Enquiry",
                         "Doctor Network Application",
@@ -391,14 +394,14 @@ export default function ContactPage() {
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1">Message</label>
+                    <label className="block text-slate-500 dark:text-slate-400 mb-1">Message</label>
                     <textarea
                       required
                       rows={3}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder="How can we help you?"
-                      className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0B2D5C] dark:text-white focus:outline-none focus:border-[#12B8B0]"
                     />
                   </div>
 

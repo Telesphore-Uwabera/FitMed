@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ChevronRight } from "lucide-react";
+import { Menu, X, ChevronRight, LogIn, LayoutDashboard } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTheme } from "@/components/ThemeProvider";
+import { dashboardPath } from "@/lib/roles";
 
 const navLinks = [
   { label: "Home",          href: "/" },
@@ -36,22 +37,44 @@ const NAV_H_SCROLLED = 58;
 export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [onHero,     setOnHero]     = useState(true);
   const [mounted,    setMounted]    = useState(false);
+  const [accountHref, setAccountHref] = useState<string | null>(null);
   const pathname = usePathname();
   const { theme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
     const handle = () => {
-      const y = window.scrollY;
-      setScrolled(y > 40);
-      setOnHero(y < window.innerHeight * 0.75);
+      setScrolled(window.scrollY > 40);
     };
     handle();
     window.addEventListener("scroll", handle, { passive: true });
     return () => window.removeEventListener("scroll", handle);
   }, []);
+
+  useEffect(() => {
+    const uiRole = document.cookie
+      .split("; ")
+      .find((part) => part.startsWith("fitmed_ui="))
+      ?.split("=")[1];
+    if (uiRole) setAccountHref(dashboardPath(decodeURIComponent(uiRole)));
+
+    let cancelled = false;
+    fetch("/api/auth/session", { credentials: "include", cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data?.success || !data.user) {
+          setAccountHref(null);
+          return;
+        }
+        setAccountHref(dashboardPath(data.user.role));
+      })
+      .catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -97,9 +120,7 @@ export default function Navbar() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50",
           scrolled
-            ? onHero
-              ? "bg-[#071d3d]/95 backdrop-blur-xl shadow-xl shadow-black/30"
-              : "bg-white/97 dark:bg-[#08162c]/95 backdrop-blur-xl shadow-md dark:shadow-black/30"
+            ? "bg-white/97 dark:bg-[#08162c]/95 backdrop-blur-xl shadow-md dark:shadow-black/30"
             : "bg-transparent"
         )}
       >
@@ -119,7 +140,7 @@ export default function Navbar() {
                * Both have transparent backgrounds — no filter needed.
                */}
               <Image
-                src={scrolled && theme !== "dark" ? "/logo-2.webp" : "/logo-4.webp"}
+                src={theme === "dark" ? "/logo-4.webp" : "/logo-2.webp"}
                 alt="FitMed"
                 width={641}
                 height={390}
@@ -139,23 +160,28 @@ export default function Navbar() {
                   onClick={(event) => handleLinkClick(event, link.href)}
                   className={cn(
                     "whitespace-nowrap flex-shrink-0 px-2.5 2xl:px-4 py-2 rounded-xl text-[13px] 2xl:text-[0.9rem] font-semibold transition-all duration-200",
-                    onHero
-                      ? "text-white/85 hover:text-white hover:bg-white/12"
-                      : "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6] dark:text-white/85 dark:hover:text-white dark:hover:bg-white/12"
+                    "text-[#0B2D5C] hover:text-[#12B8B0] hover:bg-[#edf6f6] dark:text-white/85 dark:hover:text-white dark:hover:bg-white/12"
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
             </nav>
-            <ThemeToggle variant={onHero ? "hero" : "nav"} className="ml-1" />
+            <ThemeToggle variant="nav" className="ml-1" />
+            <Link
+              href={accountHref || "/signin"}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold border-2 border-[#0B2D5C] text-[#0B2D5C] hover:bg-[#0B2D5C] hover:text-white dark:border-[#12B8B0] dark:text-[#12B8B0] dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] transition-all whitespace-nowrap"
+            >
+              {accountHref ? <LayoutDashboard className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+              <span>{accountHref ? "Dashboard" : "Sign In"}</span>
+            </Link>
             <motion.div
               whileHover={{ scale: 1.04, boxShadow: "0 8px 30px rgba(14,165,233,.35)" }}
               whileTap={{ scale: 0.97 }}
               className="flex-shrink-0"
             >
               <Link
-                href="/signin"
+                href={accountHref || "/signin"}
                 className="flex items-center gap-1.5 px-4 xl:px-5 py-2.5 rounded-xl text-sm font-bold text-white btn-primary shadow-md shadow-sky-500/20 whitespace-nowrap"
               >
                 <span>Request Certificate</span>
@@ -171,18 +197,14 @@ export default function Navbar() {
             <ThemeToggle
               variant="icon"
               className={
-                onHero
-                  ? "text-white hover:bg-white/12 border border-white/20"
-                  : "text-[#0B2D5C] dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600"
+                "text-[#0B2D5C] dark:text-slate-200 bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600"
               }
             />
             <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors font-bold text-xs tracking-widest uppercase flex-shrink-0",
-              onHero
-                ? "text-white hover:bg-white/12"
-                : "text-[#0B2D5C] hover:bg-[#edf6f6] dark:text-white dark:hover:bg-white/12"
+              "text-[#0B2D5C] hover:bg-[#edf6f6] dark:text-white dark:hover:bg-white/12"
             )}
             aria-label="Toggle menu"
           >
@@ -260,7 +282,15 @@ export default function Navbar() {
               {/* Bottom actions */}
               <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex flex-col gap-3">
                 <Link
-                  href="/signin"
+                  href={accountHref || "/signin"}
+                  onClick={() => setMobileOpen(false)}
+                  className="py-3 inline-flex items-center justify-center gap-2 rounded-xl font-bold text-sm border-2 border-[#0B2D5C] text-[#0B2D5C] hover:bg-[#0B2D5C] hover:text-white dark:border-[#12B8B0] dark:text-[#12B8B0] dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] transition-all"
+                >
+                  {accountHref ? <LayoutDashboard className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                  {accountHref ? "Dashboard" : "Sign In"}
+                </Link>
+                <Link
+                  href={accountHref || "/signin"}
                   onClick={() => setMobileOpen(false)}
                   className="py-3 text-center rounded-xl font-bold text-white btn-primary text-sm"
                 >

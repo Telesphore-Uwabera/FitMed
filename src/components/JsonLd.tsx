@@ -10,7 +10,7 @@ export default function JsonLd() {
         name: SITE_NAME,
         url: SITE_URL,
         logo: absoluteUrl("/logo-4.webp"),
-        email: "support@fitnessmed.rw",
+        email: "fixmed@gmail.com",
         address: {
           "@type": "PostalAddress",
           addressLocality: "Kigali",

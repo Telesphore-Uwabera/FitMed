@@ -4,6 +4,7 @@ import { Mail, Phone, MapPin, Globe, Share2, MessageCircle, Send } from "lucide-
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
 
 const footerLinks = {
   Platform: [
@@ -42,6 +43,7 @@ const socials = [
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { theme } = useTheme();
   const [newsEmail, setNewsEmail] = useState("");
   const [newsName, setNewsName] = useState("");
   const [newsNote, setNewsNote] = useState("");
@@ -73,7 +75,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#0B2D5C]">
+    <footer className="bg-[#f4f7fb] dark:bg-[#0B2D5C] border-t border-slate-200 dark:border-transparent">
       <div className="container-wide pt-20 pb-10">
 
         {/* ── Main grid ─────────────────────────────────────── */}
@@ -82,10 +84,9 @@ export default function Footer() {
           {/* Brand col — spans 2 on lg */}
           <div className="col-span-2">
 
-            {/* ── Logo: logo-4.webp has transparent background, shows cleanly on dark footer ── */}
             <Link href="/" aria-label="FitMed home" className="inline-block mb-7 group">
               <Image
-                src="/logo-4.webp"
+                src={theme === "dark" ? "/logo-4.webp" : "/logo-2.webp"}
                 alt="FitMed"
                 width={641}
                 height={390}
@@ -93,27 +94,27 @@ export default function Footer() {
               />
             </Link>
 
-            <p className="text-sm text-slate-400 leading-relaxed mb-7 max-w-xs">
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-7 max-w-xs">
               Secure digital medical fitness assessments, conducted by licensed doctors and verified online.
             </p>
 
             <div className="space-y-3">
               <a
-                href="mailto:support@fitnessmed.rw"
-                className="flex items-center gap-2.5 text-xs text-slate-500 hover:text-sky-400 transition-colors group"
+                href="mailto:fixmed@gmail.com"
+                className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-500 hover:text-[#12B8B0] transition-colors group"
               >
-                <Mail className="w-3.5 h-3.5 text-sky-500/60 group-hover:text-sky-400 flex-shrink-0 transition-colors" />
-                <span>support@fitnessmed.rw</span>
+                <Mail className="w-3.5 h-3.5 text-[#12B8B0]/80 group-hover:text-[#12B8B0] flex-shrink-0 transition-colors" />
+                <span>fixmed@gmail.com</span>
               </a>
               <a
                 href="tel:+250782168650"
-                className="flex items-center gap-2.5 text-xs text-slate-500 hover:text-sky-400 transition-colors group"
+                className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-500 hover:text-[#12B8B0] transition-colors group"
               >
-                <Phone className="w-3.5 h-3.5 text-sky-500/60 group-hover:text-sky-400 flex-shrink-0 transition-colors" />
+                <Phone className="w-3.5 h-3.5 text-[#12B8B0]/80 group-hover:text-[#12B8B0] flex-shrink-0 transition-colors" />
                 <span>+250 782 168 650</span>
               </a>
-              <div className="flex items-center gap-2.5 text-xs text-slate-500">
-                <MapPin className="w-3.5 h-3.5 text-sky-500/60 flex-shrink-0" />
+              <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-500">
+                <MapPin className="w-3.5 h-3.5 text-[#12B8B0]/80 flex-shrink-0" />
                 <span>Kigali, Rwanda</span>
               </div>
             </div>
@@ -123,7 +124,7 @@ export default function Footer() {
           {Object.entries(footerLinks).map(([cat, links]) => (
             <div key={cat}>
               <h4
-                className="text-xs font-extrabold text-white/90 uppercase tracking-[0.18em] mb-5"
+                className="text-xs font-extrabold text-[#0B2D5C] dark:text-white/90 uppercase tracking-[0.18em] mb-5"
                 style={{ fontFamily: "var(--font-primary)" }}
               >
                 {cat}
@@ -136,14 +137,14 @@ export default function Footer() {
                         href={l.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-white/50 hover:text-[#12B8B0] transition-colors duration-200"
+                        className="text-sm text-slate-600 dark:text-white/50 hover:text-[#12B8B0] transition-colors duration-200"
                       >
                         {l.label}
                       </a>
                     ) : (
                       <Link
                         href={l.href}
-                        className="text-sm text-white/50 hover:text-[#12B8B0] transition-colors duration-200"
+                        className="text-sm text-slate-600 dark:text-white/50 hover:text-[#12B8B0] transition-colors duration-200"
                       >
                         {l.label}
                       </Link>
@@ -155,38 +156,38 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mb-16 rounded-3xl border border-white/10 bg-[#082247] p-6 sm:p-8">
+        <div className="mb-16 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#082247] p-6 sm:p-8">
           <div className="grid lg:grid-cols-[1.1fr_1fr] gap-8 items-end">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#12B8B0] mb-2">FitMed news</p>
-              <h3 className="text-2xl font-extrabold text-white mb-2" style={{ fontFamily: "var(--font-primary)" }}>
+              <h3 className="text-2xl font-extrabold text-[#0B2D5C] dark:text-white mb-2" style={{ fontFamily: "var(--font-primary)" }}>
                 Subscribe for platform updates
               </h3>
-              <p className="text-sm text-slate-400 max-w-md">
+              <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
                 Get notices about certificate processing, doctor availability, and FitMed announcements.
               </p>
             </div>
             <form onSubmit={subscribe} className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Name</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Name</span>
                   <input
                     type="text"
                     value={newsName}
                     onChange={(e) => setNewsName(e.target.value)}
                     placeholder="Your name"
-                    className="w-full mt-1 text-sm text-white placeholder:text-slate-500"
+                    className="w-full mt-1 text-sm text-[#0B2D5C] dark:text-white placeholder:text-slate-400 bg-slate-50 dark:bg-transparent border border-slate-200 dark:border-white/15 rounded-xl px-3 py-2"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Email</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email</span>
                   <input
                     type="email"
                     required
                     value={newsEmail}
                     onChange={(e) => setNewsEmail(e.target.value)}
                     placeholder="you@email.com"
-                    className="w-full mt-1 text-sm text-white placeholder:text-slate-500"
+                    className="w-full mt-1 text-sm text-[#0B2D5C] dark:text-white placeholder:text-slate-400 bg-slate-50 dark:bg-transparent border border-slate-200 dark:border-white/15 rounded-xl px-3 py-2"
                   />
                 </label>
               </div>
@@ -198,7 +199,7 @@ export default function Footer() {
                 <Send className="w-3.5 h-3.5" />
                 {newsBusy ? "Saving…" : "Subscribe"}
               </button>
-              {newsNote ? <p className="text-xs text-[#8ff3e8]">{newsNote}</p> : null}
+              {newsNote ? <p className="text-xs text-[#0d9690] dark:text-[#8ff3e8]">{newsNote}</p> : null}
             </form>
           </div>
         </div>
@@ -209,7 +210,7 @@ export default function Footer() {
         {/* ── Bottom bar ──────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-5">
 
-          <p className="text-xs text-white/30 order-2 md:order-1">
+          <p className="text-xs text-slate-500 dark:text-white/30 order-2 md:order-1">
             © {year} FitMed. All rights reserved.
           </p>
 
@@ -222,14 +223,14 @@ export default function Footer() {
                 aria-label={ariaLabel}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-[#143d7a] border border-white/10 flex items-center justify-center text-white/50 hover:text-[#12B8B0] hover:border-[#12B8B0]/50 transition-all"
+                className="w-9 h-9 rounded-xl bg-white dark:bg-[#143d7a] border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 dark:text-white/50 hover:text-[#12B8B0] hover:border-[#12B8B0]/50 transition-all"
               >
                 <Icon className="w-4 h-4" />
               </a>
             ))}
           </div>
 
-          <p className="text-xs text-white/30 order-3">
+          <p className="text-xs text-slate-500 dark:text-white/30 order-3">
             Built with clinical safety and privacy in mind.
           </p>
         </div>
