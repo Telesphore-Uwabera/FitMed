@@ -1,7 +1,14 @@
 import { FITMED_SERVICE_TITLES } from "@/lib/fitmedServices";
+import { SITE_URL } from "@/lib/seo";
 
 export function publicAppUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_APP_URL || SITE_URL).replace(/\/$/, "");
+}
+
+export function publicApiOrigin() {
+  const socket = (process.env.NEXT_PUBLIC_SOCKET_URL || "").replace(/\/$/, "");
+  if (socket && !/localhost|127\.0\.0\.1/i.test(socket)) return socket;
+  return "";
 }
 
 export function officialDocumentNo(certificateId?: string) {

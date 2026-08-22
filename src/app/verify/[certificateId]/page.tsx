@@ -1,13 +1,13 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
-import { connectToDatabase } from "@/lib/mongodb";
-import Certificate from "@/models/Certificate";
-import Doctor from "@/models/Doctor";
-import User from "@/models/User";
-import { officialDocumentNo, toOfficialCertificateData } from "@/lib/certificateDisplay";
+import type { CertificateData } from "@/components/OfficialMedicalCertificate";
+import { officialDocumentNo, publicApiOrigin } from "@/lib/certificateDisplay";
 import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -25,6 +25,15 @@ export async function generateMetadata({
   });
 }
 
+async function apiOrigin() {
+  const configured = publicApiOrigin();
+  if (configured) return configured;
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host");
+  const proto = h.get("x-forwarded-proto") || "http";
+  return host ? `${proto}://${host.split(",")[0].trim()}` : "https://fitmed-l2uv.onrender.com";
+}
+
 export default async function VerifyCertificatePage({
   params,
 }: {
@@ -33,33 +42,29 @@ export default async function VerifyCertificatePage({
   const { certificateId } = await params;
   const id = officialDocumentNo(certificateId);
 
-  let cert: Record<string, unknown> | null = null;
-  let applicant: { avatarUrl?: string; nationalId?: string } | null = null;
-  let doctor: { fullName?: string; licenseNumber?: string; specialty?: string } | null = null;
+  let data: CertificateData | null = null;
   let loadError = "";
+  let notFound = !id;
 
-  try {
-    await connectToDatabase();
-    cert = (await Certificate.findOne({ certificateId: id }).lean()) as Record<string, unknown> | null;
-    applicant = cert?.applicantEmail
-      ? ((await User.findOne({ email: String(cert.applicantEmail).toLowerCase() })
-          .select("avatarUrl nationalId gender dateOfBirth")
-          .lean()) as { avatarUrl?: string; nationalId?: string } | null)
-      : null;
-    if (cert?.assignedDoctorId) {
-      doctor = (await Doctor.findById(cert.assignedDoctorId)
-        .select("fullName licenseNumber specialty")
-        .lean()) as { fullName?: string; licenseNumber?: string; specialty?: string } | null;
+  if (id) {
+    try {
+      const origin = await apiOrigin();
+      const res = await fetch(`${origin}/api/public/certificates/${encodeURIComponent(id)}`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (res.status === 404) {
+        notFound = true;
+      } else if (!res.ok) {
+        loadError = "This certificate could not be opened right now. Please try again in a moment.";
+      } else {
+        const json = (await res.json()) as { success?: boolean; data?: CertificateData };
+        data = json.data || null;
+        notFound = !data;
+      }
+    } catch {
+      loadError = "This certificate could not be opened right now. Please try again in a moment.";
     }
-    if (!doctor && cert) {
-      doctor = (await Doctor.findOne({}).select("fullName licenseNumber specialty").lean()) as {
-        fullName?: string;
-        licenseNumber?: string;
-        specialty?: string;
-      } | null;
-    }
-  } catch {
-    loadError = "This certificate could not be opened right now. Please try again in a moment.";
   }
 
   return (
@@ -70,29 +75,12 @@ export default async function VerifyCertificatePage({
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950">
             {loadError}
           </div>
-        ) : !cert ? (
+        ) : notFound ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
             No FitMed certificate was found for <strong className="font-mono">{id || "this number"}</strong>.
           </div>
         ) : (
-          <OfficialMedicalCertificate
-            data={toOfficialCertificateData(
-              {
-                ...cert,
-                avatarUrl: cert.avatarUrl || applicant?.avatarUrl,
-                candidateIdNumber: cert.candidateIdNumber || applicant?.nationalId,
-                assignedDoctorLicense: cert.assignedDoctorLicense || doctor?.licenseNumber,
-                assignedDoctor: cert.assignedDoctor || doctor?.fullName,
-              },
-              {
-                doctorLicense: doctor?.licenseNumber,
-                doctorSpecialty: doctor?.specialty,
-                doctorName: doctor?.fullName,
-                applicantImageUrl: applicant?.avatarUrl,
-                nationalId: applicant?.nationalId,
-              }
-            )}
-          />
+          <OfficialMedicalCertificate data={data as CertificateData} />
         )}
       </main>
       <Footer />
