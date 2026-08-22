@@ -6,10 +6,14 @@ let io: SocketIOServer | null = null;
 export const initializeSocket = (server: HTTPServer) => {
   if (!io) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const extraOrigins = (process.env.SOCKET_CORS_ORIGINS || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
     io = new SocketIOServer(server, {
       cors: {
         origin: appUrl
-          ? [appUrl, "http://localhost:3000", "http://localhost:3001"]
+          ? [appUrl, ...extraOrigins, "http://localhost:3000", "http://localhost:3001"]
           : true,
         methods: ["GET", "POST"],
         credentials: true,

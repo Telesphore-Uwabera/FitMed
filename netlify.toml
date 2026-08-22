@@ -8,6 +8,20 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+  NEXT_PUBLIC_SOCKET_URL = "https://fitmed-l2uv.onrender.com"
+
+# Pages and assets on Netlify. APIs, webhooks, and Socket.IO stay on Render.
+[[redirects]]
+  from = "/api/*"
+  to = "https://fitmed-l2uv.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/socket.io/*"
+  to = "https://fitmed-l2uv.onrender.com/socket.io/:splat"
+  status = 200
+  force = true
 
 [[headers]]
   for = "/*"
