@@ -70,11 +70,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon-white.webp", type: "image/webp", sizes: "256x256" },
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/favicon-48x48.png", type: "image/png", sizes: "48x48" },
+      { url: "/favicon-icon.webp", type: "image/webp" },
     ],
     shortcut: "/favicon.ico",
-    apple: "/favicon-white.webp",
+    apple: "/favicon-48x48.png",
   },
 };
 
@@ -85,6 +86,10 @@ export default function RootLayout({
     <html lang="en" className={manrope.variable} suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="P7tFxJLbr0ugu0-lq5ZXBX_JsIwzoc0q6iFGN0AN9A8" />
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <link rel="icon" href="/favicon-48x48.png" type="image/png" sizes="48x48" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon-48x48.png" />
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <JsonLd />
