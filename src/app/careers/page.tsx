@@ -76,8 +76,8 @@ export default function CareersPage() {
           <Mail className="w-10 h-10 text-sky-400 mx-auto mb-4" strokeWidth={1.5} />
           <h2 className="text-xl font-extrabold text-white mb-3" style={{ fontFamily: "var(--font-primary)" }}>Don't see your role?</h2>
           <p className="text-slate-400 mb-6 max-w-md mx-auto text-sm">We're always interested in talented people. Send us your CV and a note about what you'd bring to FitMed.</p>
-          <a href="mailto:careers@fitmed.rw" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white btn-primary">
-            careers@fitmed.rw
+          <a href="mailto:support@fitnessmed.rw" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white btn-primary">
+            support@fitnessmed.rw
           </a>
         </div>
 

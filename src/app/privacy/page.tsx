@@ -64,7 +64,7 @@ const policySections = [
     border: "border-amber-100",
     content: [
       { heading: "4.1 Retention Periods",  text: "We retain your medical assessment data and issued certificates for the period required by applicable Rwandan health and medical records legislation, and for as long as necessary to provide certificate verification services." },
-      { heading: "4.2 Deletion",           text: "You may request deletion of your personal data by contacting us at privacy@fitmed.rw. Deletion requests will be processed within 30 days, subject to any legal retention obligations. Certificate records required for ongoing validity verification may be retained in a minimised form." },
+      { heading: "4.2 Deletion",           text: "You may request deletion of your personal data by contacting us at support@fitnessmed.rw. Deletion requests will be processed within 30 days, subject to any legal retention obligations. Certificate records required for ongoing validity verification may be retained in a minimised form." },
     ],
   },
   {
@@ -74,8 +74,8 @@ const policySections = [
     bg: "bg-violet-50",
     border: "border-violet-100",
     content: [
-      { heading: "5.1 Access",              text: "You have the right to access the personal and health information we hold about you. Submit an access request to privacy@fitmed.rw." },
-      { heading: "5.2 Correction",          text: "You have the right to correct inaccurate personal information. Contact us at privacy@fitmed.rw." },
+      { heading: "5.1 Access",              text: "You have the right to access the personal and health information we hold about you. Submit an access request to support@fitnessmed.rw." },
+      { heading: "5.2 Correction",          text: "You have the right to correct inaccurate personal information. Contact us at support@fitnessmed.rw." },
       { heading: "5.3 Erasure",             text: "Subject to legal retention obligations, you have the right to request deletion of your personal data." },
       { heading: "5.4 Portability",         text: "You have the right to receive a copy of your personal data in a structured, commonly used, machine-readable format." },
       { heading: "5.5 Objection",           text: "You have the right to object to certain processing activities and to request restriction of processing in certain circumstances." },
@@ -325,8 +325,8 @@ export default function PrivacyPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             {[
               { label: "Data Controller",   value: "FitMed" },
-              { label: "Privacy Contact",   value: "privacy@fitmed.rw",  href: "mailto:privacy@fitmed.rw" },
-              { label: "General Enquiries", value: "hello@fitmed.rw",    href: "mailto:hello@fitmed.rw" },
+              { label: "Privacy Contact",   value: "support@fitnessmed.rw",  href: "mailto:support@fitnessmed.rw" },
+              { label: "General Enquiries", value: "support@fitnessmed.rw",    href: "mailto:support@fitnessmed.rw" },
               { label: "Address",           value: "Kigali, Rwanda" },
             ].map(({ label, value, href }) => (
               <div key={label} className="bg-white rounded-xl p-4 border border-slate-100">

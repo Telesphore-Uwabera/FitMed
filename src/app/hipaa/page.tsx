@@ -65,7 +65,7 @@ export default function HipaaPage() {
         <div className="bg-slate-50 rounded-2xl p-7 border border-slate-200">
           <h2 className="text-base font-bold text-slate-900 mb-3" style={{ fontFamily: "var(--font-primary)" }}>Contact Our Privacy Team</h2>
           <div className="space-y-1.5 text-sm text-slate-600">
-            <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:privacy@fitmed.rw" className="text-sky-600 hover:underline">privacy@fitmed.rw</a></div>
+            <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:support@fitnessmed.rw" className="text-sky-600 hover:underline">support@fitnessmed.rw</a></div>
             <div><strong className="text-slate-800">Address:</strong> Kigali, Rwanda</div>
           </div>
         </div>

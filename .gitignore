@@ -40,6 +40,9 @@ yarn-error.log*
 # netlify
 .netlify
 
+# local tooling
+.snapshots/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

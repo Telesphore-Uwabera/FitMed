@@ -37,7 +37,7 @@ const footerLinks = {
 const socials = [
   { icon: MessageCircle, label: "X / Twitter", href: "https://twitter.com/fitmedrw",              ariaLabel: "Follow FitMed on X (Twitter)" },
   { icon: Share2,        label: "LinkedIn",     href: "https://linkedin.com/company/fitmedrw",    ariaLabel: "Connect with FitMed on LinkedIn" },
-  { icon: Globe,         label: "Website",      href: "https://fitmed.rw",                        ariaLabel: "Visit the FitMed website" },
+  { icon: Globe,         label: "Website",      href: "https://fitnessmed.rw",                    ariaLabel: "Visit the FitMed website" },
 ];
 
 export default function Footer() {

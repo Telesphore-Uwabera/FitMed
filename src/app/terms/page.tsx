@@ -25,7 +25,7 @@ const sections = [
     title: "4. User Accounts",
     items: [
       { heading: "Eligibility", text: "You must be at least 18 years old to create an account. By registering, you confirm that the information you provide is accurate and complete." },
-      { heading: "Account Security", text: "You are responsible for maintaining the security of your account credentials. Notify us immediately if you suspect unauthorised access at security@fitmed.rw." },
+      { heading: "Account Security", text: "You are responsible for maintaining the security of your account credentials. Notify us immediately if you suspect unauthorised access at support@fitnessmed.rw." },
       { heading: "Accurate Information", text: "Providing false or misleading health information in order to obtain a medical fitness certificate may constitute fraud and is strictly prohibited." },
     ],
   },
@@ -98,7 +98,7 @@ export default function TermsPage() {
               {s.contact && (
                 <div className="space-y-2 text-sm text-slate-600">
                   <p>For questions about these Terms:</p>
-                  <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:legal@fitmed.rw" className="text-sky-600 hover:underline">legal@fitmed.rw</a></div>
+                  <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:support@fitnessmed.rw" className="text-sky-600 hover:underline">support@fitnessmed.rw</a></div>
                   <div><strong className="text-slate-800">Address:</strong> Kigali, Rwanda</div>
                 </div>
               )}

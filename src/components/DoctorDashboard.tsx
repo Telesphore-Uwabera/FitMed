@@ -7,10 +7,10 @@ import Image from "next/image";
 import type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
 const features = [
-  { icon: ClipboardList, title: "Applicant Overview", desc: "Full history, vitals, medications, and AI-flagged red flags before the consultation.", color: "text-sky-600", bg: "bg-sky-50", border: "border-sky-100" },
-  { icon: Video, title: "Secure Video Call", desc: "End-to-end encrypted live video with built-in identity verification.", color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-100" },
-  { icon: Brain, title: "AI Decision Support", desc: "Summaries, risk flags, and documentation assistance — you stay in control.", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-100" },
-  { icon: FileSignature, title: "Digital Signature", desc: "One-click digitally signed certificate issuance with a full audit trail.", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
+  { icon: ClipboardList, title: "Applicant Overview", desc: "Full history, vitals, medications, and AI-flagged red flags before the consultation.", color: "text-sky-600", bg: "bg-sky-50" },
+  { icon: Video, title: "Secure Video Call", desc: "End-to-end encrypted live video with built-in identity verification.", color: "text-teal-600", bg: "bg-teal-50" },
+  { icon: Brain, title: "AI Decision Support", desc: "Summaries, risk flags, and documentation assistance — you stay in control.", color: "text-violet-600", bg: "bg-violet-50" },
+  { icon: FileSignature, title: "Digital Signature", desc: "One-click digitally signed certificate issuance with a full audit trail.", color: "text-emerald-600", bg: "bg-emerald-50" },
 ];
 
 const decisions = [

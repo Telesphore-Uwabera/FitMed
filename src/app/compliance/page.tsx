@@ -70,7 +70,7 @@ export default function CompliancePage() {
           <h2 className="text-base font-bold text-slate-900 mb-3" style={{ fontFamily: "var(--font-primary)" }}>Compliance Enquiries</h2>
           <p className="text-sm text-slate-600 mb-3">For compliance and regulatory questions:</p>
           <div className="space-y-1.5 text-sm text-slate-600">
-            <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:compliance@fitmed.rw" className="text-sky-600 hover:underline">compliance@fitmed.rw</a></div>
+            <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:support@fitnessmed.rw" className="text-sky-600 hover:underline">support@fitnessmed.rw</a></div>
             <div><strong className="text-slate-800">Address:</strong> Kigali, Rwanda</div>
           </div>
         </div>
