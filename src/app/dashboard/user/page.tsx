@@ -521,11 +521,11 @@ export default function UserDashboard() {
             {/* ── MAIN INFO STAT CARDS ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {/* Card 1: Active Certificates */}
-              <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="bg-white rounded-2xl p-5 sm:p-6 border-0 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-teal-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/15 border border-[#12B8B0]/30 flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/15 border-0 flex items-center justify-center">
                       <CheckCircle2 className="w-5 h-5 text-[#12B8B0]" />
                     </div>
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
@@ -545,11 +545,11 @@ export default function UserDashboard() {
               </div>
 
               {/* Card 2: Assigned Doctor */}
-              <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="bg-white rounded-2xl p-5 sm:p-6 border-0 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-sky-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-sky-100 border-0 flex items-center justify-center">
                       <Stethoscope className="w-5 h-5 text-sky-600" />
                     </div>
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
@@ -569,11 +569,11 @@ export default function UserDashboard() {
               </div>
 
               {/* Card 3: Standard Fee */}
-              <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="bg-white rounded-2xl p-5 sm:p-6 border-0 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-emerald-100 border-0 flex items-center justify-center">
                       <Sparkles className="w-5 h-5 text-emerald-600" />
                     </div>
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-[10px] font-bold uppercase tracking-wider">
@@ -592,24 +592,25 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              {/* Card 4: Services CTA (dark accent) */}
-              <div className="bg-gradient-to-br from-[#071d3d] to-[#0B2D5C] rounded-2xl p-5 sm:p-6 border border-[#12B8B0]/30 shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group cursor-pointer"
-                onClick={() => goToTab("request")}>
+              <div
+                className="bg-white dark:bg-[#12253d] rounded-2xl p-5 sm:p-6 border-0 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer"
+                onClick={() => goToTab("request")}
+              >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-[#12B8B0]/10 rounded-full blur-2xl pointer-events-none" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/20 border border-[#12B8B0]/40 flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/15 border-0 flex items-center justify-center">
                       <PlusCircle className="w-5 h-5 text-[#12B8B0]" />
                     </div>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#12B8B0]/20 border border-[#12B8B0]/30 text-[#12B8B0] text-[10px] font-bold uppercase tracking-wider">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#12B8B0]/15 border-0 text-[#12B8B0] text-[10px] font-bold uppercase tracking-wider">
                       Apply Now
                     </span>
                   </div>
-                  <div className="text-xs font-bold text-sky-300/80 uppercase tracking-wider mb-1">New Application</div>
-                  <div className="text-lg font-extrabold text-white" style={{ fontFamily: "var(--font-primary)" }}>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Application</div>
+                  <div className="text-lg font-extrabold text-[#0B2D5C] dark:text-white" style={{ fontFamily: "var(--font-primary)" }}>
                     Request Certificate
                   </div>
-                  <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
+                  <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
                     <ArrowRight className="w-3 h-3 text-[#12B8B0]" />
                     7 available categories
                   </div>
@@ -637,8 +638,8 @@ export default function UserDashboard() {
                 return (
                   <div
                     key={cert.id}
-                    className={`bg-white rounded-3xl p-6 sm:p-8 border shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all ${
-                      isPaid ? "border-slate-200 hover:border-[#12B8B0]" : "border-amber-300 bg-amber-50/20 shadow-amber-500/5"
+                    className={`bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all ${
+                      isPaid ? "" : "bg-amber-50/20 shadow-amber-500/5"
                     }`}
                   >
                     <div className="space-y-3">
@@ -703,7 +704,7 @@ export default function UserDashboard() {
                         </div>
                       )}
                       {cert.notes && !isApproved && (
-                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium">
+                        <div className="p-3 rounded-xl bg-slate-50 border-0 text-xs text-slate-700 font-medium">
                           <strong className="text-[#0B2D5C]">Physician notice:</strong> {cert.notes}
                         </div>
                       )}
@@ -793,14 +794,14 @@ export default function UserDashboard() {
             </div>
 
             {/* Quick Link to Telehealth */}
-            <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#0B2D5C] to-[#082247] text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-[#12B8B0]/30 shadow-xl">
+            <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#12253d] text-[#0B2D5C] dark:text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-0 shadow-sm">
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-bold uppercase">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold uppercase">
                   <Video className="w-3.5 h-3.5" />
                   Live Applicant-Doctor Communication
                 </div>
-                <h3 className="text-xl font-bold text-white">Join Doctor Telehealth Room & Messaging</h3>
-                <p className="text-xs text-slate-300 max-w-xl">
+                <h3 className="text-xl font-bold text-[#0B2D5C] dark:text-white">Join Doctor Telehealth Room & Messaging</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-300 max-w-xl">
                   Connect with your assigned FitMed physician for identity verification, vital symptom discussion, and real-time clinical assessment.
                 </p>
               </div>
@@ -1128,7 +1129,7 @@ export default function UserDashboard() {
                 return (
                   <div
                     key={cert.id}
-                    className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:border-[#12B8B0] transition-colors"
+                    className="bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-colors"
                   >
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-3">

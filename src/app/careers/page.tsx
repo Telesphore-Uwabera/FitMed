@@ -72,10 +72,10 @@ export default function CareersPage() {
         </div>
 
         {/* General application */}
-        <div className="bg-slate-900 rounded-3xl p-8 text-center">
-          <Mail className="w-10 h-10 text-sky-400 mx-auto mb-4" strokeWidth={1.5} />
-          <h2 className="text-xl font-extrabold text-white mb-3" style={{ fontFamily: "var(--font-primary)" }}>Don't see your role?</h2>
-          <p className="text-slate-400 mb-6 max-w-md mx-auto text-sm">We're always interested in talented people. Send us your CV and a note about what you'd bring to FitMed.</p>
+        <div className="bg-[#edf6f6] dark:bg-[#0B2D5C] rounded-3xl p-8 text-center border-0">
+          <Mail className="w-10 h-10 text-[#12B8B0] mx-auto mb-4" strokeWidth={1.5} />
+          <h2 className="text-xl font-extrabold text-[#0B2D5C] dark:text-white mb-3" style={{ fontFamily: "var(--font-primary)" }}>Don't see your role?</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">We're always interested in talented people. Send us your CV and a note about what you'd bring to FitMed.</p>
           <a href="mailto:fixmed@gmail.com" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white btn-primary">
             fixmed@gmail.com
           </a>

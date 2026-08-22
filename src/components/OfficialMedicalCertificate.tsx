@@ -124,11 +124,11 @@ export default function OfficialMedicalCertificate({
   return (
     <div className="space-y-4">
       {/* Top Action Bar */}
-      <div className="flex items-center justify-between bg-slate-900 text-white p-4 rounded-2xl print:hidden shadow-lg">
+      <div className="flex items-center justify-between bg-white dark:bg-[#12253d] text-[#0B2D5C] dark:text-white p-4 rounded-2xl print:hidden shadow-lg border-0">
         <div className="flex items-center gap-2.5">
           <ShieldCheck className="w-5 h-5 text-[#12B8B0]" />
           <div>
-            <div className="text-xs font-extrabold text-white uppercase tracking-wider">
+            <div className="text-xs font-extrabold text-[#0B2D5C] dark:text-white uppercase tracking-wider">
               Official Medical Certificate Viewer
             </div>
             <div className="text-[11px] text-slate-400">
@@ -150,7 +150,7 @@ export default function OfficialMedicalCertificate({
           {onClose && (
             <button
               onClick={onClose}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+              className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[#0B2D5C] dark:text-slate-300 text-xs font-bold transition-colors"
             >
               Close
             </button>
@@ -161,7 +161,7 @@ export default function OfficialMedicalCertificate({
       {/* ── THE OFFICIAL CERTIFICATE CANVAS ── */}
       <div
         ref={certRef}
-        className="official-certificate bg-white rounded-3xl p-6 sm:p-9 border-2 border-slate-300 text-slate-900 shadow-2xl relative overflow-hidden font-serif w-full max-w-[794px] mx-auto print:border-none print:shadow-none print:p-0 print:m-0"
+        className="official-certificate bg-white rounded-3xl p-6 sm:p-9 border-0 text-slate-900 shadow-2xl relative overflow-hidden font-serif w-full max-w-[794px] mx-auto print:border-none print:shadow-none print:p-0 print:m-0"
         style={{ minHeight: "1123px", aspectRatio: "210 / 297" }}
       >
         {/* Subtle Decorative Security Watermark */}
@@ -227,7 +227,7 @@ export default function OfficialMedicalCertificate({
               <span>1. Applicant & Certificate Purpose</span>
             </div>
 
-            <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+            <div className="bg-slate-50 p-5 rounded-xl border-0">
               <div className="flex items-center gap-5">
               <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-[#12B8B0] bg-slate-200 flex-shrink-0">
                 {cert.applicantImageUrl ? (
@@ -253,7 +253,7 @@ export default function OfficialMedicalCertificate({
               <span>2. Physician Declaration & Determination</span>
             </div>
 
-            <div className="p-5 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300 space-y-4">
+            <div className="p-5 rounded-2xl bg-emerald-50 border-0 space-y-4">
               <p className="text-xs sm:text-sm text-emerald-950 leading-relaxed font-serif text-justify">
                 Based on the medical history provided by the applicant, the virtual clinical interview, and the physical assessment possible through the FitMed platform, I have assessed the applicant for fitness for the stated purpose.
               </p>
@@ -266,7 +266,7 @@ export default function OfficialMedicalCertificate({
                   <span className="text-sm font-bold text-emerald-950">{cert.decision}</span>
                 </div>
               </div>
-              <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-[10px] text-amber-900 leading-relaxed">
+              <div className="mt-3 p-3 rounded-lg bg-amber-50 border-0 text-[11px] text-amber-950 leading-relaxed">
                 <strong>Important:</strong> This certification reflects the applicant's condition at the time of the virtual assessment and is limited to findings that can reasonably be assessed remotely. It does not replace an in-person examination or investigations where these are clinically indicated.
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function OfficialMedicalCertificate({
             </div>
 
             {/* Official Digital Seal / Stamp */}
-            <div className="flex flex-col items-center justify-center text-center p-3 rounded-2xl border-2 border-dashed border-[#0B2D5C]/30 bg-slate-50">
+            <div className="flex flex-col items-center justify-center text-center p-3 rounded-2xl border-0 bg-slate-50">
               <div className="w-14 h-14 rounded-full border-2 border-[#0B2D5C] text-[#0B2D5C] flex items-center justify-center font-black text-[9px] uppercase tracking-tighter text-center leading-tight mb-1 bg-white shadow-inner">
                 FITMED<br />DIGITAL<br />SEAL
               </div>
@@ -298,8 +298,8 @@ export default function OfficialMedicalCertificate({
             </div>
 
             {/* QR Code Verification Link */}
-            <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
-              <div className="w-20 h-20 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
+            <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 p-3 rounded-xl border-0 text-center">
+              <div className="w-20 h-20 bg-white p-1 rounded-lg border-0 shadow-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
                 {cert.certificateId && cert.certificateId !== "—" ? (
                   <CertificateQr value={verifyUrl} label="Scan to open certificate" />
                 ) : (

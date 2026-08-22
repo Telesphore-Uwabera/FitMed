@@ -90,9 +90,9 @@ export default function PressPage() {
         </div>
 
         {/* CTA */}
-        <div className="bg-slate-900 rounded-3xl p-8 text-center">
-          <h2 className="text-xl font-extrabold text-white mb-3" style={{ fontFamily: "var(--font-primary)" }}>Cover FitMed?</h2>
-          <p className="text-slate-400 mb-6 max-w-md mx-auto text-sm">We're happy to arrange interviews, provide statistics, or offer expert commentary on digital health and telemedicine in Rwanda.</p>
+        <div className="bg-[#edf6f6] dark:bg-[#0B2D5C] rounded-3xl p-8 text-center border-0">
+          <h2 className="text-xl font-extrabold text-[#0B2D5C] dark:text-white mb-3" style={{ fontFamily: "var(--font-primary)" }}>Cover FitMed?</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">We're happy to arrange interviews, provide statistics, or offer expert commentary on digital health and telemedicine in Rwanda.</p>
           <a href="mailto:fixmed@gmail.com" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white btn-primary group">
             Get in Touch <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </a>

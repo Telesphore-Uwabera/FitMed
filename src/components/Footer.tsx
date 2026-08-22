@@ -156,7 +156,7 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mb-16 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#082247] p-6 sm:p-8">
+        <div className="mb-16 rounded-3xl border-0 bg-white dark:bg-[#082247] p-6 sm:p-8">
           <div className="grid lg:grid-cols-[1.1fr_1fr] gap-8 items-end">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#12B8B0] mb-2">FitMed news</p>

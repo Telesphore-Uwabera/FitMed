@@ -79,12 +79,12 @@ export default function HowItWorks() {
             Simple 4-Step Process
           </span>
           <h2
-            className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5"
+            className="text-4xl md:text-5xl font-extrabold text-[#0B2D5C] dark:text-white mb-5"
             style={{ fontFamily: "var(--font-primary)" }}
           >
             How It <span className="gradient-text">Works</span>
           </h2>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-600 dark:text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
             From account creation to certificate delivery — get medically certified in as little as one day.
           </p>
         </motion.div>
@@ -107,30 +107,30 @@ export default function HowItWorks() {
               className="group card-white rounded-3xl overflow-hidden transition-all duration-300 flex flex-col"
             >
               {/* ── Large visual icon panel ── */}
-              <div className="relative h-48 lg:h-56 overflow-hidden flex-shrink-0 bg-slate-900 flex items-center justify-center">
-                <span className="absolute top-5 left-6 text-3xl font-black tracking-wider text-white/90" aria-label={`Step ${i + 1}`}>
+              <div className="relative h-48 lg:h-56 overflow-hidden flex-shrink-0 bg-[#edf6f6] dark:bg-[#0B2D5C] flex items-center justify-center">
+                <span className="absolute top-5 left-6 text-3xl font-black tracking-wider text-[#0B2D5C] dark:text-white/90" aria-label={`Step ${i + 1}`}>
                   {i + 1}<sup className="ml-0.5 text-sm align-super tracking-normal">{i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}</sup>
                 </span>
-                <div className="absolute top-0 right-0 w-56 h-56 bg-[#12B8B0]/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="relative w-28 h-28 rounded-[2rem] bg-white/15 border border-white/30 flex items-center justify-center shadow-2xl backdrop-blur-sm">
-                  <s.icon className="w-16 h-16 text-white" strokeWidth={1.35} />
+                <div className="absolute top-0 right-0 w-56 h-56 bg-[#12B8B0]/15 dark:bg-[#12B8B0]/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative w-28 h-28 rounded-[2rem] bg-white dark:bg-white/15 border border-[#12B8B0]/25 dark:border-white/30 flex items-center justify-center shadow-xl backdrop-blur-sm">
+                  <s.icon className="w-16 h-16 text-[#0B2D5C] dark:text-white" strokeWidth={1.35} />
                 </div>
               </div>
 
               {/* ── Content ── */}
               <div className="p-7 flex flex-col flex-1">
                 <h3
-                  className="text-xl font-extrabold text-slate-900 mb-3"
+                  className="text-xl font-extrabold text-[#0B2D5C] dark:text-white mb-3"
                   style={{ fontFamily: "var(--font-primary)" }}
                 >
                   {s.title}
                 </h3>
-                <p className="text-slate-500 text-sm leading-relaxed mb-6 flex-1">
+                <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-6 flex-1">
                   {s.description}
                 </p>
                 <ul className="space-y-2.5">
                   {s.details.map((d) => (
-                    <li key={d} className="flex items-start gap-2.5 text-sm text-slate-600">
+                    <li key={d} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
                       <CheckCircle className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />
                       <span>{d}</span>
                     </li>

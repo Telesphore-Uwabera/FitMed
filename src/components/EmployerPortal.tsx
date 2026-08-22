@@ -15,7 +15,6 @@ const features = [
     desc: "Centralised dashboard for all employee assessments — track who is certified, pending, or due for renewal.",
     color: "text-sky-600",
     bg: "bg-sky-50",
-    border: "border-sky-100",
   },
   {
     icon: SendHorizonal,
@@ -23,7 +22,6 @@ const features = [
     desc: "Generate secure invitation links or codes. Employees complete the assessment on their own schedule.",
     color: "text-teal-600",
     bg: "bg-teal-50",
-    border: "border-teal-100",
   },
   {
     icon: CheckCircle,
@@ -31,7 +29,6 @@ const features = [
     desc: "Instant QR verification — see if a certificate is valid, expired, or revoked in seconds.",
     color: "text-emerald-600",
     bg: "bg-emerald-50",
-    border: "border-emerald-100",
   },
   {
     icon: BarChart3,
@@ -39,7 +36,6 @@ const features = [
     desc: "Completion rates, pending assessments, and team fitness overview at a glance.",
     color: "text-violet-600",
     bg: "bg-violet-50",
-    border: "border-violet-100",
   },
   {
     icon: CreditCard,
@@ -47,7 +43,6 @@ const features = [
     desc: "Organisational packages, assessment credits, and per-assessment pricing to suit any team size.",
     color: "text-amber-600",
     bg: "bg-amber-50",
-    border: "border-amber-100",
   },
   {
     icon: Bell,
@@ -55,7 +50,6 @@ const features = [
     desc: "Automated reminders for upcoming renewals and expiring certificates — never miss a deadline.",
     color: "text-rose-600",
     bg: "bg-rose-50",
-    border: "border-rose-100",
   },
 ];
 
@@ -105,7 +99,7 @@ export default function EmployerPortal() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={isInView ? { opacity: 1, y: 0 } : {}}
                   transition={{ delay: 0.2 + i * 0.09 }}
-                  className={`rounded-2xl p-5 border ${f.border} ${f.bg} flex flex-col gap-3 transition-all hover:shadow-md group`}
+                  className={`rounded-2xl p-5 border-0 ${f.bg} flex flex-col gap-3 transition-all hover:shadow-md group`}
                 >
                   {/* Icon */}
                   <div className={`w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform`}>

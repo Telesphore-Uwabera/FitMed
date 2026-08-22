@@ -94,10 +94,10 @@ export default async function DoctorsPage() {
         </div>
 
         {/* Join CTA */}
-        <div className="bg-slate-900 rounded-3xl p-10 text-center">
-          <Stethoscope className="w-10 h-10 text-teal-400 mx-auto mb-5" strokeWidth={1.5} />
-          <h2 className="text-2xl font-extrabold text-white mb-4" style={{ fontFamily: "var(--font-primary)" }}>Join the FitMed Doctor Network</h2>
-          <p className="text-slate-400 mb-8 max-w-lg mx-auto">Expand your practice with flexible telemedicine assessments. Apply to join our growing network of licensed doctors.</p>
+        <div className="bg-[#edf6f6] dark:bg-[#0B2D5C] rounded-3xl p-10 text-center border-0">
+          <Stethoscope className="w-10 h-10 text-[#12B8B0] mx-auto mb-5" strokeWidth={1.5} />
+          <h2 className="text-2xl font-extrabold text-[#0B2D5C] dark:text-white mb-4" style={{ fontFamily: "var(--font-primary)" }}>Join the FitMed Doctor Network</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">Expand your practice with flexible telemedicine assessments. Apply to join our growing network of licensed doctors.</p>
           <Link
             href="/contact#doctors"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-white btn-primary shadow-xl shadow-sky-500/25 group"

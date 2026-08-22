@@ -22,11 +22,11 @@ export default function ThemeToggle({
       className={cn(
         "inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0",
         variant === "hero" &&
-          "px-3 py-2 text-white/85 hover:text-white hover:bg-white/12 border border-white/20",
+          "px-3 py-2 text-white/85 hover:text-white hover:bg-white/12 border-0",
         variant === "nav" &&
-          "px-3 py-2 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600",
+          "px-3 py-2 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border-0",
         variant === "drawer" &&
-          "w-full py-3 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-600",
+          "w-full py-3 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80 border-0",
         variant === "icon" &&
           "w-9 h-9 p-0",
         className

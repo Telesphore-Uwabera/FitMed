@@ -194,7 +194,7 @@ export default function ContactPage() {
       <section className="py-6 sm:py-12 bg-[#f4f7fb] border-b border-slate-200">
         <div className="container-wide">
           <div className="grid sm:grid-cols-3 gap-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="bg-white rounded-2xl p-6 border-0 shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 text-[#12B8B0] flex items-center justify-center flex-shrink-0">
                 <Clock className="w-6 h-6" />
               </div>
@@ -204,7 +204,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="bg-white rounded-2xl p-6 border-0 shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center flex-shrink-0">
                 <Phone className="w-6 h-6" />
               </div>
@@ -216,7 +216,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="bg-white rounded-2xl p-6 border-0 shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center flex-shrink-0">
                 <MapPin className="w-6 h-6" />
               </div>

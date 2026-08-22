@@ -11,13 +11,12 @@ interface PageLayoutProps {
 
 export default function PageLayout({ title, subtitle, lastUpdated, children }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Dark header */}
-      <header className="bg-slate-900 py-14">
+    <div className="min-h-screen bg-white dark:bg-[#071422]">
+      <header className="bg-[#f4f7fb] dark:bg-[#0B2D5C] py-14">
         <div className="max-w-5xl mx-auto px-3 sm:px-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-10 group"
+            className="inline-flex items-center gap-2 text-slate-500 hover:text-[#0B2D5C] dark:text-slate-400 dark:hover:text-white transition-colors text-sm mb-10 group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             Back to FitMed
@@ -25,23 +24,29 @@ export default function PageLayout({ title, subtitle, lastUpdated, children }: P
           <div className="flex items-center gap-5 mb-5">
             <div className="relative flex-shrink-0" style={{ width: 160, height: 56 }}>
               <Image
-                src="/logo-4.webp"
+                src="/logo-2.webp"
                 alt="FitMed"
                 fill
-                className="object-contain"
+                className="object-contain dark:hidden"
+              />
+              <Image
+                src="/logo-4.webp"
+                alt=""
+                fill
+                className="object-contain hidden dark:block"
               />
             </div>
           </div>
           <h1
-            className="text-4xl md:text-5xl font-extrabold text-white mb-3"
+            className="text-4xl md:text-5xl font-extrabold text-[#0B2D5C] dark:text-white mb-3"
             style={{ fontFamily: "var(--font-primary)" }}
           >
             {title}
           </h1>
-          {subtitle && <p className="text-slate-400 text-lg">{subtitle}</p>}
+          {subtitle && <p className="text-slate-600 dark:text-slate-400 text-lg">{subtitle}</p>}
           {lastUpdated && (
             <p className="text-slate-500 text-sm mt-3">
-              Last updated: <strong className="text-slate-300">{lastUpdated}</strong>
+              Last updated: <strong className="text-slate-700 dark:text-slate-300">{lastUpdated}</strong>
             </p>
           )}
         </div>

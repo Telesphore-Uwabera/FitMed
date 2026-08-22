@@ -218,7 +218,7 @@ export default function DashboardShell({
 
       {/* ── FIXED SIDEBAR (DESKTOP & MOBILE DRAWER) ── */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-[#0B2D5C] text-[#0B2D5C] dark:text-white border-r border-slate-200 dark:border-transparent flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-[#0B2D5C] text-[#0B2D5C] dark:text-white border-r-0 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "max-lg:-translate-x-full"
         }`}
       >
@@ -246,7 +246,7 @@ export default function DashboardShell({
           </div>
 
           {/* User Profile Card in Sidebar */}
-          <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-sm space-y-3">
+          <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50 dark:bg-white/5 border-0 backdrop-blur-sm space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-slate-200 dark:border-white/20">
                 {profileImageSrc ? (

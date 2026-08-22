@@ -150,17 +150,17 @@ body {
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.15);
+  border: none;
 }
 .glass-light {
   background: rgba(255,255,255,0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(18,184,176,0.2);
+  border: none;
 }
 html.dark .glass-light {
   background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.15);
+  border: none;
 }
 
 /* ─── Cards ──────────────────────────────────────────────────────── */
@@ -586,6 +586,83 @@ section, footer, header, main {
   border-color: rgba(244, 63, 94, 0.32) !important;
 }
 
+/* Official certificate is a printed paper — never remap it to dark-mode colors */
+html.dark .official-certificate,
+.dashboard-app.dark .official-certificate {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+html.dark .official-certificate h1,
+html.dark .official-certificate h2,
+html.dark .official-certificate h3,
+.dashboard-app.dark .official-certificate h1,
+.dashboard-app.dark .official-certificate h2,
+.dashboard-app.dark .official-certificate h3 {
+  color: #0B2D5C !important;
+}
+html.dark .official-certificate .bg-white,
+.dashboard-app.dark .official-certificate .bg-white,
+html.dark .official-certificate.bg-white,
+.dashboard-app.dark .official-certificate.bg-white {
+  background-color: #ffffff !important;
+}
+html.dark .official-certificate .bg-slate-50,
+.dashboard-app.dark .official-certificate .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+html.dark .official-certificate .bg-slate-200,
+.dashboard-app.dark .official-certificate .bg-slate-200 {
+  background-color: #e2e8f0 !important;
+}
+html.dark .official-certificate .bg-emerald-50,
+html.dark .official-certificate .bg-emerald-50\/60,
+.dashboard-app.dark .official-certificate .bg-emerald-50,
+.dashboard-app.dark .official-certificate .bg-emerald-50\/60 {
+  background-color: #ecfdf5 !important;
+}
+html.dark .official-certificate .bg-emerald-100,
+.dashboard-app.dark .official-certificate .bg-emerald-100 {
+  background-color: #d1fae5 !important;
+}
+html.dark .official-certificate .bg-amber-50,
+.dashboard-app.dark .official-certificate .bg-amber-50 {
+  background-color: #fffbeb !important;
+}
+html.dark .official-certificate .text-\[\#0B2D5C\],
+html.dark .official-certificate .text-slate-900,
+html.dark .official-certificate .text-slate-800,
+html.dark .official-certificate .text-slate-700,
+.dashboard-app.dark .official-certificate .text-\[\#0B2D5C\],
+.dashboard-app.dark .official-certificate .text-slate-900,
+.dashboard-app.dark .official-certificate .text-slate-800,
+.dashboard-app.dark .official-certificate .text-slate-700 {
+  color: #0B2D5C !important;
+}
+html.dark .official-certificate .text-slate-600,
+.dashboard-app.dark .official-certificate .text-slate-600 {
+  color: #475569 !important;
+}
+html.dark .official-certificate .text-slate-500,
+html.dark .official-certificate .text-slate-400,
+.dashboard-app.dark .official-certificate .text-slate-500,
+.dashboard-app.dark .official-certificate .text-slate-400 {
+  color: #64748b !important;
+}
+html.dark .official-certificate .text-emerald-950,
+html.dark .official-certificate .text-emerald-800,
+.dashboard-app.dark .official-certificate .text-emerald-950,
+.dashboard-app.dark .official-certificate .text-emerald-800 {
+  color: #064e3b !important;
+}
+html.dark .official-certificate .text-amber-900,
+.dashboard-app.dark .official-certificate .text-amber-900 {
+  color: #78350f !important;
+}
+html.dark .official-certificate .text-teal-700,
+.dashboard-app.dark .official-certificate .text-teal-700 {
+  color: #0f766e !important;
+}
+
 /* FitMed form controls — keep native selects and calendars on brand. */
 select {
   appearance: none;
@@ -796,5 +873,18 @@ html.dark:not(:has(.dashboard-app)) .bg-\[\#edf6f6\] {
 html.dark:not(:has(.dashboard-app)) .badge-teal {
   background: rgba(18, 184, 176, 0.15);
   color: #7ee8e2;
-  border-color: rgba(18, 184, 176, 0.35);
+  border-color: transparent;
+}
+
+/* Card / panel outlines off — keep form fields, dashed empties, and 2px emphasis */
+:is(.rounded-2xl, .rounded-3xl).border:not(input):not(textarea):not(select):not(button):not([role="combobox"]):not(.border-dashed):not(.border-2) {
+  border-width: 0 !important;
+  border-color: transparent !important;
+}
+
+/* Dashboard cards often use rounded-xl plus !important dark border colors */
+.dashboard-app .dashboard-main :is(.rounded-xl, .rounded-2xl, .rounded-3xl):not(input):not(textarea):not(select):not(button):not([role="combobox"]) {
+  border-style: none !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
 }

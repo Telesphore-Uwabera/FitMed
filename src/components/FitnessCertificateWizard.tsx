@@ -281,17 +281,17 @@ export default function FitnessCertificateWizard({
 
   // ── Render Wizard ────────────────────────────────────────────────────────
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+    <div className="bg-white dark:bg-[#12253d] rounded-3xl border-0 shadow-xl overflow-hidden">
       <div className="grid lg:grid-cols-12 min-h-[640px]">
         {/* ── LEFT SIDEBAR ── */}
-        <div className="lg:col-span-4 bg-[#082247] text-white p-6 sm:p-8 flex flex-col justify-between border-r border-[#12B8B0]/20 relative overflow-hidden">
+        <div className="lg:col-span-4 bg-[#edf6f6] dark:bg-[#082247] text-[#0B2D5C] dark:text-white p-6 sm:p-8 flex flex-col justify-between border-r-0 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-60 h-60 bg-[#12B8B0]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="space-y-5 relative z-10">
             {/* Progress */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Progress</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Progress</span>
                 <span className="text-xs font-extrabold text-[#12B8B0]">{`${progressPercent}%`}</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -315,10 +315,10 @@ export default function FitnessCertificateWizard({
                     key={s.num}
                     type="button"
                     onClick={() => handleStepChange(s.num)}
-                    className={`w-full text-left p-3 rounded-2xl flex items-center justify-between transition-all ${
+                    className={`w-full text-left p-3 rounded-2xl flex items-center justify-between transition-all border-0 ${
                       isCurrent
-                        ? "bg-white/15 border-2 border-[#12B8B0] shadow-lg shadow-teal-500/10 backdrop-blur-md"
-                        : "hover:bg-white/5 border border-white/5"
+                        ? "bg-white dark:bg-white/15 shadow-md"
+                        : "hover:bg-white/70 dark:hover:bg-white/5"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -327,16 +327,16 @@ export default function FitnessCertificateWizard({
                           isCurrent
                             ? "bg-[#12B8B0] text-[#0B2D5C] font-black shadow-md"
                             : isVisited
-                            ? "bg-emerald-500/20 text-[#12B8B0] border border-[#12B8B0]/40"
+                            ? "bg-emerald-500/20 text-[#12B8B0] border-0"
                             : isRedFlagStep
-                            ? "bg-rose-500/20 text-rose-400 border border-rose-400/40"
-                            : "bg-white/10 text-slate-400"
+                            ? "bg-rose-500/20 text-rose-500 dark:text-rose-400 border-0"
+                            : "bg-white/80 dark:bg-white/10 text-slate-400"
                         }`}
                       >
                         {isVisited ? <Check className="w-4 h-4 text-[#12B8B0]" /> : <Icon className="w-4 h-4" />}
                       </div>
                       <div>
-                        <div className={`text-xs font-bold ${isCurrent ? "text-white" : "text-slate-300"} flex items-center gap-1.5`}>
+                        <div className={`text-xs font-bold ${isCurrent ? "text-[#0B2D5C] dark:text-white" : "text-slate-600 dark:text-slate-300"} flex items-center gap-1.5`}>
                           {s.title}
                           {isRedFlagStep && activeRedFlagCount > 0 && (
                             <span className="px-1.5 py-0.5 bg-rose-500 text-white rounded text-[9px] font-extrabold">
@@ -366,7 +366,7 @@ export default function FitnessCertificateWizard({
 
           {/* Red flag warning if any active */}
           {activeRedFlagCount > 0 && (
-            <div className="mt-4 p-3 rounded-2xl bg-rose-500/20 border border-rose-400/40 text-xs text-rose-200 flex items-start gap-2 relative z-10">
+            <div className="mt-4 p-3 rounded-2xl bg-rose-500/20 border-0 text-xs text-rose-800 dark:text-rose-200 flex items-start gap-2 relative z-10">
               <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
               <span>
                 <strong className="text-rose-300">{activeRedFlagCount} danger sign(s) flagged.</strong>{" "}
@@ -381,7 +381,7 @@ export default function FitnessCertificateWizard({
         </div>
 
         {/* ── RIGHT CONTENT AREA ── */}
-        <div className="lg:col-span-8 p-6 sm:p-8 flex flex-col justify-between bg-white">
+        <div className="lg:col-span-8 p-6 sm:p-8 flex flex-col justify-between bg-white dark:bg-[#0c1c33]">
           <div className="space-y-5 flex-1">
             {/* Step Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -403,7 +403,7 @@ export default function FitnessCertificateWizard({
 
             {/* Inline Error Notice */}
             {stepError && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-xs text-rose-900 font-bold flex items-center gap-2 animate-in fade-in">
+              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-500/15 border-0 text-xs text-rose-900 dark:text-rose-200 font-bold flex items-center gap-2 animate-in fade-in">
                 <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
                 <span>{stepError}</span>
               </div>
@@ -419,7 +419,7 @@ export default function FitnessCertificateWizard({
                   options={[...FITMED_SERVICE_TITLES]}
                 />
 
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#0e1c31] border-0 text-xs text-slate-600 dark:text-slate-300">
                   <div className="font-bold text-[#0B2D5C]">Fixed Clinical Assessment Rate</div>
                   <div className="mt-1">Standard Medical Fitness Clearance: <strong className="text-[#0B2D5C]">5,000 FRW</strong> (includes physician review, QR-verified digital certificate valid for 6 months).</div>
                 </div>
@@ -486,7 +486,7 @@ export default function FitnessCertificateWizard({
                   </div>
                   {/* BMI Display */}
                   {bmi && (
-                    <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                    <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-[#0e1c31] border-0 flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-500">Calculated BMI:</span>
                       <span className={`text-lg font-extrabold ${bmiCategory(parseFloat(bmi)).color}`}>
                         {bmi} <span className="text-sm font-bold">{bmiCategory(parseFloat(bmi)).label}</span>
@@ -510,7 +510,7 @@ export default function FitnessCertificateWizard({
                     <VitalInput label="SpO₂" unit="%" value={vitals.spo2} onChange={(v) => setVitals((p) => ({ ...p, spo2: v }))} placeholder="e.g. 98" icon={Droplets} />
                   </div>
                   {bpAssessment && (
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0e1c31] border-0 text-xs">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-bold text-slate-500">Blood pressure:</span>
                         <span className={`text-lg font-extrabold ${bpAssessment.color}`}>
@@ -527,7 +527,7 @@ export default function FitnessCertificateWizard({
             {/* ── STEP 3: RED FLAGS ── */}
             {currentStep === 3 && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-3">
+                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/15 border-0 text-xs text-rose-800 dark:text-rose-200 flex items-start gap-3">
                   <ShieldAlert className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <strong>Mandatory Danger Sign Screening.</strong> Answer honestly about any of the following symptoms.
@@ -592,7 +592,7 @@ export default function FitnessCertificateWizard({
                   <p className="text-[11px] text-slate-400 mb-3">Assess your ability to perform daily activities relevant to your intended work or activity.</p>
                   
                   {criticalNoCount > 0 && (
-                    <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-xs text-amber-900 font-semibold flex items-start gap-2.5 shadow-sm animate-in fade-in">
+                    <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/15 border-0 text-xs text-amber-900 dark:text-amber-200 font-semibold flex items-start gap-2.5 shadow-sm animate-in fade-in">
                       <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <strong className="text-amber-950 font-bold">{criticalNoCount} Functional Limitation(s) Flagged (Answered 'No'):</strong>{" "}
@@ -626,7 +626,7 @@ export default function FitnessCertificateWizard({
                   />
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[#edf6f6] border border-teal-200 text-xs text-[#0B2D5C]">
+                <div className="p-4 rounded-2xl bg-[#edf6f6] dark:bg-[#0e1c31] border-0 text-xs text-[#0B2D5C] dark:text-slate-200">
                   <div className="font-bold mb-1">What happens next?</div>
                   <p className="text-slate-600 leading-relaxed">
                     After submission, FitMed's clinical decision engine will screen your answers.
@@ -644,7 +644,7 @@ export default function FitnessCertificateWizard({
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1"
+                className="px-5 py-2.5 rounded-xl border-0 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-white/15 text-xs font-bold transition-all flex items-center gap-1"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back

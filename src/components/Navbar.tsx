@@ -170,7 +170,7 @@ export default function Navbar() {
             <ThemeToggle variant="nav" className="ml-1" />
             <Link
               href={accountHref || "/signin"}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold border-2 border-[#0B2D5C] text-[#0B2D5C] hover:bg-[#0B2D5C] hover:text-white dark:border-[#12B8B0] dark:text-[#12B8B0] dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] transition-all whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold border-0 bg-[#edf6f6] text-[#0B2D5C] hover:bg-[#0B2D5C] hover:text-white dark:bg-white/10 dark:text-[#12B8B0] dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] transition-all whitespace-nowrap"
             >
               {accountHref ? <LayoutDashboard className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
               <span>{accountHref ? "Dashboard" : "Sign In"}</span>
@@ -197,7 +197,7 @@ export default function Navbar() {
             <ThemeToggle
               variant="icon"
               className={
-                "text-[#0B2D5C] dark:text-slate-200 bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600"
+                "text-[#0B2D5C] dark:text-slate-200 bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border-0"
               }
             />
             <button
@@ -284,7 +284,7 @@ export default function Navbar() {
                 <Link
                   href={accountHref || "/signin"}
                   onClick={() => setMobileOpen(false)}
-                  className="py-3 inline-flex items-center justify-center gap-2 rounded-xl font-bold text-sm border-2 border-[#0B2D5C] text-[#0B2D5C] hover:bg-[#0B2D5C] hover:text-white dark:border-[#12B8B0] dark:text-[#12B8B0] dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] transition-all"
+                  className="py-3 inline-flex items-center justify-center gap-2 rounded-xl font-bold text-sm border-0 bg-[#edf6f6] text-[#0B2D5C] hover:bg-[#0B2D5C] hover:text-white dark:bg-white/10 dark:text-[#12B8B0] dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] transition-all"
                 >
                   {accountHref ? <LayoutDashboard className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
                   {accountHref ? "Dashboard" : "Sign In"}

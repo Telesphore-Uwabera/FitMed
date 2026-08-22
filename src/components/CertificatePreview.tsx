@@ -50,7 +50,6 @@ export default function CertificatePreview() {
                     icon: Shield,
                     color: "text-sky-600",
                     bg: "bg-sky-50",
-                    border: "border-sky-100",
                     title: "Purpose-specific",
                     desc: "Each certificate states exactly what it certifies — fitness for the specific role or activity requested.",
                   },
@@ -58,7 +57,6 @@ export default function CertificatePreview() {
                     icon: Lock,
                     color: "text-teal-600",
                     bg: "bg-teal-50",
-                    border: "border-teal-100",
                     title: "Doctor-signed & traceable",
                     desc: "Digitally signed by a licensed doctor. Full audit trail from submission to issuance.",
                   },
@@ -66,7 +64,6 @@ export default function CertificatePreview() {
                     icon: QrCode,
                     color: "text-violet-600",
                     bg: "bg-violet-50",
-                    border: "border-violet-100",
                     title: "Instantly verifiable",
                     desc: "QR code links to a public verification page. Anyone can check validity without seeing medical details.",
                   },
@@ -74,14 +71,13 @@ export default function CertificatePreview() {
                     icon: CheckCircle,
                     color: "text-emerald-600",
                     bg: "bg-emerald-50",
-                    border: "border-emerald-100",
                     title: "Privacy-protecting",
                     desc: "Medical history and clinical notes stay private from employers. Always.",
                   },
                 ].map((item) => (
                   <div key={item.title} className="flex gap-4">
                     <div
-                      className={`w-10 h-10 rounded-xl ${item.bg} border ${item.border} flex items-center justify-center flex-shrink-0 mt-0.5`}
+                      className={`w-10 h-10 rounded-xl ${item.bg} border-0 flex items-center justify-center flex-shrink-0 mt-0.5`}
                     >
                       <item.icon className={`w-5 h-5 ${item.color}`} strokeWidth={1.5} />
                     </div>
