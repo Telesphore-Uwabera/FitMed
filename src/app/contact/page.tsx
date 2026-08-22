@@ -27,7 +27,7 @@ const contactDepartments = [
     color: "text-[#12B8B0]",
     badgeBg: "bg-teal-50 border-teal-200 text-teal-800",
     title: "General Enquiries",
-    email: "hello@fitmed.rw",
+    email: "support@fitnessmed.rw",
     desc: "General questions about the FitMed platform, certificate verification, or platform access.",
   },
   {
@@ -36,7 +36,7 @@ const contactDepartments = [
     color: "text-sky-500",
     badgeBg: "bg-sky-50 border-sky-200 text-sky-800",
     title: "Doctor & Clinical Support",
-    email: "doctors@fitmed.rw",
+    email: "support@fitnessmed.rw",
     desc: "Support for licensed doctors using FitMed video consultations and applicant reviews.",
   },
   {
@@ -45,7 +45,7 @@ const contactDepartments = [
     color: "text-indigo-500",
     badgeBg: "bg-indigo-50 border-indigo-200 text-indigo-800",
     title: "Employer & Corporate Support",
-    email: "employers@fitmed.rw",
+    email: "support@fitnessmed.rw",
     desc: "Help with company accounts, staff fitness certificates, and verification for HR teams.",
   },
   {
@@ -54,7 +54,7 @@ const contactDepartments = [
     color: "text-rose-500",
     badgeBg: "bg-rose-50 border-rose-200 text-rose-800",
     title: "Report an Issue",
-    email: "support@fitmed.rw",
+    email: "support@fitnessmed.rw",
     desc: "Report platform technical issues, urgent certificate disputes, or clinical referral queries.",
   },
   {
@@ -63,7 +63,7 @@ const contactDepartments = [
     color: "text-emerald-500",
     badgeBg: "bg-emerald-50 border-emerald-200 text-emerald-800",
     title: "Privacy & Data Protection",
-    email: "privacy@fitmed.rw",
+    email: "support@fitnessmed.rw",
     desc: "Questions about how we protect your health information, or requests about your personal data.",
   },
   {
@@ -72,7 +72,7 @@ const contactDepartments = [
     color: "text-amber-500",
     badgeBg: "bg-amber-50 border-amber-200 text-amber-800",
     title: "Legal & Regulatory Compliance",
-    email: "legal@fitmed.rw",
+    email: "support@fitnessmed.rw",
     desc: "Questions about regulations, doctor licensing, or legal documents.",
   },
 ];
@@ -208,7 +208,9 @@ export default function ContactPage() {
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Direct Hotline</div>
-                <div className="text-base font-extrabold text-[#0B2D5C] mt-0.5">+250 788 000 000</div>
+                <div className="text-base font-extrabold text-[#0B2D5C] mt-0.5">
+                  <a href="tel:+250782168650" className="hover:text-[#12B8B0]">+250 782 168 650</a>
+                </div>
               </div>
             </div>
 
@@ -363,7 +365,7 @@ export default function ContactPage() {
                       <label className="block text-slate-400 mb-1">Phone Number (Optional)</label>
                       <input
                         type="tel"
-                        placeholder="+250 788 000 000"
+                        placeholder="+250 782 168 650"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-[#12B8B0]"

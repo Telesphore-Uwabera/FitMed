@@ -235,24 +235,8 @@ export default function Navbar() {
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
               className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white dark:bg-[#0c1c33] shadow-2xl xl:hidden flex flex-col"
+              style={{ paddingTop: navH }}
             >
-              {/* Drawer header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-                <Image
-                  src="/logo-4.webp"
-                  alt="FitMed"
-                  width={641}
-                  height={390}
-                  className="w-32 h-auto object-contain"
-                />
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-500 dark:text-slate-300" />
-                </button>
-              </div>
-
               {/* Nav links */}
               <div className="flex flex-col p-4 gap-1 flex-1 overflow-y-auto">
                 {navLinks.map((link, i) => (

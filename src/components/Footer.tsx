@@ -99,18 +99,18 @@ export default function Footer() {
 
             <div className="space-y-3">
               <a
-                href="mailto:hello@fitmed.rw"
+                href="mailto:support@fitnessmed.rw"
                 className="flex items-center gap-2.5 text-xs text-slate-500 hover:text-sky-400 transition-colors group"
               >
                 <Mail className="w-3.5 h-3.5 text-sky-500/60 group-hover:text-sky-400 flex-shrink-0 transition-colors" />
-                <span>hello@fitmed.rw</span>
+                <span>support@fitnessmed.rw</span>
               </a>
               <a
-                href="tel:+250700000000"
+                href="tel:+250782168650"
                 className="flex items-center gap-2.5 text-xs text-slate-500 hover:text-sky-400 transition-colors group"
               >
                 <Phone className="w-3.5 h-3.5 text-sky-500/60 group-hover:text-sky-400 flex-shrink-0 transition-colors" />
-                <span>+250 700 000 000</span>
+                <span>+250 782 168 650</span>
               </a>
               <div className="flex items-center gap-2.5 text-xs text-slate-500">
                 <MapPin className="w-3.5 h-3.5 text-sky-500/60 flex-shrink-0" />

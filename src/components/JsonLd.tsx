@@ -10,7 +10,7 @@ export default function JsonLd() {
         name: SITE_NAME,
         url: SITE_URL,
         logo: absoluteUrl("/logo-4.webp"),
-        email: "hello@fitmed.rw",
+        email: "support@fitnessmed.rw",
         address: {
           "@type": "PostalAddress",
           addressLocality: "Kigali",
@@ -24,7 +24,7 @@ export default function JsonLd() {
         name: SITE_NAME,
         url: SITE_URL,
         description: DEFAULT_DESCRIPTION,
-        telephone: "+250 788 000 000",
+        telephone: "+250 782 168 650",
         address: {
           "@type": "PostalAddress",
           addressLocality: "Kigali",

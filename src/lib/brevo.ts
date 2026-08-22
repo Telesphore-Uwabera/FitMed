@@ -54,7 +54,7 @@ export function brandedEmail(title: string, bodyHtml: string): string {
                 <p style="margin:0;">
                   <a href="${FITMED_APP_URL}" style="color:#12B8B0;text-decoration:none;font-weight:700;">${FITMED_APP_URL.replace(/^https?:\/\//, "")}</a>
                   &nbsp;·&nbsp;
-                  <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;text-decoration:none;">hello@fitmed.rw</a>
+                  <a href="mailto:support@fitnessmed.rw" style="color:#12B8B0;text-decoration:none;">support@fitnessmed.rw</a>
                 </p>
                 <p style="margin:10px 0 0;color:#94a3b8;">Kigali, Rwanda · Telehealth &amp; medical certification</p>
                 <p style="margin:12px 0 0;color:#64748b;">© ${year} FitMed. All rights reserved.</p>
@@ -447,7 +447,7 @@ export const EmailTemplates = {
     return brandedEmail(
       "Reply from FitMed",
       `${body}
-       <p>You can reply to this email, or write to <a href="mailto:hello@fitmed.rw" style="color:#12B8B0;">hello@fitmed.rw</a>.</p>`
+       <p>You can reply to this email, or write to <a href="mailto:support@fitnessmed.rw" style="color:#12B8B0;">support@fitnessmed.rw</a>.</p>`
     );
   },
 };

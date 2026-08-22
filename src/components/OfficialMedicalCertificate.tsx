@@ -310,6 +310,17 @@ export default function OfficialMedicalCertificate({
             </div>
           </div>
 
+          <div className="mt-2 pt-4 border-t border-slate-200 text-center font-sans space-y-1">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2D5C]">
+              FitMed contact
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] text-slate-600">
+              <span>Email: <strong className="text-[#0B2D5C]">support@fitnessmed.rw</strong></span>
+              <span>Phone: <strong className="text-[#0B2D5C]">+250 782 168 650</strong></span>
+              <span>Website: <strong className="text-[#0B2D5C]">https://fitnessmed.rw</strong></span>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
