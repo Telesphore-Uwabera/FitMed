@@ -1,3 +1,5 @@
+# Render hosts the Node API + Socket.IO only.
+# The public site and custom domain fitnessmed.rw are on Netlify.
 services:
   - type: web
     name: fitmed
@@ -12,9 +14,13 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_APP_URL
-        sync: false
+        value: https://fitnessmed.rw
+      - key: FITMED_APP_URL
+        value: https://fitnessmed.rw
       - key: NEXT_PUBLIC_SOCKET_URL
-        sync: false
+        value: https://fitmed-l2uv.onrender.com
+      - key: SOCKET_CORS_ORIGINS
+        value: https://fitnessmed.netlify.app,https://fitnessmed.rw
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_DB_NAME
@@ -32,4 +38,6 @@ services:
       - key: BREVO_SENDER_NAME
         value: FitMed Rwanda
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
+      - key: SESSION_SECRET
+        sync: false

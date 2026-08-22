@@ -5,7 +5,10 @@ let io = null;
 const initializeSocket = (server) => {
   if (!io) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const extraOrigins = (process.env.SOCKET_CORS_ORIGINS || "")
+    const extraOrigins = (
+      process.env.SOCKET_CORS_ORIGINS ||
+      "https://fitnessmed.netlify.app,https://fitnessmed.rw"
+    )
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean);
