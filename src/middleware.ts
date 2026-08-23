@@ -7,7 +7,7 @@ function signInUrl(request: NextRequest, reason?: string) {
   url.pathname = "/signin";
   url.search = "";
   if (reason) url.searchParams.set(reason, "1");
-  url.searchParams.set("next", request.nextUrl.pathname);
+  url.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
   return url;
 }
 

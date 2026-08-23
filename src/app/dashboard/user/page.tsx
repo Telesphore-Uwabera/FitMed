@@ -73,6 +73,8 @@ export default function UserDashboard() {
   const { success, error, warning, info } = useToast();
   const { session, loading: sessionLoading } = useSession("user");
   const [activeTab, setActiveTab] = useState<string>("overview");
+  const [selectedServicePurpose, setSelectedServicePurpose] = useState<string>(DEFAULT_FITMED_PURPOSE);
+  const [wizardStartStep, setWizardStartStep] = useState<number>(1);
 
   const goToTab = (id: string) => {
     setActiveTab(id);
@@ -86,9 +88,12 @@ export default function UserDashboard() {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab") || params.get("nav");
     if (tab) setActiveTab(tab);
+    const purpose = params.get("purpose");
+    if (purpose) {
+      setSelectedServicePurpose(purpose);
+      setWizardStartStep(1);
+    }
   }, []);
-  const [selectedServicePurpose, setSelectedServicePurpose] = useState<string>(DEFAULT_FITMED_PURPOSE);
-  const [wizardStartStep, setWizardStartStep] = useState<number>(1);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showOfficialCertModal, setShowOfficialCertModal] = useState(false);
   const [selectedCert, setSelectedCert] = useState<any | null>(null);

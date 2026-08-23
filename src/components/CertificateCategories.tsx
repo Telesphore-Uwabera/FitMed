@@ -7,12 +7,18 @@ import {
   ChevronRight, CheckCircle, AlertTriangle, Info,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+
+function requestHref(purpose: string) {
+  return `/dashboard/user?tab=request&purpose=${encodeURIComponent(purpose)}`;
+}
 
 /* ── All images: Black African people, fitness & medical context ── */
 const categories = [
   {
     icon: Briefcase,
     title: "Employment Fitness",
+    purpose: "Workplace & Office Fitness",
     type: "telemedicine",
     badge: "Telemedicine Eligible",
     badgeColor: "badge-fit",
@@ -25,6 +31,7 @@ const categories = [
   {
     icon: GraduationCap,
     title: "School & University",
+    purpose: "School & University Admission",
     type: "telemedicine",
     badge: "Telemedicine Eligible",
     badgeColor: "badge-fit",
@@ -37,6 +44,7 @@ const categories = [
   {
     icon: Truck,
     title: "Transport & Driving",
+    purpose: "Commercial Driver & Transport",
     type: "review",
     badge: "May Require Review",
     badgeColor: "badge-review",
@@ -49,6 +57,7 @@ const categories = [
   {
     icon: Wrench,
     title: "Occupational / High-Risk",
+    purpose: "Construction & Heights Fitness",
     type: "physical",
     badge: "Physical Exam Required",
     badgeColor: "badge-notfit",
@@ -61,6 +70,7 @@ const categories = [
   {
     icon: HeartPulse,
     title: "General Health Fitness",
+    purpose: "Sports, Gym & Athletic Fitness",
     type: "telemedicine",
     badge: "Telemedicine Eligible",
     badgeColor: "badge-fit",
@@ -73,6 +83,7 @@ const categories = [
   {
     icon: Anchor,
     title: "Aviation & Specialised",
+    purpose: "Construction & Heights Fitness",
     type: "physical",
     badge: "Physical Exam Required",
     badgeColor: "badge-notfit",
@@ -133,8 +144,12 @@ export default function CertificateCategories() {
                 whileHover={{ y: -6, transition: { duration: 0.22 } }}
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
-                className="group card-white rounded-3xl overflow-hidden flex flex-col h-full transition-all duration-300 cursor-pointer"
+                className="group card-white rounded-3xl overflow-hidden flex flex-col h-full transition-all duration-300"
               >
+                <Link
+                  href={requestHref(cat.purpose)}
+                  className="flex flex-col h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                >
                 {/* Image */}
                 <div className="relative h-44 overflow-hidden flex-shrink-0">
                   <Image
@@ -177,15 +192,16 @@ export default function CertificateCategories() {
                     <typeData.icon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>{typeData.label}</span>
                   </div>
-                  <motion.div
-                    animate={{ opacity: hovered === i ? 1 : 0, y: hovered === i ? 0 : 4 }}
-                    transition={{ duration: 0.2 }}
-                    className="mt-3 flex items-center gap-1 text-xs text-sky-600 font-bold"
+                  <div
+                    className={`mt-3 inline-flex items-center gap-1 text-xs font-bold transition-colors ${
+                      hovered === i ? "text-sky-700" : "text-sky-600"
+                    }`}
                   >
                     Request this certificate
                     <ChevronRight className="w-3 h-3" />
-                  </motion.div>
+                  </div>
                 </div>
+                </Link>
               </motion.div>
             );
           })}
