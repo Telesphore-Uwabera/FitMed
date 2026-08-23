@@ -3,8 +3,6 @@
 > **Fit, Verified, and Ready.**  
 > Secure digital medical fitness assessments conducted and certified by licensed doctors.
 
-![FitMed](public/logo.webp)
-
 ---
 
 ## Table of Contents
