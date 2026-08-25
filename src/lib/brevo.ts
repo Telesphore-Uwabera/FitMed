@@ -3,7 +3,7 @@
  */
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "info.teletech.rw@gmail.com";
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "fitmedrwanda@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "FitMed Rwanda";
 export const FITMED_APP_URL = (
   process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com"
@@ -11,7 +11,7 @@ export const FITMED_APP_URL = (
 export const FITMED_ADMIN_EMAIL = (
   process.env.FITMED_ADMIN_EMAIL ||
   process.env.ADMIN_EMAIL ||
-  "info.teletech.rw@gmail.com"
+  "fitmedrwanda@gmail.com"
 )
   .trim()
   .toLowerCase();
@@ -54,7 +54,7 @@ export function brandedEmail(title: string, bodyHtml: string): string {
                 <p style="margin:0;">
                   <a href="${FITMED_APP_URL}" style="color:#12B8B0;text-decoration:none;font-weight:700;">${FITMED_APP_URL.replace(/^https?:\/\//, "")}</a>
                   &nbsp;·&nbsp;
-                  <a href="mailto:fixmed@gmail.com" style="color:#12B8B0;text-decoration:none;">fixmed@gmail.com</a>
+                  <a href="mailto:fitmedrwanda@gmail.com" style="color:#12B8B0;text-decoration:none;">fitmedrwanda@gmail.com</a>
                 </p>
                 <p style="margin:10px 0 0;color:#94a3b8;">Kigali, Rwanda · Telehealth &amp; medical certification</p>
                 <p style="margin:12px 0 0;color:#64748b;">© ${year} FitMed. All rights reserved.</p>
@@ -210,9 +210,18 @@ export const EmailTemplates = {
     brandedEmail(
       "Password reset code",
       `<p>Hello <strong>${name}</strong>,</p>
-       <p>Use this 6-digit code to reset your FitMed password. It expires in 15 minutes. Do not share it with anyone.</p>
+       <p>Someone asked to reset the password on your FitMed account. This is <strong>not</strong> a sign-in notice and it does not mean anyone has logged in.</p>
+       <p>Use this 6-digit code only on the FitMed password-reset screen. It expires in 15 minutes. Do not share it with anyone.</p>
        <p style="text-align:center;margin:20px 0;font-family:Consolas,monospace;font-size:32px;font-weight:800;letter-spacing:8px;color:#0B2D5C;">${otp}</p>
-       <p style="font-size:13px;color:#64748b;">If you did not request this, you can ignore this email. Your password will stay the same.</p>`
+       <p style="font-size:13px;color:#64748b;">If you did not request a password reset, you can ignore this email. Your password will stay the same.</p>`
+    ),
+
+  passwordChanged: (name: string) =>
+    brandedEmail(
+      "Your password was changed",
+      `<p>Hello <strong>${name}</strong>,</p>
+       <p>The password on your FitMed account was changed after a reset request. This message is only a security confirmation. Nobody was signed in for you.</p>
+       <p>If you did not change your password, contact FitMed immediately at <a href="mailto:fitmedrwanda@gmail.com" style="color:#0B2D5C;font-weight:700;">fitmedrwanda@gmail.com</a>.</p>`
     ),
 
   applicationReceived: (name: string, certId: string, purpose: string) =>
@@ -447,7 +456,7 @@ export const EmailTemplates = {
     return brandedEmail(
       "Reply from FitMed",
       `${body}
-       <p>You can reply to this email, or write to <a href="mailto:fixmed@gmail.com" style="color:#12B8B0;">fixmed@gmail.com</a>.</p>`
+       <p>You can reply to this email, or write to <a href="mailto:fitmedrwanda@gmail.com" style="color:#12B8B0;">fitmedrwanda@gmail.com</a>.</p>`
     );
   },
 };

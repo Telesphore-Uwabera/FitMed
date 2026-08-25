@@ -55,7 +55,14 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: "en_RW",
     type: "website",
-    images: [{ url: "/logo-4.webp", width: 641, height: 390, alt: SITE_NAME }],
+    images: [
+      {
+        url: "/logo-4.webp",
+        width: 1200,
+        height: 630,
+        alt: SITE_NAME,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",

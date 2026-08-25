@@ -315,7 +315,7 @@ export default function OfficialMedicalCertificate({
               FitMed contact
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] text-slate-600">
-              <span>Email: <strong className="text-[#0B2D5C]">fixmed@gmail.com</strong></span>
+              <span>Email: <strong className="text-[#0B2D5C]">fitmedrwanda@gmail.com</strong></span>
               <span>Phone: <strong className="text-[#0B2D5C]">+250 782 168 650</strong></span>
               <span>Website: <strong className="text-[#0B2D5C]">https://fitnessmed.rw</strong></span>
             </div>

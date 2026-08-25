@@ -34,8 +34,8 @@ export default function PressPage() {
           <div className="flex flex-col sm:flex-row gap-6">
             <div className="flex-1 p-5 bg-sky-50 rounded-2xl border border-sky-100">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Press Enquiries</div>
-              <a href="mailto:fixmed@gmail.com" className="text-base font-bold text-sky-600 hover:underline flex items-center gap-2">
-                <Mail className="w-4 h-4" /> fixmed@gmail.com
+              <a href="mailto:fitmedrwanda@gmail.com" className="text-base font-bold text-sky-600 hover:underline flex items-center gap-2">
+                <Mail className="w-4 h-4" /> fitmedrwanda@gmail.com
               </a>
             </div>
             <div className="flex-1 p-5 bg-slate-50 rounded-2xl border border-slate-100">
@@ -74,7 +74,7 @@ export default function PressPage() {
             {[
               { label: "FitMed Logo (WebP)", file: "/logo-4.webp" },
               { label: "FitMed Icon (WebP)", file: "/favicon-icon.webp" },
-              { label: "Brand Guidelines", file: "mailto:fixmed@gmail.com" },
+              { label: "Brand Guidelines", file: "mailto:fitmedrwanda@gmail.com" },
             ].map((asset) => (
               <a
                 key={asset.label}
@@ -93,7 +93,7 @@ export default function PressPage() {
         <div className="bg-[#edf6f6] dark:bg-[#0B2D5C] rounded-3xl p-8 text-center border-0">
           <h2 className="text-xl font-extrabold text-[#0B2D5C] dark:text-white mb-3" style={{ fontFamily: "var(--font-primary)" }}>Cover FitMed?</h2>
           <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">We're happy to arrange interviews, provide statistics, or offer expert commentary on digital health and telemedicine in Rwanda.</p>
-          <a href="mailto:fixmed@gmail.com" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white btn-primary group">
+          <a href="mailto:fitmedrwanda@gmail.com" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white btn-primary group">
             Get in Touch <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </a>
         </div>

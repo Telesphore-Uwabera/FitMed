@@ -100,11 +100,11 @@ export default function Footer() {
 
             <div className="space-y-3">
               <a
-                href="mailto:fixmed@gmail.com"
+                href="mailto:fitmedrwanda@gmail.com"
                 className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-500 hover:text-[#12B8B0] transition-colors group"
               >
                 <Mail className="w-3.5 h-3.5 text-[#12B8B0]/80 group-hover:text-[#12B8B0] flex-shrink-0 transition-colors" />
-                <span>fixmed@gmail.com</span>
+                <span>fitmedrwanda@gmail.com</span>
               </a>
               <a
                 href="tel:+250782168650"

@@ -28,7 +28,7 @@ const contactDepartments = [
     color: "text-[#12B8B0]",
     badgeBg: "bg-teal-50 border-teal-200 text-teal-800",
     title: "General Enquiries",
-    email: "fixmed@gmail.com",
+    email: "fitmedrwanda@gmail.com",
     desc: "General questions about the FitMed platform, certificate verification, or platform access.",
   },
   {
@@ -37,7 +37,7 @@ const contactDepartments = [
     color: "text-sky-500",
     badgeBg: "bg-sky-50 border-sky-200 text-sky-800",
     title: "Doctor & Clinical Support",
-    email: "fixmed@gmail.com",
+    email: "fitmedrwanda@gmail.com",
     desc: "Support for licensed doctors using FitMed video consultations and applicant reviews.",
   },
   {
@@ -46,7 +46,7 @@ const contactDepartments = [
     color: "text-indigo-500",
     badgeBg: "bg-indigo-50 border-indigo-200 text-indigo-800",
     title: "Employer & Corporate Support",
-    email: "fixmed@gmail.com",
+    email: "fitmedrwanda@gmail.com",
     desc: "Help with company accounts, staff fitness certificates, and verification for HR teams.",
   },
   {
@@ -55,7 +55,7 @@ const contactDepartments = [
     color: "text-rose-500",
     badgeBg: "bg-rose-50 border-rose-200 text-rose-800",
     title: "Report an Issue",
-    email: "fixmed@gmail.com",
+    email: "fitmedrwanda@gmail.com",
     desc: "Report platform technical issues, urgent certificate disputes, or clinical referral queries.",
   },
   {
@@ -64,7 +64,7 @@ const contactDepartments = [
     color: "text-emerald-500",
     badgeBg: "bg-emerald-50 border-emerald-200 text-emerald-800",
     title: "Privacy & Data Protection",
-    email: "fixmed@gmail.com",
+    email: "fitmedrwanda@gmail.com",
     desc: "Questions about how we protect your health information, or requests about your personal data.",
   },
   {
@@ -73,7 +73,7 @@ const contactDepartments = [
     color: "text-amber-500",
     badgeBg: "bg-amber-50 border-amber-200 text-amber-800",
     title: "Legal & Regulatory Compliance",
-    email: "fixmed@gmail.com",
+    email: "fitmedrwanda@gmail.com",
     desc: "Questions about regulations, doctor licensing, or legal documents.",
   },
 ];

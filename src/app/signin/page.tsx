@@ -44,12 +44,14 @@ function SignInContent() {
   const [forgotStep, setForgotStep] = useState<"request" | "reset">("request");
   const [forgotOtp, setForgotOtp] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
   // First-Time Temporary Password Reset State
   const [showTempResetModal, setShowTempResetModal] = useState(false);
   const [permanentPassword, setPermanentPassword] = useState("");
+  const [permanentPasswordConfirm, setPermanentPasswordConfirm] = useState("");
   const [pendingAccount, setPendingAccount] = useState<any | null>(null);
 
   useEffect(() => {
@@ -140,6 +142,14 @@ function SignInContent() {
       warning("Password Too Short", "Permanent password must be at least 6 characters.");
       return;
     }
+    if (permanentPassword !== permanentPasswordConfirm) {
+      warning("Passwords do not match", "Enter the same new password in both fields.");
+      return;
+    }
+    if (permanentPassword === password) {
+      warning("Choose a new password", "You cannot reuse the password you just signed in with.");
+      return;
+    }
 
     if (pendingAccount) {
       try {
@@ -151,6 +161,7 @@ function SignInContent() {
             email: pendingAccount.email,
             currentPassword: password,
             newPassword: permanentPassword,
+            confirmPassword: permanentPasswordConfirm,
           }),
         });
         const data = await res.json();
@@ -190,12 +201,10 @@ function SignInContent() {
         success("OTP Dispatched", `A 6-digit reset code was sent to ${forgotEmail}.`);
         setForgotStep("reset");
       } else {
-        setError(data.error || "Failed to send reset code.");
+        toastError("Could not send code", data.error || "Failed to send reset code.");
       }
     } catch {
-      // Fallback
-      success("OTP Dispatched", `Reset code sent to ${forgotEmail}.`);
-      setForgotStep("reset");
+      toastError("Could not send code", "Check your connection and try again.");
     } finally {
       setIsSendingOtp(false);
     }
@@ -203,8 +212,16 @@ function SignInContent() {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotOtp || !forgotNewPassword) {
-      warning("Missing Fields", "Please enter OTP and new password.");
+    if (!forgotOtp || !forgotNewPassword || !forgotConfirmPassword) {
+      warning("Missing Fields", "Enter the code, new password, and confirmation.");
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      warning("Passwords do not match", "Enter the same new password in both fields.");
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      warning("Password Too Short", "Use at least 6 characters.");
       return;
     }
     setIsResetting(true);
@@ -217,23 +234,24 @@ function SignInContent() {
           email: forgotEmail,
           otp: forgotOtp,
           newPassword: forgotNewPassword,
+          confirmPassword: forgotConfirmPassword,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        success("Password Reset!", "You may now sign in with your new password.");
+        success("Password Reset!", "Sign in with your new password. FitMed did not sign you in.");
         setShowForgotModal(false);
         setForgotStep("request");
         setForgotOtp("");
         setForgotNewPassword("");
-        setPassword(forgotNewPassword);
+        setForgotConfirmPassword("");
+        setPassword("");
         setEmail(forgotEmail);
       } else {
         toastError("Reset Failed", data.error || "Invalid code.");
       }
     } catch {
-      success("Password Reset!", "You may now sign in with your new password.");
-      setShowForgotModal(false);
+      toastError("Reset Failed", "Could not reset your password. Try again.");
     } finally {
       setIsResetting(false);
     }
@@ -477,11 +495,34 @@ function SignInContent() {
                     type="password"
                     autoComplete="new-password"
                     required
+                    minLength={6}
                     value={forgotNewPassword}
                     onChange={(e) => setForgotNewPassword(e.target.value)}
-                    placeholder="Enter new password (min. 6 chars)"
+                    placeholder="At least 6 characters"
                     className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
+                    Confirm new password
+                  </label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                    value={forgotConfirmPassword}
+                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    placeholder="Type the same password again"
+                    className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                  />
+                  {forgotConfirmPassword && forgotNewPassword !== forgotConfirmPassword && (
+                    <p className="mt-1 text-[11px] font-semibold text-rose-600">Passwords do not match.</p>
+                  )}
+                  {forgotConfirmPassword && forgotNewPassword === forgotConfirmPassword && (
+                    <p className="mt-1 text-[11px] font-semibold text-emerald-700">Passwords match.</p>
+                  )}
                 </div>
 
                 <div className="flex gap-2 pt-1">
@@ -537,6 +578,24 @@ function SignInContent() {
                   placeholder="At least 6 characters"
                   className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
+                  Confirm new password
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={permanentPasswordConfirm}
+                  onChange={(e) => setPermanentPasswordConfirm(e.target.value)}
+                  placeholder="Type the same password again"
+                  className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                />
+                {permanentPasswordConfirm && permanentPassword !== permanentPasswordConfirm && (
+                  <p className="mt-1 text-[11px] font-semibold text-rose-600">Passwords do not match.</p>
+                )}
               </div>
 
               <div className="p-3.5 rounded-2xl bg-teal-50 border border-teal-200 text-slate-700 text-[11px] space-y-1">

@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   temporaryPassword?: string;
+  previousPasswords?: string[];
   requiresPasswordReset?: boolean;
   applicantId?: string;
   phone?: string;
@@ -47,6 +48,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String },
     temporaryPassword: { type: String },
+    previousPasswords: { type: [String], default: [] },
     requiresPasswordReset: { type: Boolean, default: false },
     applicantId: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
     phone: { type: String, trim: true },

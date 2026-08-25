@@ -81,7 +81,7 @@ export default function CookiesPage() {
               {section.contact && (
                 <div className="space-y-2 text-sm text-slate-600">
                   <p>For questions about our use of cookies:</p>
-                  <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:fixmed@gmail.com" className="text-sky-600 hover:underline">fixmed@gmail.com</a></div>
+                  <div><strong className="text-slate-800">Email:</strong>{" "}<a href="mailto:fitmedrwanda@gmail.com" className="text-sky-600 hover:underline">fitmedrwanda@gmail.com</a></div>
                   <div><strong className="text-slate-800">Address:</strong> Kigali, Rwanda</div>
                 </div>
               )}

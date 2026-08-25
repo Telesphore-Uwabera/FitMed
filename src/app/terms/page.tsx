@@ -25,7 +25,7 @@ const sections = [
     title: "4. User Accounts",
     items: [
       { heading: "Eligibility", text: "You must be at least 18 years old to create an account. By registering, you confirm that the information you provide is accurate and complete." },
-      { heading: "Account Security", text: "You are responsible for maintaining the security of your account credentials. Notify us immediately if you suspect unauthorised access at fixmed@gmail.com." },
+      { heading: "Account Security", text: "You are responsible for maintaining the security of your account credentials. Notify us immediately if you suspect unauthorised access at fitmedrwanda@gmail.com." },
       { heading: "Accurate Information", text: "Providing false or misleading health information in order to obtain a medical fitness certificate may constitute fraud and is strictly prohibited." },
     ],
   },

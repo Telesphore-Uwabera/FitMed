@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import { hashPassword, verifyPassword } from "@/lib/password";
+import { hashPassword, isReusedPassword, nextPasswordHistory, verifyPassword } from "@/lib/password";
 import User from "@/models/User";
 import { attachAuthCookie } from "@/lib/authCookie";
 
@@ -17,10 +17,13 @@ function isBlocked(status?: string) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { email, currentPassword, newPassword } = await request.json();
+    const { email, currentPassword, newPassword, confirmPassword } = await request.json();
     const cleanEmail = String(email || "").trim().toLowerCase();
     if (!cleanEmail || !newPassword) {
       return NextResponse.json({ success: false, error: "Email and new password are required." }, { status: 400 });
+    }
+    if (confirmPassword !== undefined && confirmPassword !== newPassword) {
+      return NextResponse.json({ success: false, error: "New password and confirmation do not match." }, { status: 400 });
     }
     if (String(newPassword).length < 6) {
       return NextResponse.json({ success: false, error: "Password must be at least 6 characters." }, { status: 400 });
@@ -43,6 +46,22 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Current password is incorrect." }, { status: 401 });
     }
 
+    if (newPassword === currentPassword) {
+      return NextResponse.json(
+        { success: false, error: "Choose a new password. You cannot reuse a password you have used before." },
+        { status: 400 }
+      );
+    }
+
+    const previous = Array.isArray(user.previousPasswords) ? user.previousPasswords : [];
+    if (isReusedPassword(newPassword, user.password, previous)) {
+      return NextResponse.json(
+        { success: false, error: "Choose a new password. You cannot reuse a password you have used before." },
+        { status: 400 }
+      );
+    }
+
+    user.previousPasswords = nextPasswordHistory(user.password, previous);
     user.password = hashPassword(newPassword);
     user.temporaryPassword = undefined;
     user.requiresPasswordReset = false;

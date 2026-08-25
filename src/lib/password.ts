@@ -17,6 +17,19 @@ export function verifyPassword(plain: string, stored?: string | null): boolean {
   return timingSafeEqual(prev, next);
 }
 
+const PASSWORD_HISTORY_LIMIT = 5;
+
+export function isReusedPassword(plain: string, currentHash?: string | null, previousHashes: string[] = []) {
+  if (verifyPassword(plain, currentHash)) return true;
+  return previousHashes.some((hash) => verifyPassword(plain, hash));
+}
+
+export function nextPasswordHistory(currentHash?: string | null, previousHashes: string[] = []) {
+  const next = [...previousHashes];
+  if (currentHash) next.unshift(currentHash);
+  return next.slice(0, PASSWORD_HISTORY_LIMIT);
+}
+
 export function generateTempPassword(): string {
   return `FitMed#${Math.floor(1000 + Math.random() * 9000)}`;
 }

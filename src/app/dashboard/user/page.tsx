@@ -149,6 +149,7 @@ export default function UserDashboard() {
   // Password change state
   const [currentPass, setCurrentPass] = useState("");
   const [newPass, setNewPass] = useState("");
+  const [confirmNewPass, setConfirmNewPass] = useState("");
   const [showNewPass, setShowNewPass] = useState(false);
 
   // WebRTC video call state
@@ -1580,11 +1581,29 @@ export default function UserDashboard() {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-slate-700 font-bold uppercase mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmNewPass}
+                      onChange={(e) => setConfirmNewPass(e.target.value)}
+                      placeholder="Type the same password again"
+                      className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
+                    />
+                    {confirmNewPass && newPass !== confirmNewPass && (
+                      <p className="mt-1 text-[11px] font-semibold text-rose-600">Passwords do not match.</p>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={async () => {
-                      if (!currentPass || !newPass) {
-                        warning("Missing details", "Enter your current password and a new password.");
+                      if (!currentPass || !newPass || !confirmNewPass) {
+                        warning("Missing details", "Enter your current password, new password, and confirmation.");
+                        return;
+                      }
+                      if (newPass !== confirmNewPass) {
+                        warning("Passwords do not match", "Enter the same new password in both fields.");
                         return;
                       }
                       try {
@@ -1595,6 +1614,7 @@ export default function UserDashboard() {
                             email: profileData.email || session?.email,
                             currentPassword: currentPass,
                             newPassword: newPass,
+                            confirmPassword: confirmNewPass,
                           }),
                         });
                         const data = await res.json();
@@ -1605,6 +1625,7 @@ export default function UserDashboard() {
                         success("Password updated", "Use your new password the next time you sign in.");
                         setCurrentPass("");
                         setNewPass("");
+                        setConfirmNewPass("");
                       } catch {
                         error("Password not changed", "Could not reach the server.");
                       }
