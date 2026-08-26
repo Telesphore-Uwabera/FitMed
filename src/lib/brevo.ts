@@ -218,10 +218,11 @@ export const EmailTemplates = {
 
   passwordChanged: (name: string) =>
     brandedEmail(
-      "Your password was changed",
+      "Password reset successful",
       `<p>Hello <strong>${name}</strong>,</p>
-       <p>The password on your FitMed account was changed after a reset request. This message is only a security confirmation. Nobody was signed in for you.</p>
-       <p>If you did not change your password, contact FitMed immediately at <a href="mailto:fitmedrwanda@gmail.com" style="color:#0B2D5C;font-weight:700;">fitmedrwanda@gmail.com</a>.</p>`
+       <p>Your FitMed account password was successfully reset. You can now sign in with your new password.</p>
+       <p>If you did not request this change, contact us immediately at <a href="mailto:fitmedrwanda@gmail.com" style="color:#0B2D5C;font-weight:700;">fitmedrwanda@gmail.com</a> — your account may be at risk.</p>
+       ${button(`${FITMED_APP_URL}/signin`, "Sign in to FitMed")}`
     ),
 
   applicationReceived: (name: string, certId: string, purpose: string) =>

@@ -446,7 +446,7 @@ export default function DashboardShell({
 
               {/* Email & Notifications Dropdown Drawer */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-88 sm:w-96 bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 z-50 space-y-4 animate-in fade-in">
+                <div className="fixed left-1/2 -translate-x-1/2 w-[calc(100vw-2rem)] max-w-sm mt-2 md:absolute md:left-auto md:translate-x-0 md:right-0 md:w-96 md:max-w-none top-16 md:top-auto bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 z-50 space-y-4 animate-in fade-in">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-[#12B8B0]" />

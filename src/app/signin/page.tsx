@@ -41,11 +41,13 @@ function SignInContent() {
   // Forgot Password State
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotStep, setForgotStep] = useState<"request" | "reset">("request");
+  const [forgotStep, setForgotStep] = useState<"request" | "verify" | "newpassword">("request");
   const [forgotOtp, setForgotOtp] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
   // First-Time Temporary Password Reset State
@@ -199,7 +201,7 @@ function SignInContent() {
       const data = await res.json();
       if (data.success) {
         success("OTP Dispatched", `A 6-digit reset code was sent to ${forgotEmail}.`);
-        setForgotStep("reset");
+        setForgotStep("verify");
       } else {
         toastError("Could not send code", data.error || "Failed to send reset code.");
       }
@@ -210,10 +212,37 @@ function SignInContent() {
     }
   };
 
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotOtp || forgotOtp.length !== 6) {
+      warning("Code Required", "Enter the 6-digit code from your email.");
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify_otp", email: forgotEmail, otp: forgotOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        success("Code Verified", "Your code is correct. Set your new password below.");
+        setForgotStep("newpassword");
+      } else {
+        toastError("Invalid Code", data.error || "The code is incorrect or has expired.");
+      }
+    } catch {
+      toastError("Verification Failed", "Could not verify the code. Check your connection.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotOtp || !forgotNewPassword || !forgotConfirmPassword) {
-      warning("Missing Fields", "Enter the code, new password, and confirmation.");
+    if (!forgotNewPassword || !forgotConfirmPassword) {
+      warning("Missing Fields", "Enter both password fields.");
       return;
     }
     if (forgotNewPassword !== forgotConfirmPassword) {
@@ -224,6 +253,7 @@ function SignInContent() {
       warning("Password Too Short", "Use at least 6 characters.");
       return;
     }
+    setForgotPasswordError("");
     setIsResetting(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -232,7 +262,6 @@ function SignInContent() {
         body: JSON.stringify({
           action: "reset_password",
           email: forgotEmail,
-          otp: forgotOtp,
           newPassword: forgotNewPassword,
           confirmPassword: forgotConfirmPassword,
         }),
@@ -245,10 +274,13 @@ function SignInContent() {
         setForgotOtp("");
         setForgotNewPassword("");
         setForgotConfirmPassword("");
+        setForgotPasswordError("");
         setPassword("");
         setEmail(forgotEmail);
       } else {
-        toastError("Reset Failed", data.error || "Invalid code.");
+        // Show reuse error inline so the user sees it directly under the password field
+        setForgotPasswordError(data.error || "Could not reset password.");
+        toastError("Reset Failed", data.error || "Could not reset password.");
       }
     } catch {
       toastError("Reset Failed", "Could not reset your password. Try again.");
@@ -424,7 +456,7 @@ function SignInContent() {
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-6 shadow-2xl relative border border-slate-200 text-slate-800">
             <button
-              onClick={() => { setShowForgotModal(false); setForgotStep("request"); }}
+              onClick={() => { setShowForgotModal(false); setForgotStep("request"); setForgotOtp(""); setForgotNewPassword(""); setForgotConfirmPassword(""); setForgotPasswordError(""); }}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
             >
               <X className="w-5 h-5" />
@@ -439,13 +471,14 @@ function SignInContent() {
                 Reset Your Password
               </h3>
               <p className="text-xs text-slate-500">
-                {forgotStep === "request"
-                  ? "Enter your account email. We will send you a 6-digit security code."
-                  : `Enter the 6-digit verification code dispatched to ${forgotEmail}.`}
+                {forgotStep === "request" && "Enter your account email. We will send you a 6-digit security code."}
+                {forgotStep === "verify" && `Enter the 6-digit code sent to ${forgotEmail}. The code must be verified before you can set a new password.`}
+                {forgotStep === "newpassword" && "Code verified. Choose a new password that you have not used before."}
               </p>
             </div>
 
-            {forgotStep === "request" ? (
+            {/* ── STEP 1: request OTP ── */}
+            {forgotStep === "request" && (
               <form onSubmit={handleRequestOtp} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
@@ -467,11 +500,14 @@ function SignInContent() {
                   className="w-full py-3 rounded-xl bg-[#0B2D5C] hover:bg-[#082247] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
                 >
                   <Send className="w-4 h-4 text-[#12B8B0]" />
-                  <span>{isSendingOtp ? "Dispatching OTP Code..." : "Send 6-Digit OTP Code"}</span>
+                  <span>{isSendingOtp ? "Sending code..." : "Send 6-Digit Code"}</span>
                 </button>
               </form>
-            ) : (
-              <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
+            )}
+
+            {/* ── STEP 2: verify OTP ── */}
+            {forgotStep === "verify" && (
+              <form onSubmit={handleVerifyOtp} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
                     6-Digit Verification Code
@@ -480,24 +516,52 @@ function SignInContent() {
                     type="text"
                     required
                     maxLength={6}
+                    inputMode="numeric"
+                    autoFocus
                     value={forgotOtp}
-                    onChange={(e) => setForgotOtp(e.target.value)}
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ""))}
                     placeholder="123456"
                     className="w-full p-3 rounded-xl border border-slate-200 text-center font-mono text-lg font-black tracking-widest focus:outline-none focus:border-[#12B8B0]"
                   />
+                  <p className="mt-1.5 text-[11px] text-slate-400">
+                    Check your inbox at <strong className="text-slate-600">{forgotEmail}</strong>. The code expires in 15 minutes.
+                  </p>
                 </div>
 
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={isVerifyingOtp || forgotOtp.length !== 6}
+                    className="flex-1 py-3 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                  >
+                    <span>{isVerifyingOtp ? "Verifying..." : "Verify Code"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotStep("request"); setForgotOtp(""); }}
+                    className="px-4 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50"
+                  >
+                    Back
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ── STEP 3: new password ── */}
+            {forgotStep === "newpassword" && (
+              <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
-                    New password
+                    New Password
                   </label>
                   <input
                     type="password"
                     autoComplete="new-password"
                     required
                     minLength={6}
+                    autoFocus
                     value={forgotNewPassword}
-                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                    onChange={(e) => { setForgotNewPassword(e.target.value); setForgotPasswordError(""); }}
                     placeholder="At least 6 characters"
                     className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                   />
@@ -505,7 +569,7 @@ function SignInContent() {
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">
-                    Confirm new password
+                    Confirm New Password
                   </label>
                   <input
                     type="password"
@@ -513,7 +577,7 @@ function SignInContent() {
                     required
                     minLength={6}
                     value={forgotConfirmPassword}
-                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                    onChange={(e) => { setForgotConfirmPassword(e.target.value); setForgotPasswordError(""); }}
                     placeholder="Type the same password again"
                     className="w-full p-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:border-[#12B8B0]"
                   />
@@ -525,17 +589,25 @@ function SignInContent() {
                   )}
                 </div>
 
+                {/* Inline error — surfaces "cannot reuse a previous password" and other server errors */}
+                {forgotPasswordError && (
+                  <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold">
+                    <span className="mt-0.5 shrink-0">⚠</span>
+                    <span>{forgotPasswordError}</span>
+                  </div>
+                )}
+
                 <div className="flex gap-2 pt-1">
                   <button
                     type="submit"
-                    disabled={isResetting}
+                    disabled={isResetting || forgotNewPassword !== forgotConfirmPassword || forgotNewPassword.length < 6}
                     className="flex-1 py-3 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
                   >
-                    <span>{isResetting ? "Updating..." : "Save New Password"}</span>
+                    <span>{isResetting ? "Saving..." : "Save New Password"}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setForgotStep("request")}
+                    onClick={() => { setForgotStep("verify"); setForgotPasswordError(""); }}
                     className="px-4 py-3 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50"
                   >
                     Back
