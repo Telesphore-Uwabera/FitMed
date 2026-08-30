@@ -41,12 +41,18 @@ export default function MeetJoinClient({ roomId }: { roomId: string }) {
   }, [roomId]);
 
   if (loading && !payload) {
-    return <p className="text-sm text-slate-500">Opening your FitMed meeting…</p>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 animate-pulse">
+          Opening your FitMed meeting…
+        </p>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
+      <div className="rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-6 text-sm text-rose-800 dark:text-rose-300">
         {error}
       </div>
     );
@@ -55,17 +61,17 @@ export default function MeetJoinClient({ roomId }: { roomId: string }) {
   const apt = payload?.appointment;
   if (payload?.status === "waiting") {
     return (
-      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center space-y-3">
-        <Clock className="w-10 h-10 text-amber-600 mx-auto" />
-        <h1 className="text-xl font-extrabold text-[#0B2D5C]">It is not yet time for this meeting</h1>
-        <p className="text-sm text-amber-950">
+      <div className="rounded-3xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-8 text-center space-y-3">
+        <Clock className="w-10 h-10 text-amber-600 dark:text-amber-400 mx-auto" />
+        <h1 className="text-xl font-extrabold text-[#0B2D5C] dark:text-white">It is not yet time for this meeting</h1>
+        <p className="text-sm text-amber-950 dark:text-amber-200">
           Your video visit with <strong>{apt?.doctorName}</strong> is scheduled for{" "}
           <strong>
             {apt?.scheduledDate} at {apt?.scheduledTime}
           </strong>{" "}
           (Africa/Kigali).
         </p>
-        <p className="text-sm font-bold text-[#0B2D5C]">
+        <p className="text-sm font-bold text-[#0B2D5C] dark:text-[#12B8B0]">
           Please wait {formatCountdown(payload.minutesUntilStart)}. This page will open the room automatically when the time arrives.
         </p>
       </div>
@@ -74,11 +80,11 @@ export default function MeetJoinClient({ roomId }: { roomId: string }) {
 
   if (payload?.status === "ended" || payload?.status === "completed") {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center space-y-2">
-        <h1 className="text-xl font-extrabold text-[#0B2D5C]">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1f35] p-8 text-center space-y-2">
+        <h1 className="text-xl font-extrabold text-[#0B2D5C] dark:text-white">
           {payload?.status === "completed" ? "This meeting is completed" : "This meeting has ended"}
         </h1>
-        <p className="text-sm text-slate-600">Ask your doctor to reschedule if you still need a visit.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Ask your doctor to reschedule if you still need a visit.</p>
       </div>
     );
   }
