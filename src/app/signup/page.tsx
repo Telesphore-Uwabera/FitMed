@@ -46,16 +46,54 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Profile Image & WebP Conversion State
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [webpResult, setWebpResult] = useState<WebPConversionResult | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+
   // National ID Document Image & WebP Conversion State
   const idFileInputRef = useRef<HTMLInputElement>(null);
   const [nationalIdImage, setNationalIdImage] = useState<string | null>(null);
   const [idWebpResult, setIdWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingId, setIsConvertingId] = useState(false);
 
+  const [profileCloudUrl, setProfileCloudUrl] = useState("");
   const [idCloudUrl, setIdCloudUrl] = useState("");
+  const [uploadingProfile, setUploadingProfile] = useState(false);
   const [uploadingId, setUploadingId] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsConverting(true);
+      setUploadingProfile(true);
+      setProfileCloudUrl("");
+      const converted = await convertToWebP(file, 0.85, 800);
+      setWebpResult(converted);
+      setProfileImage(converted.dataUrl);
+      setIsConverting(false);
+      const uploaded = await uploadToCloudinary(converted.file, "fitmed/applicants");
+      if (!isCloudinaryUrl(uploaded.url)) {
+        warning("Photo not saved", uploaded.error || "Please upload a clear passport photo to proceed.");
+        setProfileImage(null);
+        setWebpResult(null);
+        return;
+      }
+      setProfileCloudUrl(uploaded.url);
+      info("Passport photo ready", "Your passport photo is uploaded and verified.");
+    } catch (err) {
+      console.error("WebP conversion error:", err);
+      warning("Photo not saved", "Could not process the passport photo. Try another image.");
+      setProfileImage(null);
+      setWebpResult(null);
+    } finally {
+      setIsConverting(false);
+      setUploadingProfile(false);
+    }
+  };
 
   const handleIdImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,16 +109,16 @@ export default function SignUpPage() {
       setIsConvertingId(false);
       const uploaded = await uploadToCloudinary(converted.file, "fitmed/national_ids");
       if (!isCloudinaryUrl(uploaded.url)) {
-        warning("ID not saved", "Your ID document could not be saved. Please try a different image.");
+        warning("ID document not saved", uploaded.error || "Please upload a readable National ID document copy.");
         setNationalIdImage(null);
         setIdWebpResult(null);
         return;
       }
       setIdCloudUrl(uploaded.url);
-      info("ID document ready", "Your National ID / Passport has been uploaded and is ready for submission.");
+      info("National ID ready", "Your National ID document is uploaded and verified.");
     } catch (err) {
       console.error("National ID WebP conversion error:", err);
-      warning("ID not saved", "Could not process the ID document. Try another image.");
+      warning("ID document not saved", "Could not process the National ID photo. Try another image.");
       setNationalIdImage(null);
       setIdWebpResult(null);
     } finally {
@@ -88,6 +126,8 @@ export default function SignUpPage() {
       setUploadingId(false);
     }
   };
+
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,15 +149,15 @@ export default function SignUpPage() {
       warning("Check your details", "Date of birth, gender, and address are required.");
       return;
     }
-    if (!isCloudinaryUrl(idCloudUrl)) {
+    if (!isCloudinaryUrl(profileCloudUrl) || !isCloudinaryUrl(idCloudUrl)) {
       warning(
-        "National ID required",
-        "Please upload a clear photo of your National ID / Passport document before submitting."
+        "Photos required",
+        "Please upload both your Passport Photo and National ID document before submitting."
       );
       return;
     }
-    if (uploadingId) {
-      warning("ID document still uploading", "Please wait until your ID document has finished uploading.");
+    if (uploadingProfile || uploadingId) {
+      warning("Photos uploading", "Please wait a moment while your photos finish uploading.");
       return;
     }
     setIsSubmitting(true);
@@ -135,6 +175,7 @@ export default function SignUpPage() {
           gender,
           address: address.trim(),
           password,
+          avatarUrl: profileCloudUrl,
           idDocUrl: idCloudUrl,
         }),
       });
@@ -256,19 +297,88 @@ export default function SignUpPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid lg:grid-cols-2 gap-4">
+                {/* ── PASSPORT PHOTO UPLOAD ── */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Passport Photo
+                    </label>
+                    <span className="text-[10px] font-bold text-[#12B8B0] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                      Required for Certificate
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-200 border-2 border-[#12B8B0] flex-shrink-0 flex items-center justify-center shadow-inner">
+                      {profileImage ? (
+                        <img
+                          src={profileImage}
+                          alt="Passport Photo Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-8 h-8 text-slate-400" />
+                      )}
+
+                      {(isConverting || uploadingProfile) && (
+                        <div className="absolute inset-0 bg-[#0B2D5C]/70 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageSelect}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-[#12B8B0]" />
+                        <span>{profileImage ? "Change Passport Photo" : "Upload Passport Photo"}</span>
+                      </button>
+                      <p className="text-[11px] text-slate-400">
+                        Upload a clear passport-style face photo on a plain background.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Upload confirmation */}
+                  {profileCloudUrl ? (
+                    <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-[11px] text-teal-900 font-semibold flex items-center justify-between animate-in fade-in">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+                        <span>
+                          Passport photo uploaded &amp; verified
+                        </span>
+                      </div>
+                      <span className="text-[10px] uppercase font-bold bg-teal-200 text-teal-800 px-2 py-0.5 rounded-md">
+                        Ready
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+
                 {/* ── NATIONAL ID / PASSPORT DOCUMENT UPLOAD ── */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                       National ID / Passport Document
                     </label>
-                    <span className="text-[10px] font-bold text-[#12B8B0] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
-                      Required for Account Verification
+                    <span className="text-[10px] font-bold text-[#12B8B0] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                      Required for Identity Verification
                     </span>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-slate-200 border-2 border-slate-300 flex-shrink-0 flex items-center justify-center shadow-inner">
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-24 h-16 rounded-xl overflow-hidden bg-slate-200 border-2 border-slate-300 flex-shrink-0 flex items-center justify-center shadow-inner">
                       {nationalIdImage ? (
                         <img
                           src={nationalIdImage}
@@ -276,7 +386,7 @@ export default function SignUpPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <IdCard className="w-10 h-10 text-slate-400" />
+                        <IdCard className="w-8 h-8 text-slate-400" />
                       )}
 
                       {(isConvertingId || uploadingId) && (
@@ -297,34 +407,32 @@ export default function SignUpPage() {
                       <button
                         type="button"
                         onClick={() => idFileInputRef.current?.click()}
-                        className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                        className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
                       >
                         <UploadCloud className="w-3.5 h-3.5 text-[#12B8B0]" />
-                        <span>{nationalIdImage ? "Change National ID Document" : "Upload National ID / Passport Photo"}</span>
+                        <span>{nationalIdImage ? "Change National ID" : "Upload National ID / Passport"}</span>
                       </button>
-                      <p className="text-[11px] text-slate-500">
-                        Upload a clear photo or copy of your Rwanda National ID or Passport. Our medical administration team uses this to verify your identity.
+                      <p className="text-[11px] text-slate-400">
+                        Upload a clear photo of your Rwanda National ID or passport for verification.
                       </p>
                     </div>
                   </div>
 
                   {/* Upload confirmation */}
-                  {uploadingId ? (
-                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 font-semibold flex items-center gap-1.5 animate-in fade-in">
-                      <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                      <span>Uploading document for verification…</span>
-                    </div>
-                  ) : idCloudUrl ? (
+                  {idCloudUrl ? (
                     <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-[11px] text-sky-900 font-semibold flex items-center justify-between animate-in fade-in">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
-                        <span>National ID / Passport document uploaded &amp; verified</span>
+                        <span>
+                          National ID document uploaded &amp; verified
+                        </span>
                       </div>
                       <span className="text-[10px] uppercase font-bold bg-sky-200 text-sky-800 px-2 py-0.5 rounded-md">
                         Ready
                       </span>
                     </div>
                   ) : null}
+                </div>
                 </div>
 
                 {/* Full Name */}

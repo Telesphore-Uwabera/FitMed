@@ -44,11 +44,45 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!isCloudinaryUrl(idDocUrl)) {
+    let finalAvatarUrl = String(avatarUrl || "");
+    let finalIdDocUrl = String(idDocUrl || "");
+
+    // If base64 data URLs are provided, upload to Cloudinary on the server
+    if (finalAvatarUrl.startsWith("data:") || finalIdDocUrl.startsWith("data:")) {
+      try {
+        const { v2: cloudinary } = await import("cloudinary");
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+          secure: true,
+        });
+        if (finalAvatarUrl.startsWith("data:")) {
+          const upPhoto = await cloudinary.uploader.upload(finalAvatarUrl, {
+            folder: "fitmed/applicants",
+            format: "webp",
+            resource_type: "image",
+          });
+          if (upPhoto?.secure_url) finalAvatarUrl = upPhoto.secure_url;
+        }
+        if (finalIdDocUrl.startsWith("data:")) {
+          const upId = await cloudinary.uploader.upload(finalIdDocUrl, {
+            folder: "fitmed/national_ids",
+            format: "webp",
+            resource_type: "image",
+          });
+          if (upId?.secure_url) finalIdDocUrl = upId.secure_url;
+        }
+      } catch (uploadErr) {
+        console.warn("Register route image upload fallback warning:", uploadErr);
+      }
+    }
+
+    if (!finalAvatarUrl || !finalIdDocUrl) {
       return NextResponse.json(
         {
           success: false,
-          error: "Please upload a clear photo of your National ID / Passport document before submitting your registration.",
+          error: "Passport photo and National ID document are both required to create your account.",
         },
         { status: 400 }
       );
@@ -93,8 +127,8 @@ export async function POST(request: NextRequest) {
       address: cleanAddress,
       applicantId: await nextApplicantId(),
       password: hashPassword(cleanPassword),
-      avatarUrl: avatarUrl || undefined,
-      nationalIdImageUrl: idDocUrl || "",
+      avatarUrl: finalAvatarUrl || undefined,
+      nationalIdImageUrl: finalIdDocUrl || "",
       role: "user",
       status: "pending_approval",
       requiresPasswordReset: false,

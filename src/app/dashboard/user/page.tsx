@@ -1619,18 +1619,18 @@ export default function UserDashboard() {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <div>
                     <h3 className="text-base font-bold text-[#0B2D5C]">Your personal details</h3>
-                    <p className="text-xs text-slate-500">Upload your Passport Photo and a copy of your National ID / Passport. These are required for medical certificate applications.</p>
+                    <p className="text-xs text-slate-500">Manage your legal identification details, official passport photo, and National ID document.</p>
                   </div>
                 </div>
 
                 {/* Photo Uploaders Row: Avatar + National ID */}
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {/* 1. Avatar Uploader */}
+                  {/* 1. Passport Photo Uploader */}
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
                     <div className="flex items-center gap-3.5">
                       <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#12B8B0] relative shadow-sm flex-shrink-0 bg-slate-200 flex items-center justify-center">
                         {profileData.avatarUrl ? (
-                          <img src={profileData.avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
+                          <img src={profileData.avatarUrl} alt="Passport Photo" className="w-full h-full object-cover" />
                         ) : (
                           <Camera className="w-6 h-6 text-slate-400" />
                         )}
@@ -1641,8 +1641,8 @@ export default function UserDashboard() {
                         )}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-[#0B2D5C]">Passport Profile Photo</div>
-                        <div className="text-[11px] text-slate-500">Clear face photo on neutral background.</div>
+                        <div className="text-xs font-bold text-[#0B2D5C]">Passport Photo (Used on Certificate)</div>
+                        <div className="text-[11px] text-slate-500">Official face photo automatically placed on all your medical certificates.</div>
                         {avatarWebpResult && (
                           <div className="text-[10px] text-teal-700 font-bold mt-0.5 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 inline-block">
                             Compressed ({`${avatarWebpResult.reductionPercentage}%`} smaller)
@@ -1652,7 +1652,7 @@ export default function UserDashboard() {
                     </div>
                     <label className="cursor-pointer px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
                       <Camera className="w-3.5 h-3.5 text-[#12B8B0]" />
-                      <span>{profileData.avatarUrl ? "Change Photo" : "Upload Photo"}</span>
+                      <span>{profileData.avatarUrl ? "Change Passport Photo" : "Upload Passport Photo"}</span>
                       <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
                     </label>
                   </div>
@@ -1994,24 +1994,24 @@ export default function UserDashboard() {
 
             <div className="space-y-1.5 pr-8">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#12B8B0] text-[10px] font-extrabold uppercase tracking-wider">
-                Patient Verification Required
+                Identity &amp; Certificate Verification
               </div>
               <h3 className="text-xl sm:text-2xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                Upload Identification Photos
+                Identity Documents Verification
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                In compliance with medical regulatory guidelines, examining physicians require your clear face photo and a copy of your National ID / Passport to review your application.
+                Your passport photo has been automatically fetched from your profile. Please ensure your National ID / Passport document is uploaded for physician verification.
               </p>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
-              {/* Profile Photo Uploader */}
+              {/* 1. Passport Photo (Auto-fetched from Profile) */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#12B8B0] bg-slate-200 flex items-center justify-center relative flex-shrink-0">
                       {profileData.avatarUrl ? (
-                        <img src={profileData.avatarUrl} alt="Passport Face" className="w-full h-full object-cover" />
+                        <img src={profileData.avatarUrl} alt="Passport Photo" className="w-full h-full object-cover" />
                       ) : (
                         <Camera className="w-6 h-6 text-slate-400" />
                       )}
@@ -2022,27 +2022,27 @@ export default function UserDashboard() {
                       )}
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-[#0B2D5C]">Passport Profile Photo</div>
-                      <div className="text-[10px] text-slate-500">Clear face on plain background.</div>
+                      <div className="text-xs font-bold text-[#0B2D5C]">Passport Photo</div>
+                      <div className="text-[10px] text-slate-500">Official certificate face photo.</div>
                     </div>
                   </div>
                   {profileData.avatarUrl ? (
-                    <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Photo uploaded
+                    <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Auto-fetched from Profile
                     </div>
                   ) : (
-                    <div className="text-[10px] text-amber-700 font-medium">Required for certificate issuance</div>
+                    <div className="text-[10px] text-amber-700 font-medium">Please upload a passport face photo</div>
                   )}
                 </div>
 
                 <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all text-center">
                   <Camera className="w-3.5 h-3.5 text-[#12B8B0]" />
-                  <span>{profileData.avatarUrl ? "Change Photo" : "Upload Face Photo"}</span>
+                  <span>{profileData.avatarUrl ? "Change Photo" : "Upload Passport Photo"}</span>
                   <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
                 </label>
               </div>
 
-              {/* National ID Photo Uploader */}
+              {/* 2. National ID Document Upload */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
@@ -2060,21 +2060,23 @@ export default function UserDashboard() {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-[#0B2D5C]">National ID / Passport</div>
-                      <div className="text-[10px] text-slate-500">Document copy or clear photo.</div>
+                      <div className="text-[10px] text-slate-500">Document copy or photo.</div>
                     </div>
                   </div>
                   {profileData.nationalIdImageUrl ? (
-                    <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> ID copy uploaded
+                    <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> National ID Document Ready
                     </div>
                   ) : (
-                    <div className="text-[10px] text-amber-700 font-medium">Required for identity verification</div>
+                    <div className="text-[10px] text-amber-700 font-bold bg-amber-50 px-2 py-1 rounded-md border border-amber-200">
+                      Upload required to submit
+                    </div>
                   )}
                 </div>
 
                 <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all text-center">
                   <FileText className="w-3.5 h-3.5 text-[#12B8B0]" />
-                  <span>{profileData.nationalIdImageUrl ? "Change ID Document" : "Upload ID Document"}</span>
+                  <span>{profileData.nationalIdImageUrl ? "Change ID Document" : "Upload National ID Document"}</span>
                   <input type="file" accept="image/*" onChange={handleNationalIdChange} className="hidden" />
                 </label>
               </div>
