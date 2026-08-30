@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!isCloudinaryUrl(avatarUrl) || !isCloudinaryUrl(idDocUrl)) {
+    if (!isCloudinaryUrl(idDocUrl)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Profile photo and National ID photo must both be stored on Cloudinary before the account can be created.",
+          error: "Please upload a clear photo of your National ID / Passport document before submitting your registration.",
         },
         { status: 400 }
       );
