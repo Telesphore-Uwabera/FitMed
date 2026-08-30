@@ -1145,15 +1145,27 @@ export default function UserDashboard() {
                     >
                       Reschedule
                     </button>
-                    <button
-                      onClick={() => {
-                        window.location.href = `/meet/${encodeURIComponent(apt.roomId || apt.appointmentId)}`;
-                      }}
-                      className="px-5 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95"
-                    >
-                      <Video className="w-4 h-4" />
-                      <span>Enter Video Room</span>
-                    </button>
+                    {(() => {
+                      const lifecycle = meetingLifecycleStatus(apt);
+                      const canEnter = lifecycle === "in-progress" || lifecycle === "scheduled" || lifecycle === "rescheduled";
+                      const isRejoinable = lifecycle === "rejoinable";
+                      if (!canEnter && !isRejoinable) return null;
+                      return (
+                        <button
+                          onClick={() => {
+                            window.location.href = `/meet/${encodeURIComponent(apt.roomId || apt.appointmentId)}`;
+                          }}
+                          className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95 ${
+                            isRejoinable
+                              ? "bg-violet-600 hover:bg-violet-700 text-white"
+                              : "bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C]"
+                          }`}
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>{isRejoinable ? "Rejoin Meeting" : "Enter Video Room"}</span>
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -1219,13 +1231,25 @@ export default function UserDashboard() {
                     >
                       Reschedule
                     </button>
-                    <button
-                      onClick={() => handleStartCall(apt)}
-                      className="px-6 py-3 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-black text-xs flex items-center gap-2 shadow-md transition-all active:scale-95"
-                    >
-                      <PlayCircle className="w-4 h-4" />
-                      <span>Start Consultation</span>
-                    </button>
+                    {(() => {
+                      const lifecycle = meetingLifecycleStatus(apt);
+                      const isRejoinable = lifecycle === "rejoinable";
+                      const canStart = lifecycle === "in-progress" || lifecycle === "scheduled" || lifecycle === "rescheduled" || isRejoinable;
+                      if (!canStart) return null;
+                      return (
+                        <button
+                          onClick={() => handleStartCall(apt)}
+                          className={`px-6 py-3 rounded-xl font-black text-xs flex items-center gap-2 shadow-md transition-all active:scale-95 ${
+                            isRejoinable
+                              ? "bg-violet-600 hover:bg-violet-700 text-white"
+                              : "bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C]"
+                          }`}
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          <span>{isRejoinable ? "Rejoin Consultation" : "Start Consultation"}</span>
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}

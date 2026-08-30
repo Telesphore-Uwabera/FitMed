@@ -1452,7 +1452,45 @@ export default function DoctorDashboardPage() {
                       <p className="text-[11px] font-bold text-rose-700 max-w-[220px] text-right">
                         Meeting time has ended. Reschedule to invite the applicant again.
                       </p>
-                    ) : meetingLifecycleStatus(apt) === "completed" || meetingLifecycleStatus(apt) === "cancelled" ? null : (
+                    ) : meetingLifecycleStatus(apt) === "completed" || meetingLifecycleStatus(apt) === "cancelled" ? null
+                    : meetingLifecycleStatus(apt) === "rejoinable" ? (
+                      <>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch("/api/appointments", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ appointmentId: apt.appointmentId, action: "remind" }),
+                              });
+                              const data = await res.json();
+                              if (!data.success) { error("Reminder not sent", data.error || "Please try again."); return; }
+                              success("Reminder sent", `We emailed ${apt.applicantName} about their visit.`);
+                            } catch { error("Reminder not sent", "Could not reach the server."); }
+                          }}
+                          className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors flex items-center gap-1.5"
+                        >
+                          <Mail className="w-3.5 h-3.5 text-[#12B8B0]" />
+                          <span>Send Reminder</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCandidate({
+                              name: apt.applicantName,
+                              purpose: apt.purpose,
+                              flags: "Rejoining video consultation",
+                              history: apt.notes,
+                            });
+                            startMeeting(apt.appointmentId);
+                            goToNav("telehealth");
+                          }}
+                          className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-black text-xs flex items-center gap-2 shadow-sm transition-all active:scale-95"
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>Rejoin Meeting</span>
+                        </button>
+                      </>
+                    ) : (
                       <>
                     <button
                       onClick={async () => {

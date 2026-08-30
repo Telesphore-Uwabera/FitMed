@@ -49,6 +49,15 @@ export function meetingWindow(apt: {
   return { start, end, canJoin: true, minutesUntilStart: Math.max(0, minutesUntilStart), status: "open" as const };
 }
 
+/** Returns true if the meeting window (start → end+30min) is currently open */
+export function isInMeetingWindow(apt: {
+  scheduledDate?: string;
+  scheduledTime?: string;
+  durationMinutes?: number;
+}) {
+  return meetingWindow(apt).status === "open";
+}
+
 export function publicMeetUrl(roomId: string) {
   const base = (process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com").replace(/\/$/, "");
   return `${base}/meet/${encodeURIComponent(roomId)}`;
@@ -81,12 +90,19 @@ export function meetingLifecycleStatus(apt: {
   status?: string;
 }) {
   const stored = String(apt.status || "scheduled").toLowerCase();
-  if (stored === "completed" || stored === "cancelled") return stored;
   const start = appointmentStartMs(apt.scheduledDate, apt.scheduledTime);
   if (!start) return stored || "scheduled";
   const duration = Number(apt.durationMinutes || 15);
-  const end = start + duration * 60 * 1000;
+  // Use +30min grace so Rejoin is shown for the full window
+  const end = start + (duration + 30) * 60 * 1000;
   const now = Date.now();
+
+  // If someone left (completed/cancelled) but the window is still open → rejoinable
+  if ((stored === "completed" || stored === "cancelled") && now >= start && now <= end) {
+    return "rejoinable";
+  }
+  if (stored === "completed" || stored === "cancelled") return stored;
+
   if (now < start) return stored === "rescheduled" ? "rescheduled" : "scheduled";
   if (now <= end) return "in-progress";
   return "overdue";
@@ -95,6 +111,7 @@ export function meetingLifecycleStatus(apt: {
 export function meetingStatusLabel(status: string) {
   const value = String(status || "").toLowerCase();
   if (value === "in-progress") return "In progress";
+  if (value === "rejoinable") return "Rejoining available";
   if (value === "overdue") return "Overdue";
   if (value === "rescheduled") return "Rescheduled";
   if (value === "completed") return "Completed";
@@ -105,6 +122,7 @@ export function meetingStatusLabel(status: string) {
 export function meetingStatusClass(status: string) {
   const value = String(status || "").toLowerCase();
   if (value === "in-progress") return "bg-sky-100 text-sky-800";
+  if (value === "rejoinable") return "bg-violet-100 text-violet-800";
   if (value === "overdue") return "bg-rose-100 text-rose-800";
   if (value === "rescheduled") return "bg-amber-100 text-amber-800";
   if (value === "completed") return "bg-emerald-100 text-emerald-800";
