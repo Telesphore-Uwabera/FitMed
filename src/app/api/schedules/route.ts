@@ -8,7 +8,7 @@ export async function GET() {
     await connectToDatabase();
     const [schedules, appointments] = await Promise.all([
       Schedule.find({}).sort({ updatedAt: -1 }).lean(),
-      Appointment.find({}).sort({ scheduledDate: 1, scheduledTime: 1 }).lean(),
+      Appointment.find({}).sort({ createdAt: -1, scheduledDate: -1, scheduledTime: -1, _id: -1 }).lean(),
     ]);
     return NextResponse.json({
       success: true,

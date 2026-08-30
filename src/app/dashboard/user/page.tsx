@@ -1093,7 +1093,17 @@ export default function UserDashboard() {
                   No scheduled appointments.
                 </div>
               )}
-              {appointments.map((apt) => (
+              {[...appointments]
+                .sort((a, b) => {
+                  const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  if (timeA > 0 && timeB > 0 && timeA !== timeB) return timeB - timeA;
+                  const schedA = `${a.scheduledDate || ""} ${a.scheduledTime || ""}`;
+                  const schedB = `${b.scheduledDate || ""} ${b.scheduledTime || ""}`;
+                  if (schedA && schedB && schedA !== schedB) return schedB.localeCompare(schedA);
+                  return String(b._id || b.appointmentId || "").localeCompare(String(a._id || a.appointmentId || ""));
+                })
+                .map((apt) => (
                 <div
                   key={apt.appointmentId}
                   className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-[#12B8B0] transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"

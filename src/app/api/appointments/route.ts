@@ -51,8 +51,23 @@ export async function GET(request: NextRequest) {
     if (or.length && !applicantEmail) query.$or = or;
     if (status) query.status = status;
 
-    const appointments = await Appointment.find(query).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ success: true, appointments });
+    const appointments = await Appointment.find(query)
+      .sort({ createdAt: -1, scheduledDate: -1, scheduledTime: -1, _id: -1 })
+      .lean();
+
+    const sorted = (appointments || []).sort((a: any, b: any) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA > 0 && timeB > 0 && timeA !== timeB) return timeB - timeA;
+      
+      const schedA = `${a.scheduledDate || ""} ${a.scheduledTime || ""}`;
+      const schedB = `${b.scheduledDate || ""} ${b.scheduledTime || ""}`;
+      if (schedA && schedB && schedA !== schedB) return schedB.localeCompare(schedA);
+
+      return String(b._id || b.appointmentId || "").localeCompare(String(a._id || a.appointmentId || ""));
+    });
+
+    return NextResponse.json({ success: true, appointments: sorted });
   } catch (error: any) {
     console.error("GET appointments error:", error);
     return NextResponse.json({ success: false, error: error.message, appointments: [] }, { status: 500 });
