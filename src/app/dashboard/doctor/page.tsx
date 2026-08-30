@@ -63,7 +63,7 @@ import { useToast } from "@/components/ToastProvider";
 import { subscribeLiveRefresh, broadcastLiveRefresh } from "@/lib/liveRefresh";
 import { useDialog } from "@/components/DialogProvider";
 import { displayValue, isIssuedCertificate, sameCalendarDay, todayShift } from "@/lib/records";
-import { canRescheduleMeeting, isMeetingClosed, meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
+import { canRescheduleMeeting, defaultUpcomingScheduleTime, isMeetingClosed, meetingLifecycleStatus, meetingStatusClass, meetingStatusLabel } from "@/lib/meetingTime";
 
 export default function DoctorDashboardPage() {
   const { success, error, warning, info } = useToast();
@@ -102,21 +102,24 @@ export default function DoctorDashboardPage() {
     applicantPhone: "",
     purpose: "",
     scheduledDate: "",
-    scheduledTime: "14:30",
+    scheduledTime: "",
     durationMinutes: 15,
     notes: "",
     certificateDraftId: "",
   });
   useEffect(() => {
-    setScheduleForm((prev) =>
-      prev.scheduledDate ? prev : { ...prev, scheduledDate: new Date().toISOString().split("T")[0] }
-    );
+    const def = defaultUpcomingScheduleTime(15);
+    setScheduleForm((prev) => ({
+      ...prev,
+      scheduledDate: prev.scheduledDate || def.scheduledDate,
+      scheduledTime: prev.scheduledTime || def.scheduledTime,
+    }));
   }, []);
   const [doctorAppointments, setDoctorAppointments] = useState<any[]>([]);
   const [rescheduleApt, setRescheduleApt] = useState<any | null>(null);
   const [rescheduleForm, setRescheduleForm] = useState({
     scheduledDate: "",
-    scheduledTime: "09:00",
+    scheduledTime: "",
     durationMinutes: 15,
   });
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -1355,13 +1358,14 @@ export default function DoctorDashboardPage() {
               </div>
               <button
                 onClick={() => {
+                  const def = defaultUpcomingScheduleTime(15);
                   setScheduleForm({
                     applicantName: "",
                     applicantEmail: "",
                     applicantPhone: "",
                     purpose: "",
-                    scheduledDate: new Date().toISOString().split("T")[0],
-                    scheduledTime: "09:00",
+                    scheduledDate: def.scheduledDate,
+                    scheduledTime: def.scheduledTime,
                     durationMinutes: 15,
                     notes: "",
                     certificateDraftId: "",
@@ -1421,10 +1425,11 @@ export default function DoctorDashboardPage() {
                     {canRescheduleMeeting(apt) && (
                       <button
                         onClick={() => {
+                          const def = defaultUpcomingScheduleTime(15);
                           setRescheduleApt(apt);
                           setRescheduleForm({
-                            scheduledDate: apt.scheduledDate || new Date().toISOString().split("T")[0],
-                            scheduledTime: apt.scheduledTime || "09:00",
+                            scheduledDate: apt.scheduledDate || def.scheduledDate,
+                            scheduledTime: apt.scheduledTime || def.scheduledTime,
                             durationMinutes: Number(apt.durationMinutes || 15),
                           });
                         }}

@@ -12,8 +12,17 @@ const pad = (value: number) => String(value).padStart(2, "0");
 const hours = Array.from({ length: 24 }, (_, index) => ({ value: pad(index), label: pad(index) }));
 const minutes = Array.from({ length: 12 }, (_, index) => ({ value: pad(index * 5), label: pad(index * 5) }));
 
+function getDefaultTimeAhead() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 15);
+  const remainder = now.getMinutes() % 5;
+  if (remainder !== 0) now.setMinutes(now.getMinutes() + (5 - remainder));
+  return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 export default function BrandTimePicker({ value, onChange, className = "" }: BrandTimePickerProps) {
-  const [hour = "09", minute = "00"] = String(value || "09:00").split(":");
+  const fallback = getDefaultTimeAhead();
+  const [hour = fallback.split(":")[0], minute = fallback.split(":")[1]] = String(value || fallback).split(":");
   const minuteValue = minutes.some((item) => item.value === minute.slice(0, 2)) ? minute.slice(0, 2) : "00";
 
   return (

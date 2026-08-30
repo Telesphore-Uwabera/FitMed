@@ -30,6 +30,7 @@ import {
 import BrandDatePicker from "@/components/BrandDatePicker";
 import BrandTimePicker from "@/components/BrandTimePicker";
 import BrandSelect from "@/components/BrandSelect";
+import { defaultUpcomingScheduleTime } from "@/lib/meetingTime";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -95,8 +96,8 @@ export default function CertificateActionPanel({
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showVideoForm, setShowVideoForm] = useState(false);
-  const [videoDate, setVideoDate] = useState(new Date().toISOString().split("T")[0]);
-  const [videoTime, setVideoTime] = useState("14:30");
+  const [videoDate, setVideoDate] = useState(() => defaultUpcomingScheduleTime(15).scheduledDate);
+  const [videoTime, setVideoTime] = useState(() => defaultUpcomingScheduleTime(15).scheduledTime);
   const [videoDuration, setVideoDuration] = useState(15);
   const [videoNotes, setVideoNotes] = useState("");
   const [showApproveOptions, setShowApproveOptions] = useState(false);

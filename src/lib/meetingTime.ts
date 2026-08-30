@@ -1,5 +1,23 @@
 /** Appointment times are booked in Africa/Kigali (UTC+2, no DST). */
 
+export function defaultUpcomingScheduleTime(minutesAhead = 15): { scheduledDate: string; scheduledTime: string } {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + minutesAhead);
+  const remainder = now.getMinutes() % 5;
+  if (remainder !== 0) {
+    now.setMinutes(now.getMinutes() + (5 - remainder));
+  }
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return {
+    scheduledDate: `${year}-${month}-${day}`,
+    scheduledTime: `${hours}:${minutes}`,
+  };
+}
+
 export function appointmentStartMs(scheduledDate?: string, scheduledTime?: string) {
   const date = String(scheduledDate || "").trim();
   const time = String(scheduledTime || "00:00").trim();
