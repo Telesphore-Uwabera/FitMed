@@ -118,9 +118,34 @@ export default function WebRTCVideoCall({
 
   const ICE_SERVERS: RTCConfiguration = {
     iceServers: [
+      // Google public STUN servers
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      // Open Relay TURN servers (free, no auth required)
+      // These relay traffic when direct P2P is blocked by NAT/firewall/mobile
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turns:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
     ],
+    iceCandidatePoolSize: 10,
   };
 
   const formatDuration = (secs: number) => {
@@ -187,16 +212,25 @@ export default function WebRTCVideoCall({
   const startCall = useCallback(async () => {
     if (makingOfferRef.current || role !== "doctor") return;
     if (peerConnectionRef.current?.localDescription) return;
-    const stream = localStreamRef.current;
-    if (!stream || !socketRef.current) return;
 
+    // If local media is not yet ready, wait a moment and retry once.
+    // This fixes the race where user-connected fires before getUserMedia resolves.
+    if (!localStreamRef.current || !socketRef.current) {
+      setTimeout(() => void startCall(), 1500);
+      return;
+    }
+
+    const stream = localStreamRef.current;
     makingOfferRef.current = true;
     try {
       const pc = createPeerConnection();
       attachLocalTracks(pc, stream);
-      const offer = await pc.createOffer();
+      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
       await pc.setLocalDescription(offer);
       socketRef.current.emit("offer", { roomId, offer });
+    } catch (err) {
+      console.error("[WebRTC] startCall failed:", err);
+      makingOfferRef.current = false;
     } finally {
       makingOfferRef.current = false;
     }
@@ -256,8 +290,10 @@ export default function WebRTCVideoCall({
         if (role === "doctor") void startCall();
       });
 
+      // Both peers in room: always attempt (re)start so the doctor
+      // can retry if user-connected fired before local media was ready.
       socket.on("call-ready", () => {
-        if (role === "doctor" && !peerConnectionRef.current) void startCall();
+        if (role === "doctor") void startCall();
       });
 
       socket.on("offer", async ({ offer }: { offer: RTCSessionDescriptionInit }) => {
