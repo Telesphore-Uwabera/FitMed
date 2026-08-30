@@ -122,6 +122,10 @@ export default function WebRTCVideoCall({
   const [remoteLevel, setRemoteLevel] = useState(0);
   const [localSpeaking, setLocalSpeaking] = useState(false);
   const [remoteSpeaking, setRemoteSpeaking] = useState(false);
+  // ── Device / tab switch ──────────────────────────────────────────────────
+  // "idle" | "pending-new" | "takeover-request" | "evicted"
+  const [deviceSwitchState, setDeviceSwitchState] = useState<"idle" | "pending-new" | "takeover-request" | "evicted">("idle");
+  const [pendingNewSocketId, setPendingNewSocketId] = useState<string | null>(null);
 
   // ── Refs — NEVER stale, never in useCallback deps ─────────────────────────
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -143,25 +147,26 @@ export default function WebRTCVideoCall({
   // Keep refs in sync
   useEffect(() => { onRemoteJoinedRef.current = onRemoteJoined; }, [onRemoteJoined]);
 
-  // ── Theme tokens (proper light vs dark) ────────────────────────────────────
-  const bg       = dark ? "bg-slate-950"     : "bg-gray-100";
-  const bgCard   = dark ? "bg-slate-900/95"  : "bg-white/95";
-  const bgMid    = dark ? "bg-slate-800"     : "bg-gray-200";
-  const border   = dark ? "border-slate-700" : "border-gray-200";
-  const txt      = dark ? "text-white"       : "text-gray-900";
-  const txtSub   = dark ? "text-slate-400"   : "text-gray-500";
-  const ctrlBg   = dark
-    ? "bg-slate-800/90 hover:bg-slate-700"
-    : "bg-white/90 hover:bg-gray-100";
-  const ctrlTxt  = dark ? "text-white"       : "text-gray-800";
-  const inputBg  = dark
-    ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
-    : "bg-gray-100 border-gray-300 text-gray-900 placeholder-gray-400";
-  const chipBg   = dark
-    ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-    : "bg-gray-200 hover:bg-gray-300 text-gray-700 border border-gray-300";
-  const videoBg  = dark ? "bg-slate-950"     : "bg-slate-800"; // video stage always dark for contrast
-  const overlayBg = dark ? "bg-black/50"     : "bg-black/40";
+  // ── Theme tokens — mirrors the site design system ─────────────────────────
+  // Chat/controls panel uses real bg; video stage is always slate-900 for contrast
+  const bg        = dark ? "bg-[#071422]"         : "bg-white";
+  const bgCard    = dark ? "bg-[#0d1f35]/95"       : "bg-white/95";
+  const bgMid     = dark ? "bg-[#122840]"          : "bg-slate-100";
+  const border    = dark ? "border-[#1e3a5f]"      : "border-slate-200";
+  const txt       = dark ? "text-white"            : "text-[#0B2D5C]";
+  const txtSub    = dark ? "text-slate-400"         : "text-slate-500";
+  const ctrlBg    = dark
+    ? "bg-[#122840] hover:bg-[#1e3a5f]"
+    : "bg-slate-100 hover:bg-slate-200";
+  const ctrlTxt   = dark ? "text-white"            : "text-[#0B2D5C]";
+  const inputBg   = dark
+    ? "bg-[#122840] border-[#1e3a5f] text-white placeholder-slate-500"
+    : "bg-slate-100 border-slate-300 text-[#0B2D5C] placeholder-slate-400";
+  const chipBg    = dark
+    ? "bg-[#122840] hover:bg-[#1e3a5f] text-slate-300 border border-[#1e3a5f]"
+    : "bg-slate-100 hover:bg-slate-200 text-[#0B2D5C] border border-slate-200";
+  const videoBg   = "bg-slate-900"; // video stage always dark for contrast
+  const overlayBg = "bg-black/50";  // control overlays on top of video
 
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, "0");
@@ -332,7 +337,38 @@ export default function WebRTCVideoCall({
         socket.emit("join-room", { roomId, name: userName, role });
       });
 
-      socket.on("room-full", () => setMediaError("Room is full."));
+      socket.on("room-full", () => setMediaError("This consultation room is full. Only doctor and applicant are allowed."));
+
+      // ── Device/tab switch events ──────────────────────────────────────────
+      // New tab/device is knocking — old session sees this
+      socket.on("device-takeover-request", ({ newSocketId }: { newSocketId: string; name: string; role: string }) => {
+        setPendingNewSocketId(newSocketId);
+        setDeviceSwitchState("takeover-request");
+      });
+
+      // New tab waiting for old tab to respond
+      socket.on("device-switch-pending", () => {
+        setDeviceSwitchState("pending-new");
+      });
+
+      // New tab got the green light
+      socket.on("device-switch-accepted", () => {
+        setDeviceSwitchState("idle");
+        setCallStatus("connecting");
+      });
+
+      // New tab was rejected
+      socket.on("device-switch-rejected", ({ message }: { message: string }) => {
+        setMediaError(message);
+        setDeviceSwitchState("idle");
+      });
+
+      // Old tab got evicted after accepting
+      socket.on("evicted", () => {
+        setDeviceSwitchState("evicted");
+        if (durationRef.current) clearInterval(durationRef.current);
+      });
+
       socket.on("user-connected", () => { if (role === "doctor") void startCall(); });
       socket.on("call-ready", () => { if (role === "doctor") void startCall(); });
 
@@ -520,12 +556,39 @@ export default function WebRTCVideoCall({
   // ══════════════════════════════════════════════════════════════════════════
   if (floating) {
     return (
-      <div className={`relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border ${dark ? "border-slate-700" : "border-gray-300"} ${dark ? "bg-slate-900" : "bg-white"} flex flex-col select-none`}>
+      <div className={`relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border ${dark ? "border-[#1e3a5f]" : "border-slate-200"} ${bg} flex flex-col select-none`}>
         {/* Hidden audio */}
         <audio ref={remoteAudioRef} autoPlay playsInline />
 
+        {/* Device switch overlays */}
+        {deviceSwitchState === "evicted" && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 text-center gap-3 rounded-3xl">
+            <span className="text-2xl">📱</span>
+            <p className="text-white text-xs font-bold">You joined from another device.</p>
+            <p className="text-white/60 text-[10px]">This session has ended here.</p>
+          </div>
+        )}
+        {deviceSwitchState === "pending-new" && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 text-center gap-3 rounded-3xl">
+            <div className="w-8 h-8 border-2 border-[#12B8B0] border-t-transparent rounded-full animate-spin" />
+            <p className="text-white text-xs font-bold">Waiting for previous session to accept…</p>
+          </div>
+        )}
+        {deviceSwitchState === "takeover-request" && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 text-center gap-3 rounded-3xl">
+            <span className="text-2xl">⚠️</span>
+            <p className="text-white text-xs font-bold leading-snug">You're joining from a new device.<br/>Switch to it?</p>
+            <div className="flex gap-2">
+              <button onClick={() => { socketRef.current?.emit("device-takeover-accept", { newSocketId: pendingNewSocketId }); setDeviceSwitchState("idle"); }}
+                className="px-3 py-1.5 rounded-lg bg-[#12B8B0] text-[#0B2D5C] text-[11px] font-black">Accept</button>
+              <button onClick={() => { socketRef.current?.emit("device-takeover-reject", { newSocketId: pendingNewSocketId }); setDeviceSwitchState("idle"); setPendingNewSocketId(null); }}
+                className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-black">Decline</button>
+            </div>
+          </div>
+        )}
+
         {/* Top bar */}
-        <div className={`flex items-center justify-between px-3 py-2 ${dark ? "bg-slate-900" : "bg-white"} border-b ${dark ? "border-slate-800" : "border-gray-200"}`}>
+        <div className={`flex items-center justify-between px-3 py-2 ${bg} border-b ${border}`}>
           <div className="flex items-center gap-2 min-w-0">
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${bothConnected ? "bg-emerald-400 animate-pulse" : callStatus === "disconnected" ? "bg-rose-500" : "bg-amber-400 animate-pulse"}`} />
             <span className={`text-xs font-bold truncate ${txt}`}>{remoteName}</span>
@@ -535,7 +598,7 @@ export default function WebRTCVideoCall({
             <span className={`text-[10px] font-mono ${txtSub}`}>{formatDuration(callDuration)}</span>
             {onExpand && (
               <button onClick={onExpand} title="Expand to full room"
-                className={`ml-1 w-7 h-7 rounded-xl flex items-center justify-center ${dark ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"} transition-all`}>
+                className={`ml-1 w-7 h-7 rounded-xl flex items-center justify-center ${ctrlBg} ${ctrlTxt} transition-all`}>
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
             )}
@@ -570,7 +633,7 @@ export default function WebRTCVideoCall({
         </div>
 
         {/* Control bar */}
-        <div className={`flex items-center justify-center gap-2 px-3 py-2.5 ${dark ? "bg-slate-900 border-t border-slate-800" : "bg-white border-t border-gray-200"}`}>
+        <div className={`flex items-center justify-center gap-2 px-3 py-2.5 ${bg} border-t ${border}`}>
           <button onClick={toggleMute}
             className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${isMuted ? "bg-rose-600 text-white" : voiceActive ? "bg-[#12B8B0] text-[#0B2D5C]" : `${ctrlBg} ${ctrlTxt}`}`}
             title={isMuted ? "Unmute" : "Mute"}>
@@ -638,6 +701,74 @@ export default function WebRTCVideoCall({
   return (
     <div className={shellClass}>
       <audio ref={remoteAudioRef} autoPlay playsInline />
+
+      {/* ── Device switch modal / overlay for full-screen ──────────── */}
+      {deviceSwitchState === "evicted" && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md p-6 text-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-3xl border border-slate-700 shadow-xl">
+            📱
+          </div>
+          <div className="space-y-1 max-w-sm">
+            <h3 className="text-lg font-black text-white">Switched to Another Device</h3>
+            <p className="text-xs text-slate-400">
+              You transferred this consultation to another device or browser tab. This session has safely disconnected.
+            </p>
+          </div>
+          <button
+            onClick={endCall}
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs transition-all shadow-md"
+          >
+            Close Consultation
+          </button>
+        </div>
+      )}
+
+      {deviceSwitchState === "pending-new" && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md p-6 text-center gap-4">
+          <div className="w-14 h-14 rounded-full border-4 border-[#12B8B0] border-t-transparent animate-spin" />
+          <div className="space-y-1 max-w-sm">
+            <h3 className="text-base font-bold text-white">Connecting from New Device</h3>
+            <p className="text-xs text-slate-400">
+              Your previous tab or device is still active. Please click <strong>Accept</strong> on that screen to switch to this device.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {deviceSwitchState === "takeover-request" && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md p-6 text-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-3xl shadow-xl animate-pulse">
+            ⚠️
+          </div>
+          <div className="space-y-1.5 max-w-sm">
+            <h3 className="text-lg font-black text-white">Device Switch Requested</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Someone is connecting to this consultation using your account on another browser or device. Do you want to switch to the new device?
+            </p>
+          </div>
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              onClick={() => {
+                socketRef.current?.emit("device-takeover-accept", { newSocketId: pendingNewSocketId });
+                setDeviceSwitchState("idle");
+              }}
+              className="px-6 py-3 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] text-xs font-black transition-all shadow-lg active:scale-95 flex items-center gap-2"
+            >
+              <span>Accept & Switch</span>
+            </button>
+            <button
+              onClick={() => {
+                socketRef.current?.emit("device-takeover-reject", { newSocketId: pendingNewSocketId });
+                setDeviceSwitchState("idle");
+                setPendingNewSocketId(null);
+              }}
+              className="px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-lg active:scale-95"
+            >
+              Keep This Device
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Floating Top Bar ─────────────────────────────────────── */}
       <div className="absolute top-0 inset-x-0 z-30 p-3 sm:p-5 flex items-start justify-between pointer-events-none">
