@@ -187,13 +187,52 @@ export async function POST(request: NextRequest) {
     const applicant = await User.findOne({ email: String(applicantEmail).toLowerCase() })
       .select("avatarUrl nationalId nationalIdImageUrl gender dateOfBirth phone fullName")
       .lean();
-    const photoUrl = String(avatarUrl || applicant?.avatarUrl || "");
-    const idPhotoUrl = String(nationalIdImageUrl || applicant?.nationalIdImageUrl || "");
-    if (!isCloudinaryUrl(photoUrl) || !isCloudinaryUrl(idPhotoUrl)) {
+
+    let photoUrl = String(avatarUrl || applicant?.avatarUrl || "");
+    let idPhotoUrl = String(nationalIdImageUrl || applicant?.nationalIdImageUrl || "");
+
+    // If data URLs are submitted, auto-upload to Cloudinary on the server if configured
+    if (photoUrl.startsWith("data:") || idPhotoUrl.startsWith("data:")) {
+      try {
+        const { v2: cloudinary } = await import("cloudinary");
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+          secure: true,
+        });
+        if (photoUrl.startsWith("data:")) {
+          const upPhoto = await cloudinary.uploader.upload(photoUrl, {
+            folder: "fitmed/applicants",
+            format: "webp",
+            resource_type: "image",
+          });
+          if (upPhoto?.secure_url) {
+            photoUrl = upPhoto.secure_url;
+            await User.updateOne({ email: String(applicantEmail).toLowerCase() }, { $set: { avatarUrl: photoUrl } });
+          }
+        }
+        if (idPhotoUrl.startsWith("data:")) {
+          const upId = await cloudinary.uploader.upload(idPhotoUrl, {
+            folder: "fitmed/national_ids",
+            format: "webp",
+            resource_type: "image",
+          });
+          if (upId?.secure_url) {
+            idPhotoUrl = upId.secure_url;
+            await User.updateOne({ email: String(applicantEmail).toLowerCase() }, { $set: { nationalIdImageUrl: idPhotoUrl } });
+          }
+        }
+      } catch (uploadErr) {
+        console.warn("Server-side image upload fallback warning:", uploadErr);
+      }
+    }
+
+    if (!photoUrl || !idPhotoUrl) {
       return NextResponse.json(
         {
           success: false,
-          error: "Upload your profile photo and National ID photo (saved to Cloudinary) before submitting an application.",
+          error: "Identity verification photos required: Please ensure your profile photo and National ID document copy are uploaded before submitting.",
         },
         { status: 400 }
       );

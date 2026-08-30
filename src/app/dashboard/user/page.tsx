@@ -130,6 +130,11 @@ export default function UserDashboard() {
 
   const [avatarWebpResult, setAvatarWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingAvatar, setIsConvertingAvatar] = useState(false);
+  const [nationalIdWebpResult, setNationalIdWebpResult] = useState<WebPConversionResult | null>(null);
+  const [isConvertingNationalId, setIsConvertingNationalId] = useState(false);
+  const [showIdentityPhotosModal, setShowIdentityPhotosModal] = useState(false);
+  const [pendingWizardData, setPendingWizardData] = useState<any | null>(null);
+  const [isSubmittingWizard, setIsSubmittingWizard] = useState(false);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,10 +144,45 @@ export default function UserDashboard() {
       const converted = await convertToWebP(file, 0.85, 800);
       setAvatarWebpResult(converted);
       setProfileData((prev) => ({ ...prev, avatarUrl: converted.dataUrl }));
+      // Auto-upload in background
+      const uploaded = await uploadToCloudinary(converted.file, "fitmed/applicants");
+      if (uploaded.url) {
+        setProfileData((prev) => ({ ...prev, avatarUrl: uploaded.url }));
+        void fetch("/api/auth/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: profileData.email || session?.email, avatarUrl: uploaded.url }),
+        });
+      }
     } catch (err) {
       console.error("Avatar WebP conversion failed:", err);
     } finally {
       setIsConvertingAvatar(false);
+    }
+  };
+
+  const handleNationalIdChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsConvertingNationalId(true);
+      const converted = await convertToWebP(file, 0.85, 1200);
+      setNationalIdWebpResult(converted);
+      setProfileData((prev) => ({ ...prev, nationalIdImageUrl: converted.dataUrl }));
+      // Auto-upload in background
+      const uploaded = await uploadToCloudinary(converted.file, "fitmed/national_ids");
+      if (uploaded.url) {
+        setProfileData((prev) => ({ ...prev, nationalIdImageUrl: uploaded.url }));
+        void fetch("/api/auth/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: profileData.email || session?.email, nationalIdImageUrl: uploaded.url }),
+        });
+      }
+    } catch (err) {
+      console.error("National ID photo WebP conversion failed:", err);
+    } finally {
+      setIsConvertingNationalId(false);
     }
   };
 
@@ -318,26 +358,36 @@ export default function UserDashboard() {
     };
   }, [session?.email]);
 
-  const handleWizardComplete = async (data: any) => {
+  const submitCertificateApplication = async (data: any, avatarUrlOverride?: string, nationalIdUrlOverride?: string) => {
+    setIsSubmittingWizard(true);
     try {
-      if (!profileData.nationalId) {
-        error("Profile incomplete", "Add your National ID in Profile before applying.");
+      let finalAvatarUrl = avatarUrlOverride || profileData.avatarUrl;
+      let finalNationalIdUrl = nationalIdUrlOverride || profileData.nationalIdImageUrl;
+
+      // Auto-upload if local dataUrls/files
+      if (avatarWebpResult && !isCloudinaryUrl(finalAvatarUrl)) {
+        const up = await uploadToCloudinary(avatarWebpResult.file, "fitmed/applicants");
+        if (up.url) finalAvatarUrl = up.url;
+      }
+      if (nationalIdWebpResult && !isCloudinaryUrl(finalNationalIdUrl)) {
+        const upId = await uploadToCloudinary(nationalIdWebpResult.file, "fitmed/national_ids");
+        if (upId.url) finalNationalIdUrl = upId.url;
+      }
+
+      if (!finalAvatarUrl || !finalNationalIdUrl) {
+        setPendingWizardData(data);
+        setShowIdentityPhotosModal(true);
+        setIsSubmittingWizard(false);
         return;
       }
-      if (!isCloudinaryUrl(profileData.avatarUrl) || !isCloudinaryUrl(profileData.nationalIdImageUrl)) {
-        error(
-          "Photos required",
-          "Your profile photo and National ID photo must be stored on Cloudinary before you can submit an application."
-        );
-        return;
-      }
+
       const submissionData = {
         applicantEmail: profileData.email,
         applicantPhone: profileData.phone,
         candidateName: profileData.name,
         candidateIdNumber: profileData.nationalId,
-        avatarUrl: profileData.avatarUrl,
-        nationalIdImageUrl: profileData.nationalIdImageUrl,
+        avatarUrl: finalAvatarUrl,
+        nationalIdImageUrl: finalNationalIdUrl,
         age: ageFromDateOfBirth(profileData.dob) ?? undefined,
         dateOfBirth: profileData.dob,
         gender: profileData.gender || "",
@@ -381,6 +431,7 @@ export default function UserDashboard() {
           fee: "5,000 FRW",
           notes: cert.additionalNotes || "Your application was saved and is waiting for a doctor to review it.",
           qrUrl: cert.qrCodeUrl,
+          avatarUrl: finalAvatarUrl,
         };
 
         setActiveCerts((prev) => [newCert, ...prev]);
@@ -388,23 +439,37 @@ export default function UserDashboard() {
         const newEntry = {
           id: cert.certificateId,
           purpose: cert.purpose,
-          date: "Just now",
+          date: cert.appliedDate ? new Date(cert.appliedDate).toLocaleDateString() : "—",
           doctor: cert.assignedDoctor,
-          outcome: "Awaiting Clinical Review",
-          status: "Submitted",
+          outcome: "Submitted for Review",
         };
-
         setHistory((prev) => [newEntry, ...prev]);
-        broadcastLiveRefresh();
-        success("Application Submitted", `Your fitness certificate application for "${data.purpose}" is now in review.`);
-        goToTab("certificates");
+
+        setShowIdentityPhotosModal(false);
+        setPendingWizardData(null);
+        setSubmittedAlert(
+          `Your medical fitness certificate application ${cert.certificateId} has been successfully submitted to Dr. ${cert.assignedDoctor.replace(/\s*\(You\)\s*$/, "")} for clinical review.`
+        );
+
+        goToTab("overview");
+        success("Application submitted", `Your file is with Dr. ${cert.assignedDoctor.replace(/\s*\(You\)\s*$/, "")}.`);
       } else {
-        error("Submission Failed", result.error || "Failed to submit application");
+        error("Submission error", result.error || "Could not complete your application.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Wizard submission error:", err);
-      error("Submission Error", "Failed to submit application. Please try again.");
+      error("Submission Error", err?.message || "Failed to submit application. Please try again.");
+    } finally {
+      setIsSubmittingWizard(false);
     }
+  };
+
+  const handleWizardComplete = async (data: any) => {
+    if (!profileData.nationalId) {
+      error("National ID required", "Please enter your National ID / Passport number in your profile before applying.");
+      return;
+    }
+    await submitCertificateApplication(data);
   };
 
   const markCertificatePaidLocal = (txRef: string) => {
@@ -445,6 +510,14 @@ export default function UserDashboard() {
           setProfileData((prev) => ({ ...prev, avatarUrl }));
         }
       }
+      let nationalIdImageUrl = profileData.nationalIdImageUrl;
+      if (nationalIdWebpResult) {
+        const uploadedId = await uploadToCloudinary(nationalIdWebpResult.file, "fitmed/national_ids");
+        if (uploadedId.url) {
+          nationalIdImageUrl = uploadedId.url;
+          setProfileData((prev) => ({ ...prev, nationalIdImageUrl }));
+        }
+      }
       const res = await fetch("/api/auth/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -456,6 +529,7 @@ export default function UserDashboard() {
           dateOfBirth: profileData.dob,
           address: profileData.address,
           avatarUrl,
+          nationalIdImageUrl,
         }),
       });
       const data = await res.json();
@@ -1549,33 +1623,71 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
-                {/* Avatar Uploader */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#12B8B0] relative shadow-sm flex-shrink-0 bg-slate-200 flex items-center justify-center">
-                      <img src={profileData.avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
-                      {isConvertingAvatar && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        </div>
-                      )}
+                {/* Photo Uploaders Row: Avatar + National ID */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* 1. Avatar Uploader */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#12B8B0] relative shadow-sm flex-shrink-0 bg-slate-200 flex items-center justify-center">
+                        {profileData.avatarUrl ? (
+                          <img src={profileData.avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera className="w-6 h-6 text-slate-400" />
+                        )}
+                        {isConvertingAvatar && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#0B2D5C]">Passport Profile Photo</div>
+                        <div className="text-[11px] text-slate-500">Clear face photo on neutral background.</div>
+                        {avatarWebpResult && (
+                          <div className="text-[10px] text-teal-700 font-bold mt-0.5 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 inline-block">
+                            Compressed ({`${avatarWebpResult.reductionPercentage}%`} smaller)
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-[#0B2D5C]">Profile photo</div>
-                      <div className="text-[11px] text-slate-500">Choose a recent photo that shows your face clearly.</div>
-                      {avatarWebpResult && (
-                        <div className="text-[10px] text-teal-700 font-bold mt-1 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 inline-block">
-                          Photo ready · smaller by {`${avatarWebpResult.reductionPercentage}%`}
-                        </div>
-                      )}
-                    </div>
+                    <label className="cursor-pointer px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
+                      <Camera className="w-3.5 h-3.5 text-[#12B8B0]" />
+                      <span>{profileData.avatarUrl ? "Change Photo" : "Upload Photo"}</span>
+                      <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                    </label>
                   </div>
 
-                  <label className="cursor-pointer px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
-                    <Camera className="w-3.5 h-3.5 text-[#12B8B0]" />
-                    <span>Upload New Photo</span>
-                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                  </label>
+                  {/* 2. National ID / Passport Photo Uploader */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-teal-600 relative shadow-sm flex-shrink-0 bg-slate-200 flex items-center justify-center">
+                        {profileData.nationalIdImageUrl ? (
+                          <img src={profileData.nationalIdImageUrl} alt="National ID" className="w-full h-full object-cover" />
+                        ) : (
+                          <FileText className="w-6 h-6 text-slate-400" />
+                        )}
+                        {isConvertingNationalId && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#0B2D5C]">National ID / Passport Copy</div>
+                        <div className="text-[11px] text-slate-500">Official document photo for verification.</div>
+                        {nationalIdWebpResult && (
+                          <div className="text-[10px] text-teal-700 font-bold mt-0.5 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 inline-block">
+                            Compressed ({`${nationalIdWebpResult.reductionPercentage}%`} smaller)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <label className="cursor-pointer px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
+                      <FileText className="w-3.5 h-3.5 text-[#12B8B0]" />
+                      <span>{profileData.nationalIdImageUrl ? "Change ID Document" : "Upload ID Document"}</span>
+                      <input type="file" accept="image/*" onChange={handleNationalIdChange} className="hidden" />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4 text-xs">
@@ -1865,6 +1977,145 @@ export default function UserDashboard() {
           </div>
         )}
       </div>
+
+      {/* Identity Verification Photos Required Modal (In-Wizard Upload) */}
+      {showIdentityPhotosModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-6 shadow-2xl relative my-auto border border-slate-200">
+            <button
+              onClick={() => {
+                setShowIdentityPhotosModal(false);
+                setPendingWizardData(null);
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1.5 pr-8">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#12B8B0] text-[10px] font-extrabold uppercase tracking-wider">
+                Patient Verification Required
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+                Upload Identification Photos
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                In compliance with medical regulatory guidelines, examining physicians require your clear face photo and a copy of your National ID / Passport to review your application.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Profile Photo Uploader */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#12B8B0] bg-slate-200 flex items-center justify-center relative flex-shrink-0">
+                      {profileData.avatarUrl ? (
+                        <img src={profileData.avatarUrl} alt="Passport Face" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="w-6 h-6 text-slate-400" />
+                      )}
+                      {isConvertingAvatar && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#0B2D5C]">Passport Profile Photo</div>
+                      <div className="text-[10px] text-slate-500">Clear face on plain background.</div>
+                    </div>
+                  </div>
+                  {profileData.avatarUrl ? (
+                    <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> Photo uploaded
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-amber-700 font-medium">Required for certificate issuance</div>
+                  )}
+                </div>
+
+                <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all text-center">
+                  <Camera className="w-3.5 h-3.5 text-[#12B8B0]" />
+                  <span>{profileData.avatarUrl ? "Change Photo" : "Upload Face Photo"}</span>
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                </label>
+              </div>
+
+              {/* National ID Photo Uploader */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-teal-600 bg-slate-200 flex items-center justify-center relative flex-shrink-0">
+                      {profileData.nationalIdImageUrl ? (
+                        <img src={profileData.nationalIdImageUrl} alt="National ID Doc" className="w-full h-full object-cover" />
+                      ) : (
+                        <FileText className="w-6 h-6 text-slate-400" />
+                      )}
+                      {isConvertingNationalId && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#0B2D5C]">National ID / Passport</div>
+                      <div className="text-[10px] text-slate-500">Document copy or clear photo.</div>
+                    </div>
+                  </div>
+                  {profileData.nationalIdImageUrl ? (
+                    <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> ID copy uploaded
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-amber-700 font-medium">Required for identity verification</div>
+                  )}
+                </div>
+
+                <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all text-center">
+                  <FileText className="w-3.5 h-3.5 text-[#12B8B0]" />
+                  <span>{profileData.nationalIdImageUrl ? "Change ID Document" : "Upload ID Document"}</span>
+                  <input type="file" accept="image/*" onChange={handleNationalIdChange} className="hidden" />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowIdentityPhotosModal(false);
+                  setPendingWizardData(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!profileData.avatarUrl || !profileData.nationalIdImageUrl || isSubmittingWizard}
+                onClick={async () => {
+                  if (!pendingWizardData) return;
+                  await submitCertificateApplication(pendingWizardData);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] disabled:opacity-40 disabled:cursor-not-allowed text-[#0B2D5C] font-black text-xs flex items-center gap-2 shadow-md transition-all active:scale-95"
+              >
+                {isSubmittingWizard ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Submitting Application…</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Submit Application to Doctor</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Interactive IremboPay Checkout Modal (Pay-On-Approval) */}
       {showIremboModal && certToPay && (
