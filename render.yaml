@@ -32,9 +32,10 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: BREVO_API_KEY
+        value: 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
         sync: false
       - key: BREVO_SENDER_EMAIL
-        value: info.teletech.rw@gmail.com
+        value: fitmedrwanda@gmail.com
       - key: BREVO_SENDER_NAME
         value: FitMed Rwanda
       - key: JWT_SECRET

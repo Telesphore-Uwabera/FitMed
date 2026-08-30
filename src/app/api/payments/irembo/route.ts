@@ -8,7 +8,7 @@ import {
   iremboPublicCheckout,
   channelFromIremboMethod,
 } from "@/lib/iremboPay";
-import { markCertificatePaid } from "@/lib/certificatePayment";
+import { isCertificatePayable, markCertificatePaid } from "@/lib/certificatePayment";
 
 function digits(value: string) {
   return String(value || "").replace(/\D/g, "");
@@ -37,6 +37,17 @@ export async function POST(request: NextRequest) {
     if (!cert) {
       return NextResponse.json({ success: false, error: "Certificate not found." }, { status: 404 });
     }
+
+    if (!isCertificatePayable(cert)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Only approved medical fitness certificates with a FIT clinical decision are eligible for payment.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (String(cert.paymentStatus || "").toUpperCase() === "PAID") {
       return NextResponse.json({ success: false, error: "This certificate is already paid." }, { status: 400 });
     }

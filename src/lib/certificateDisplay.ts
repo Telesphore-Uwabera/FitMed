@@ -5,6 +5,8 @@ export function publicAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || SITE_URL).replace(/\/$/, "");
 }
 
+export type CertSource = Record<string, any>;
+
 export function publicApiOrigin() {
   const socket = (process.env.NEXT_PUBLIC_SOCKET_URL || "").replace(/\/$/, "");
   if (socket && !/localhost|127\.0\.0\.1/i.test(socket)) return socket;

@@ -635,45 +635,68 @@ export default function UserDashboard() {
               </div>
 
               {activeCerts.map((cert) => {
-                const isPaid = cert.paymentStatus === "PAID";
-                const isApproved = cert.status === "approved";
-                const isRejected = cert.status === "rejected";
-                const isVideoRequested = cert.status === "video appointment requested";
-                const isPhysicalRequested = cert.status === "physical check up requested";
-                const isSubmitted = cert.status === "submitted" || cert.status === "under-review";
+                const decision = cert.fullCertificate?.decision || cert.decision;
+                const decUpper = String(decision || "").toUpperCase();
+                const isFitDecision =
+                  (decUpper === "FIT" || decUpper === "FIT_RESTRICTED" || decUpper.includes("RESTRICT")) &&
+                  !decUpper.includes("NOT") &&
+                  !decUpper.includes("UNFIT");
+                const isApprovedStatus =
+                  (cert.status === "approved" || cert.status === "valid" || cert.status === "issued") &&
+                  !["rejected", "physical-checkup", "physical check up requested", "specialist-referral", "urgent-referral"].includes(cert.status);
+                const isApproved = isApprovedStatus && isFitDecision;
+                const isPaid = isApproved && String(cert.paymentStatus || "").toUpperCase() === "PAID";
+                const isRejected = cert.status === "rejected" || decUpper === "NOT_FIT" || decUpper === "UNFIT";
+                const isVideoRequested = cert.status === "video-scheduled" || cert.status === "video appointment requested";
+                const isPhysicalRequested = cert.status === "physical-checkup" || cert.status === "physical check up requested" || decUpper === "PHYSICAL_CONSULTATION";
+                const isSpecialistRequested = cert.status === "specialist-referral" || decUpper === "INVESTIGATION_SPECIALIST";
+                const isUrgent = cert.status === "urgent-referral" || decUpper === "URGENT_REFERRAL";
+                const isFitRestricted = decUpper === "FIT_RESTRICTED" || decUpper.includes("RESTRICT");
+                const isSubmitted = !isApproved && !isRejected && !isVideoRequested && !isPhysicalRequested && !isSpecialistRequested && !isUrgent;
+
                 return (
                   <div
                     key={cert.id}
                     className={`bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all ${
-                      isPaid ? "" : "bg-amber-50/20 shadow-amber-500/5"
+                      isPaid ? "" : isApproved ? "bg-amber-50/20 shadow-amber-500/5" : isPhysicalRequested ? "bg-orange-50/20" : isSpecialistRequested ? "bg-indigo-50/20" : isUrgent ? "bg-rose-50/20" : ""
                     }`}
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-3 flex-1">
                       <div className="flex items-center gap-3 flex-wrap">
                         {isPaid ? (
                           <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>{cert.statusLabel || "VERIFIED FIT (PAID)"}</span>
+                            <span>{isFitRestricted ? "FIT (WITH RESTRICTIONS)" : "VERIFIED FIT (PAID)"}</span>
                           </span>
                         ) : isApproved ? (
                           <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-extrabold flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-amber-700" />
-                            <span>APPROVED — AWAITING PAYMENT (5,000 FRW)</span>
+                            <span>{isFitRestricted ? "FIT WITH RESTRICTIONS — AWAITING PAYMENT (5,000 FRW)" : "APPROVED — AWAITING PAYMENT (5,000 FRW)"}</span>
+                          </span>
+                        ) : isPhysicalRequested ? (
+                          <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-900 border border-orange-300 text-xs font-extrabold flex items-center gap-1.5">
+                            <Hospital className="w-3.5 h-3.5 text-orange-600" />
+                            <span>PHYSICAL CONSULTATION REQUIRED</span>
+                          </span>
+                        ) : isSpecialistRequested ? (
+                          <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-300 text-xs font-extrabold flex items-center gap-1.5">
+                            <Stethoscope className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>SPECIALIST INVESTIGATION REQUIRED</span>
+                          </span>
+                        ) : isUrgent ? (
+                          <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 text-xs font-extrabold flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                            <span>URGENT MEDICAL REFERRAL</span>
                           </span>
                         ) : isVideoRequested ? (
                           <span className="px-3 py-1 rounded-full bg-teal-100 text-teal-900 border border-teal-300 text-xs font-extrabold flex items-center gap-1.5">
                             <Video className="w-3.5 h-3.5" />
-                            <span>VIDEO APPOINTMENT REQUESTED</span>
-                          </span>
-                        ) : isPhysicalRequested ? (
-                          <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-900 border border-orange-300 text-xs font-extrabold flex items-center gap-1.5">
-                            <Hospital className="w-3.5 h-3.5" />
-                            <span>PHYSICAL CHECK UP REQUESTED</span>
+                            <span>VIDEO APPOINTMENT SCHEDULED</span>
                           </span>
                         ) : isRejected ? (
                           <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 text-xs font-extrabold flex items-center gap-1.5">
                             <AlertCircle className="w-3.5 h-3.5" />
-                            <span>REJECTED (DECLINED)</span>
+                            <span>DECLINED / NOT FIT</span>
                           </span>
                         ) : (
                           <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-300 text-xs font-extrabold flex items-center gap-1.5">
@@ -696,9 +719,15 @@ export default function UserDashboard() {
                       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600">
                         <span>Doctor: <strong>{cert.doctor}</strong> (License: {cert.license})</span>
                         <span>·</span>
-                        <span>Issued: <strong>{cert.issueDate}</strong></span>
-                        <span>·</span>
-                        <span>Valid Until: <strong>{cert.expiryDate}</strong></span>
+                        {isApproved ? (
+                          <>
+                            <span>Issued: <strong>{cert.issueDate}</strong></span>
+                            <span>·</span>
+                            <span>Valid Until: <strong>{cert.expiryDate}</strong></span>
+                          </>
+                        ) : (
+                          <span>Applied: <strong>{cert.issueDate}</strong></span>
+                        )}
                       </div>
 
                       {isApproved && !isPaid && (
@@ -709,14 +738,41 @@ export default function UserDashboard() {
                           </span>
                         </div>
                       )}
-                      {cert.notes && !isApproved && (
+                      {isPhysicalRequested && (
+                        <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-950 font-medium flex items-start gap-2">
+                          <Hospital className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-orange-900 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
+                            The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.
+                          </div>
+                        </div>
+                      )}
+                      {isSpecialistRequested && (
+                        <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 font-medium flex items-start gap-2">
+                          <Stethoscope className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-indigo-900 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
+                            The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.
+                          </div>
+                        </div>
+                      )}
+                      {isUrgent && (
+                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs text-rose-950 font-medium flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-rose-900 block font-bold mb-0.5">Urgent Medical Referral</strong>
+                            The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.
+                          </div>
+                        </div>
+                      )}
+                      {cert.notes && !isApproved && !isPhysicalRequested && !isSpecialistRequested && !isUrgent && (
                         <div className="p-3 rounded-xl bg-slate-50 border-0 text-xs text-slate-700 font-medium">
                           <strong className="text-[#0B2D5C]">Physician notice:</strong> {cert.notes}
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-3 w-full md:w-auto flex-wrap sm:flex-nowrap flex-shrink-0">
                       {isApproved && !isPaid ? (
                         <>
                           <button
@@ -780,7 +836,15 @@ export default function UserDashboard() {
                           className="px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
                         >
                           <Building2 className="w-4 h-4" />
-                          <span>View hospital referral</span>
+                          <span>View partner clinics</span>
+                        </button>
+                      ) : isSpecialistRequested ? (
+                        <button
+                          onClick={() => goToTab("consultation")}
+                          className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Stethoscope className="w-4 h-4" />
+                          <span>Message Doctor</span>
                         </button>
                       ) : isSubmitted ? (
                         <div className="px-4 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 font-bold text-xs flex items-center gap-2">
@@ -1124,20 +1188,31 @@ export default function UserDashboard() {
 
             <div className="space-y-4">
               {activeCerts.map((cert) => {
-                const isPaid = cert.paymentStatus === "PAID";
-                const isApproved = cert.status === "approved";
-                const isSubmitted = cert.status === "submitted";
-                const isUnderReview = cert.status === "under-review";
-                const isVideoRequested = cert.status === "video appointment requested";
-                const isPhysicalRequested = cert.status === "physical check up requested";
-                const isRejected = cert.status === "rejected";
+                const decision = cert.fullCertificate?.decision || cert.decision;
+                const decUpper = String(decision || "").toUpperCase();
+                const isFitDecision =
+                  (decUpper === "FIT" || decUpper === "FIT_RESTRICTED" || decUpper.includes("RESTRICT")) &&
+                  !decUpper.includes("NOT") &&
+                  !decUpper.includes("UNFIT");
+                const isApprovedStatus =
+                  (cert.status === "approved" || cert.status === "valid" || cert.status === "issued") &&
+                  !["rejected", "physical-checkup", "physical check up requested", "specialist-referral", "urgent-referral"].includes(cert.status);
+                const isApproved = isApprovedStatus && isFitDecision;
+                const isPaid = isApproved && String(cert.paymentStatus || "").toUpperCase() === "PAID";
+                const isRejected = cert.status === "rejected" || decUpper === "NOT_FIT" || decUpper === "UNFIT";
+                const isVideoRequested = cert.status === "video-scheduled" || cert.status === "video appointment requested";
+                const isPhysicalRequested = cert.status === "physical-checkup" || cert.status === "physical check up requested" || decUpper === "PHYSICAL_CONSULTATION";
+                const isSpecialistRequested = cert.status === "specialist-referral" || decUpper === "INVESTIGATION_SPECIALIST";
+                const isUrgent = cert.status === "urgent-referral" || decUpper === "URGENT_REFERRAL";
+                const isFitRestricted = decUpper === "FIT_RESTRICTED" || decUpper.includes("RESTRICT");
+                const isSubmitted = !isApproved && !isRejected && !isVideoRequested && !isPhysicalRequested && !isSpecialistRequested && !isUrgent;
 
                 return (
                   <div
                     key={cert.id}
                     className="bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-colors"
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-3 flex-1">
                       <div className="flex flex-wrap items-center gap-3">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider border ${
@@ -1145,16 +1220,34 @@ export default function UserDashboard() {
                               ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                               : isApproved
                               ? "bg-amber-100 text-amber-900 border-amber-300"
-                              : isVideoRequested
-                              ? "bg-teal-100 text-teal-900 border-teal-300"
                               : isPhysicalRequested
                               ? "bg-orange-100 text-orange-900 border-orange-300"
+                              : isSpecialistRequested
+                              ? "bg-indigo-100 text-indigo-900 border-indigo-300"
+                              : isUrgent
+                              ? "bg-rose-100 text-rose-800 border-rose-300"
+                              : isVideoRequested
+                              ? "bg-teal-100 text-teal-900 border-teal-300"
                               : isRejected
                               ? "bg-rose-100 text-rose-800 border-rose-300"
                               : "bg-sky-100 text-sky-800 border-sky-300"
                           }`}
                         >
-                          {cert.statusLabel || cert.status}
+                          {isPaid
+                            ? isFitRestricted ? "FIT (WITH RESTRICTIONS)" : "VERIFIED FIT (PAID)"
+                            : isApproved
+                            ? isFitRestricted ? "FIT WITH RESTRICTIONS — PAYMENT DUE" : "APPROVED — PAYMENT DUE"
+                            : isPhysicalRequested
+                            ? "PHYSICAL CONSULTATION REQUIRED"
+                            : isSpecialistRequested
+                            ? "SPECIALIST INVESTIGATION REQUIRED"
+                            : isUrgent
+                            ? "URGENT MEDICAL REFERRAL"
+                            : isVideoRequested
+                            ? "VIDEO APPOINTMENT SCHEDULED"
+                            : isRejected
+                            ? "DECLINED / NOT FIT"
+                            : cert.statusLabel || "SUBMITTED — AWAITING REVIEW"}
                         </span>
                         <span className="text-xs font-bold text-slate-400 font-mono">ID: {cert.id}</span>
                       </div>
@@ -1163,7 +1256,37 @@ export default function UserDashboard() {
                         {cert.purpose}
                       </h3>
 
-                      {cert.notes && (
+                      {isPhysicalRequested && (
+                        <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-950 font-medium flex items-start gap-2">
+                          <Hospital className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-orange-900 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
+                            The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.
+                          </div>
+                        </div>
+                      )}
+
+                      {isSpecialistRequested && (
+                        <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 font-medium flex items-start gap-2">
+                          <Stethoscope className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-indigo-900 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
+                            The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.
+                          </div>
+                        </div>
+                      )}
+
+                      {isUrgent && (
+                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs text-rose-950 font-medium flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="text-rose-900 block font-bold mb-0.5">Urgent Medical Referral</strong>
+                            The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.
+                          </div>
+                        </div>
+                      )}
+
+                      {cert.notes && !isPhysicalRequested && !isSpecialistRequested && !isUrgent && (
                         <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200/80 p-3 rounded-xl max-w-xl">
                           <strong className="text-[#0B2D5C]">Physician Notice:</strong> {cert.notes}
                         </p>
@@ -1182,7 +1305,7 @@ export default function UserDashboard() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto flex-shrink-0">
                       {isApproved && !isPaid && (
                         <button
                           onClick={() => {
@@ -1238,13 +1361,23 @@ export default function UserDashboard() {
                           className="px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
                         >
                           <Building2 className="w-4 h-4" />
-                          <span>View Hospital Referral Slip</span>
+                          <span>View Partner Clinics</span>
                         </button>
                       )}
 
-                      {(isSubmitted || isUnderReview) && (
+                      {isSpecialistRequested && (
+                        <button
+                          onClick={() => goToTab("consultation")}
+                          className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Stethoscope className="w-4 h-4" />
+                          <span>Message Doctor</span>
+                        </button>
+                      )}
+
+                      {isSubmitted && (
                         <div className="px-4 py-2.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 font-bold text-xs flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-sky-600 animate-spin" />
+                          <Clock className="w-4 h-4 text-sky-600" />
                           <span>Doctor Evaluating Details</span>
                         </div>
                       )}

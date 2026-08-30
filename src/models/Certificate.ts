@@ -15,7 +15,15 @@ export interface ICertificate extends Document {
   purpose: string;
   jobType?: string;
   category: string;
-  decision: "FIT" | "FIT_RESTRICTED" | "FURTHER_ASSESSMENT" | "NOT_FIT" | "PENDING";
+  decision:
+    | "FIT"
+    | "FIT_RESTRICTED"
+    | "FURTHER_ASSESSMENT"
+    | "PHYSICAL_CONSULTATION"
+    | "INVESTIGATION_SPECIALIST"
+    | "URGENT_REFERRAL"
+    | "NOT_FIT"
+    | "PENDING";
   restrictions?: string;
   decisionNotes?: string;
   vitals: {
@@ -132,7 +140,6 @@ const CertificateSchema = new Schema<ICertificate>(
     category: { type: String, required: true },
     decision: {
       type: String,
-      enum: ["FIT", "FIT_RESTRICTED", "FURTHER_ASSESSMENT", "NOT_FIT", "PENDING"],
       default: "PENDING",
     },
     restrictions: { type: String },
@@ -220,7 +227,6 @@ const CertificateSchema = new Schema<ICertificate>(
     expiresAt: { type: Date, required: true },
     status: {
       type: String,
-      enum: ["Valid", "Expired", "Revoked", "submitted", "under-review", "approved", "rejected"],
       default: "submitted",
     },
     paymentStatus: { type: String, enum: ["PAID", "UNPAID"], default: "UNPAID" },

@@ -888,3 +888,38 @@ html.dark:not(:has(.dashboard-app)) .badge-teal {
   border-width: 0 !important;
   border-color: transparent !important;
 }
+
+/* ─── Dark-navy identity/security cards — light mode is intentional dark navy,
+       dark mode must be visibly LIGHTER than the page background (#071422) ── */
+
+/* Doctor license card & any gradient panel starting from #071d3d or #1e3a5f */
+.dashboard-app.dark .dashboard-main [class*="from-[#071d3d]"],
+.dashboard-app.dark .dashboard-main [class*="from-[#1e3a5f]"] {
+  background-image: linear-gradient(to bottom right, #1e3a5f, #2a5298) !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+}
+
+/* Admin "Certificate security" card and any solid dark-navy panel */
+.dashboard-app.dark .dashboard-main [class*="bg-[#082247]"] {
+  background-color: #1a3a6e !important;
+  border-color: rgba(18, 184, 176, 0.4) !important;
+}
+
+/* Solid bg-[#0B2D5C] used as a card/section panel (not a button) */
+.dashboard-app.dark .dashboard-main div[class*="bg-[#0B2D5C]"],
+.dashboard-app.dark .dashboard-main section[class*="bg-[#0B2D5C]"] {
+  background-color: #1e3d6f !important;
+}
+
+/* Keep text light/readable inside these remapped dark cards */
+.dashboard-app.dark .dashboard-main [class*="bg-[#082247]"] .text-white,
+.dashboard-app.dark .dashboard-main [class*="bg-[#082247]"] h3,
+.dashboard-app.dark .dashboard-main [class*="bg-[#082247]"] p,
+.dashboard-app.dark .dashboard-main div[class*="bg-[#0B2D5C]"] .text-white,
+.dashboard-app.dark .dashboard-main div[class*="bg-[#0B2D5C]"] h3 {
+  color: #e8f1fa !important;
+}
+.dashboard-app.dark .dashboard-main [class*="bg-[#082247]"] .text-slate-300,
+.dashboard-app.dark .dashboard-main div[class*="bg-[#0B2D5C]"] .text-slate-300 {
+  color: #a8c0d8 !important;
+}

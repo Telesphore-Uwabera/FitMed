@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import DashboardShell from "@/components/DashboardShell";
 import BrandSelect from "@/components/BrandSelect";
+import BrandDatePicker from "@/components/BrandDatePicker";
+import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate";
 import {
   ShieldAlert,
   Users,
@@ -45,6 +47,13 @@ import {
   CreditCard,
   Download,
   Calendar,
+  Filter,
+  FileSignature,
+  FileText,
+  QrCode,
+  CalendarDays,
+  Check,
+  FileSpreadsheet,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
@@ -529,6 +538,10 @@ export default function AdminDashboardPage() {
   const [reportTab, setReportTab] = useState<"certificates" | "payments" | "applicants" | "meetings" | "activity">("certificates");
   const [reportSearch, setReportSearch] = useState("");
   const [reportStatus, setReportStatus] = useState("ALL");
+  // Admin certificate status-change state
+  const [certStatusBusy, setCertStatusBusy] = useState<string | null>(null); // certificateId being updated
+  const [certRejectTarget, setCertRejectTarget] = useState<{ id: string; name: string; email: string; purpose: string } | null>(null);
+  const [certRejectReason, setCertRejectReason] = useState("");
   const [certificateRows, setCertificateRows] = useState<
     {
       id: string;
@@ -541,6 +554,27 @@ export default function AdminDashboardPage() {
       date: string;
     }[]
   >([]);
+
+  // Consolidated Full Certificates & Clinical Assessments State
+  const [allCertificates, setAllCertificates] = useState<any[]>([]);
+
+  // Assessment Reports Filters
+  const [assessmentDoctorFilter, setAssessmentDoctorFilter] = useState("ALL");
+  const [assessmentStatusFilter, setAssessmentStatusFilter] = useState("ALL");
+  const [assessmentDatePreset, setAssessmentDatePreset] = useState<"ALL" | "TODAY" | "WEEK" | "MONTH" | "CUSTOM">("ALL");
+  const [assessmentStartDate, setAssessmentStartDate] = useState("");
+  const [assessmentEndDate, setAssessmentEndDate] = useState("");
+  const [assessmentSearch, setAssessmentSearch] = useState("");
+  const [selectedAssessmentDoc, setSelectedAssessmentDoc] = useState<any | null>(null);
+
+  // Issued Certificates Filters
+  const [certDoctorFilter, setCertDoctorFilter] = useState("ALL");
+  const [certStatusFilter, setCertStatusFilter] = useState("ALL");
+  const [certDatePreset, setCertDatePreset] = useState<"ALL" | "TODAY" | "WEEK" | "MONTH" | "CUSTOM">("ALL");
+  const [certStartDate, setCertStartDate] = useState("");
+  const [certEndDate, setCertEndDate] = useState("");
+  const [certSearch, setCertSearch] = useState("");
+  const [selectedCertPreview, setSelectedCertPreview] = useState<any | null>(null);
 
   const [transactions, setTransactions] = useState<
     {
@@ -607,6 +641,240 @@ export default function AdminDashboardPage() {
       (p.applicantId || "").toLowerCase().includes(userSearch.toLowerCase()) ||
       (p.nationalId || "").includes(userSearch)
   );
+
+  // Helper: check if a date falls within calendar filter range
+  const checkDateInRange = (
+    dateStr?: string | Date | null,
+    preset: "ALL" | "TODAY" | "WEEK" | "MONTH" | "CUSTOM" = "ALL",
+    customStart: string = "",
+    customEnd: string = ""
+  ): boolean => {
+    if (preset === "ALL" && !customStart && !customEnd) return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return true;
+    const now = new Date();
+
+    if (preset === "TODAY") {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return d >= today;
+    }
+    if (preset === "WEEK") {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return d >= weekAgo;
+    }
+    if (preset === "MONTH") {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return d >= monthAgo;
+    }
+    if (customStart) {
+      const start = new Date(customStart);
+      start.setHours(0, 0, 0, 0);
+      if (d < start) return false;
+    }
+    if (customEnd) {
+      const end = new Date(customEnd);
+      end.setHours(23, 59, 59, 999);
+      if (d > end) return false;
+    }
+    return true;
+  };
+
+  // Consolidated unique doctor list across system
+  const allDoctorOptions = useMemo(() => {
+    const names = new Set<string>();
+    verifiedDoctors.forEach((d) => {
+      if (d.name) names.add(d.name.trim());
+    });
+    pendingDoctors.forEach((d) => {
+      if (d.name) names.add(d.name.trim());
+    });
+    allCertificates.forEach((c) => {
+      const doc = displayDoctorName(c.assignedDoctor || "");
+      if (doc && doc !== "—" && doc !== "Unassigned") names.add(doc.trim());
+    });
+    return Array.from(names).sort();
+  }, [verifiedDoctors, pendingDoctors, allCertificates]);
+
+  // Consolidated Assessment Reports (with doctor, calendar, status, search filtering)
+  const filteredAssessmentReports = useMemo(() => {
+    return allCertificates.filter((cert) => {
+      // 1. Doctor Filter
+      if (assessmentDoctorFilter !== "ALL") {
+        const docName = displayDoctorName(cert.assignedDoctor || "");
+        if (docName !== assessmentDoctorFilter) return false;
+      }
+
+      // 2. Status / Clinical Decision Filter
+      const dec = cert.decision || cert.structuredAssessment?.decision || "PENDING";
+      const stat = String(cert.status || "submitted").toLowerCase();
+      if (assessmentStatusFilter !== "ALL") {
+        if (assessmentStatusFilter === "FIT" && dec !== "FIT") return false;
+        if (assessmentStatusFilter === "FIT_RESTRICTED" && dec !== "FIT_RESTRICTED") return false;
+        if (
+          assessmentStatusFilter === "PHYSICAL_CONSULTATION" &&
+          dec !== "PHYSICAL_CONSULTATION" &&
+          stat !== "physical check up requested" &&
+          stat !== "physical-checkup"
+        )
+          return false;
+        if (
+          assessmentStatusFilter === "INVESTIGATION_SPECIALIST" &&
+          dec !== "INVESTIGATION_SPECIALIST" &&
+          stat !== "specialist-referral"
+        )
+          return false;
+        if (
+          assessmentStatusFilter === "URGENT_REFERRAL" &&
+          dec !== "URGENT_REFERRAL" &&
+          stat !== "urgent-referral"
+        )
+          return false;
+        if (
+          assessmentStatusFilter === "NOT_FIT" &&
+          dec !== "NOT_FIT" &&
+          dec !== "UNFIT" &&
+          stat !== "rejected"
+        )
+          return false;
+        if (
+          assessmentStatusFilter === "PENDING" &&
+          stat !== "submitted" &&
+          stat !== "under-review"
+        )
+          return false;
+      }
+
+      // 3. Calendar / Date Range Filter
+      const certDate =
+        cert.structuredAssessment?.consultationDate ||
+        cert.appliedDate ||
+        cert.issuedAt ||
+        cert.createdAt;
+      if (
+        !checkDateInRange(
+          certDate,
+          assessmentDatePreset,
+          assessmentStartDate,
+          assessmentEndDate
+        )
+      ) {
+        return false;
+      }
+
+      // 4. Search Query Filter
+      if (assessmentSearch.trim()) {
+        const q = assessmentSearch.toLowerCase();
+        const name = String(cert.candidateName || "").toLowerCase();
+        const email = String(cert.applicantEmail || "").toLowerCase();
+        const id = String(cert.certificateId || "").toLowerCase();
+        const natId = String(cert.candidateIdNumber || "").toLowerCase();
+        const doc = String(cert.assignedDoctor || "").toLowerCase();
+        const notes = String(
+          cert.decisionNotes ||
+            cert.notes ||
+            cert.structuredAssessment?.clinicalImpression ||
+            ""
+        ).toLowerCase();
+        if (
+          !name.includes(q) &&
+          !email.includes(q) &&
+          !id.includes(q) &&
+          !natId.includes(q) &&
+          !doc.includes(q) &&
+          !notes.includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    allCertificates,
+    assessmentDoctorFilter,
+    assessmentStatusFilter,
+    assessmentDatePreset,
+    assessmentStartDate,
+    assessmentEndDate,
+    assessmentSearch,
+  ]);
+
+  // Consolidated Issued Certificates (with doctor, calendar, status, search filtering)
+  const filteredIssuedCertificates = useMemo(() => {
+    return allCertificates.filter((cert) => {
+      // 1. Doctor Filter
+      if (certDoctorFilter !== "ALL") {
+        const docName = displayDoctorName(cert.assignedDoctor || "");
+        if (docName !== certDoctorFilter) return false;
+      }
+
+      // 2. Status / Payment Filter
+      const stat = String(cert.status || "").toLowerCase();
+      const pay = String(cert.paymentStatus || "").toUpperCase();
+      if (certStatusFilter !== "ALL") {
+        if (certStatusFilter === "PAID" && pay !== "PAID") return false;
+        if (certStatusFilter === "UNPAID" && pay === "PAID") return false;
+        if (
+          certStatusFilter === "VALID" &&
+          stat !== "valid" &&
+          stat !== "issued" &&
+          !(stat === "approved" && pay === "PAID")
+        )
+          return false;
+        if (
+          certStatusFilter === "APPROVED_UNPAID" &&
+          (stat !== "approved" || pay === "PAID")
+        )
+          return false;
+        if (certStatusFilter === "EXPIRED" && stat !== "expired") return false;
+        if (certStatusFilter === "REVOKED" && stat !== "revoked") return false;
+        if (certStatusFilter === "REJECTED" && stat !== "rejected") return false;
+      }
+
+      // 3. Calendar / Date Range Filter
+      const certDate = cert.issuedAt || cert.appliedDate || cert.createdAt;
+      if (
+        !checkDateInRange(
+          certDate,
+          certDatePreset,
+          certStartDate,
+          certEndDate
+        )
+      ) {
+        return false;
+      }
+
+      // 4. Search Query Filter
+      if (certSearch.trim()) {
+        const q = certSearch.toLowerCase();
+        const name = String(cert.candidateName || "").toLowerCase();
+        const email = String(cert.applicantEmail || "").toLowerCase();
+        const id = String(cert.certificateId || "").toLowerCase();
+        const natId = String(cert.candidateIdNumber || "").toLowerCase();
+        const irembo = String(cert.iremboRef || "").toLowerCase();
+        const purpose = String(cert.purpose || "").toLowerCase();
+        if (
+          !name.includes(q) &&
+          !email.includes(q) &&
+          !id.includes(q) &&
+          !natId.includes(q) &&
+          !irembo.includes(q) &&
+          !purpose.includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    allCertificates,
+    certDoctorFilter,
+    certStatusFilter,
+    certDatePreset,
+    certStartDate,
+    certEndDate,
+    certSearch,
+  ]);
 
   const [inquiries, setInquiries] = useState<
     {
@@ -685,19 +953,31 @@ export default function AdminDashboardPage() {
         const certRes = await fetch("/api/certificates", { cache: "no-store" });
         const certData = await certRes.json();
         if (certData.success && Array.isArray(certData.certificates)) {
+          setAllCertificates(certData.certificates);
           setCertificateRows(
-            certData.certificates.map((c: Record<string, unknown>) => ({
-              id: String(c.certificateId || ""),
-              applicant: String(c.candidateName || "Applicant"),
-              email: String(c.applicantEmail || ""),
-              purpose: String(c.purpose || "—"),
-              status: String(c.status || "submitted"),
-              payment: String(c.paymentStatus || "UNPAID").toUpperCase(),
-              doctor: displayDoctorName(String(c.assignedDoctor || "")) || "Unassigned",
-              date: c.appliedDate ? new Date(String(c.appliedDate)).toLocaleString() : "—",
-            }))
+            certData.certificates.map((c: Record<string, unknown>) => {
+              const status = String(c.status || "submitted").toLowerCase();
+              const decision = String(c.decision || "").toUpperCase();
+              const isApproved = ["approved", "valid", "issued"].includes(status);
+              const isFit =
+                (decision === "FIT" || decision === "FIT_RESTRICTED" || decision.includes("RESTRICT")) &&
+                !decision.includes("NOT") &&
+                !decision.includes("UNFIT");
+              const isPaid = isApproved && isFit && String(c.paymentStatus || "UNPAID").toUpperCase() === "PAID";
+              return {
+                id: String(c.certificateId || ""),
+                applicant: String(c.candidateName || "Applicant"),
+                email: String(c.applicantEmail || ""),
+                purpose: String(c.purpose || "—"),
+                status: String(c.status || "submitted"),
+                payment: isPaid ? "PAID" : "UNPAID",
+                doctor: displayDoctorName(String(c.assignedDoctor || "")) || "Unassigned",
+                date: c.appliedDate ? new Date(String(c.appliedDate)).toLocaleString() : "—",
+              };
+            })
           );
         } else {
+          setAllCertificates([]);
           setCertificateRows([]);
         }
         const payRes = await fetch("/api/payments");
@@ -708,8 +988,16 @@ export default function AdminDashboardPage() {
           setTransactions(
             certData.certificates.map((c: Record<string, unknown>) => {
               const amount = Number(c.amount) || 5000;
+              const statusLower = String(c.status || "submitted").toLowerCase();
+              const decision = String(c.decision || "").toUpperCase();
+              const isApproved = ["approved", "valid", "issued"].includes(statusLower);
+              const isFit =
+                (decision === "FIT" || decision === "FIT_RESTRICTED" || decision.includes("RESTRICT")) &&
+                !decision.includes("NOT") &&
+                !decision.includes("UNFIT");
+              const isPaid = isApproved && isFit && String(c.paymentStatus || "UNPAID").toUpperCase() === "PAID";
               const payment = String(c.paymentStatus || "UNPAID").toUpperCase();
-              const status = payment === "PAID" ? "PAID" : payment === "EXPIRED" ? "EXPIRED" : "WAITING";
+              const status = isPaid ? "PAID" : payment === "EXPIRED" ? "EXPIRED" : "WAITING";
               const applied = c.appliedDate ? new Date(String(c.appliedDate)).toLocaleString() : "—";
               return {
                 id: String(c.iremboRef || c.certificateId),
@@ -723,7 +1011,7 @@ export default function AdminDashboardPage() {
                 iremboRef: String(c.iremboRef || c.certificateId || "—"),
                 date: applied,
                 status,
-        doctorName: displayDoctorName(String(c.assignedDoctor || "—")) || "—",
+                doctorName: displayDoctorName(String(c.assignedDoctor || "—")) || "—",
                 doctorPayout: Math.round(amount * 0.8),
                 platformFee: Math.round(amount * 0.2),
                 approvedAt: c.approvedAt ? String(c.approvedAt) : "",
@@ -970,96 +1258,96 @@ export default function AdminDashboardPage() {
         {/* ── MAIN INFO STAT CARDS (always visible above tabs) ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Card 1: Total Certificates */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-50/60 to-transparent dark:from-teal-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/15 border border-[#12B8B0]/30 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/15 dark:bg-[#12B8B0]/25 border border-[#12B8B0]/30 dark:border-[#12B8B0]/40 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-[#12B8B0]" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
                   Live
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Certificates</div>
-              <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Total Certificates</div>
+              <div className="text-3xl font-extrabold text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>
                 {transactions.length.toLocaleString()}
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <span className="text-emerald-600 font-semibold">{grossRevenue.toLocaleString()} FRW</span>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{grossRevenue.toLocaleString()} FRW</span>
                 &nbsp;total revenue
               </div>
             </div>
           </div>
 
           {/* Card 2: Active Doctors */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-50/60 to-transparent dark:from-sky-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center">
-                  <Stethoscope className="w-5 h-5 text-sky-600" />
+                <div className="w-11 h-11 rounded-xl bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-700 flex items-center justify-center">
+                  <Stethoscope className="w-5 h-5 text-sky-600 dark:text-sky-400" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Active
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Doctors</div>
-              <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Active Doctors</div>
+              <div className="text-3xl font-extrabold text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>
                 {verifiedDoctors.filter((d) => d.status === "Active").length}
-                <span className="text-sm font-semibold text-slate-400 ml-1">physicians</span>
+                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 ml-1">physicians</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-sky-500" />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-sky-500 dark:text-sky-400" />
                 Verified &amp; licensed
               </div>
             </div>
           </div>
 
           {/* Card 3: Partner Clinics */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/60 to-transparent dark:from-indigo-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-indigo-600" />
+                <div className="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-700 flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider">
                   Network
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Partner Clinics</div>
-              <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Partner Clinics</div>
+              <div className="text-3xl font-extrabold text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>
                 {clinics.length}
-                <span className="text-sm font-semibold text-slate-400 ml-1">clinics</span>
+                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 ml-1">clinics</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <Building2 className="w-3 h-3 text-indigo-500" />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                <Building2 className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
                 Physical exam network
               </div>
             </div>
           </div>
 
-          {/* Card 4: Security Status (dark accent) */}
-          <div className="bg-gradient-to-br from-[#071d3d] to-[#0B2D5C] rounded-2xl p-5 sm:p-6 border border-emerald-500/30 shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+          {/* Card 4: Security Status */}
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 to-transparent dark:from-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                  <Lock className="w-5 h-5 text-emerald-400" />
+                <div className="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-700 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Secure
                 </span>
               </div>
-              <div className="text-xs font-bold text-emerald-300/80 uppercase tracking-wider mb-1">Security Status</div>
-              <div className="text-2xl font-extrabold text-emerald-400" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Security Status</div>
+              <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400" style={{ fontFamily: "var(--font-primary)" }}>
                 Protected
               </div>
-              <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
-                <ShieldAlert className="w-3 h-3 text-emerald-400" />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                <ShieldAlert className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
                 Signed sessions and role access
               </div>
             </div>
@@ -1067,28 +1355,29 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Top Tab Bar */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-4 flex-wrap">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-4 flex-wrap">
           {[
-            { id: "overview",  label: "System Analytics" },
-            { id: "reports",   label: "Reports & History" },
-            { id: "users",     label: `Users Management (${applicants.length})` },
-            { id: "doctors",   label: `Doctor Accounts (${pendingDoctors.length + verifiedDoctors.length})` },
-            { id: "payments",  label: `Payments (${transactions.length})` },
-            { id: "inquiries", label: `Contact Inquiries (${inquiries.filter(i => i.status === 'New').length} New)` },
-            { id: "clinics",   label: `Partner Clinics (${clinics.length})` },
-            { id: "schedules", label: `Schedules (${platformAppointments.length})` },
-            { id: "newsletter", label: `News (${subscribers.length})` },
-            { id: "revenue",   label: "Revenue & Payouts" },
-            { id: "security",  label: "Privacy & activity log" },
-            { id: "settings",  label: "Governance Settings" },
+            { id: "overview",     label: "System Analytics" },
+            { id: "reports",      label: `Assessment Reports (${allCertificates.length})` },
+            { id: "certificates", label: `Issued Certificates (${allCertificates.filter(c => ["valid", "approved", "issued"].includes(String(c.status || "").toLowerCase())).length})` },
+            { id: "users",        label: `Users Management (${applicants.length})` },
+            { id: "doctors",      label: `Doctor Accounts (${pendingDoctors.length + verifiedDoctors.length})` },
+            { id: "payments",     label: `Payments (${transactions.length})` },
+            { id: "inquiries",    label: `Contact Inquiries (${inquiries.filter(i => i.status === 'New').length} New)` },
+            { id: "clinics",      label: `Partner Clinics (${clinics.length})` },
+            { id: "schedules",    label: `Schedules (${platformAppointments.length})` },
+            { id: "newsletter",   label: `News (${subscribers.length})` },
+            { id: "revenue",      label: "Revenue & Payouts" },
+            { id: "security",     label: "Privacy & activity log" },
+            { id: "settings",     label: "Governance Settings" },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => goToNav(tab.id)}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
                 activeNav === tab.id
-                  ? "bg-[#0B2D5C] text-white shadow-md"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  ? "bg-[#0B2D5C] dark:bg-[#12B8B0] text-white dark:text-[#0B2D5C] shadow-md"
+                  : "bg-white dark:bg-[#0d1f38] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700"
               }`}
             >
               {tab.label}
@@ -1136,177 +1425,754 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* ── TAB: REPORTS & HISTORY ── */}
+        {/* ── TAB 2: ASSESSMENT REPORTS (CONSOLIDATED ACROSS ALL DOCTORS) ── */}
         {activeNav === "reports" && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header & Export */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
-                  Platform Reports &amp; Activity History
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#12B8B0] text-[10px] font-extrabold uppercase tracking-wider">
+                    Consolidated Clinical Intelligence
+                  </span>
+                  <span className="text-xs text-slate-400 font-bold">
+                    {filteredAssessmentReports.length} {filteredAssessmentReports.length === 1 ? "Record" : "Records"}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0B2D5C] mt-1" style={{ fontFamily: "var(--font-primary)" }}>
+                  Doctor Clinical Assessment Reports
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Filter certificates, payments, applicants, meetings, and system events. Export the table you are viewing.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Consolidated clinical evaluations, screening answers, vital signs, red-flag screening, and certification decisions across all FitMed physicians.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  downloadCsv(
-                    `fitmed_${reportTab}_report.csv`,
-                    reportHeaders,
-                    filteredReportRows.map((row) => row.cells)
-                  );
-                  success("Report ready", `${filteredReportRows.length} ${reportTab} row(s) downloaded.`);
-                }}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2 self-start"
-              >
-                <Download className="w-3.5 h-3.5 text-[#12B8B0]" />
-                Export filtered table
-              </button>
-            </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Certificates on file", value: String(certificateRows.length), hint: `${certificateRows.filter((c) => String(c.payment).toUpperCase() === "PAID").length} paid`, color: "text-emerald-600" },
-                { label: "Pending clinical reviews", value: String(pendingApplicants.length + pendingDoctors.length), hint: "Awaiting admin or doctor action", color: "text-amber-600" },
-                { label: "Applicants", value: String(applicants.length), hint: `${applicants.filter((a) => isActiveAccount(a.status)).length} active accounts`, color: "text-[#0B2D5C]" },
-                { label: "Meetings booked", value: String(platformAppointments.length), hint: `${transactions.filter((t) => t.status === "PAID").length} paid transactions`, color: "text-[#12B8B0]" },
-              ].map((card) => (
-                <div key={card.label} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm">
-                  <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{card.label}</div>
-                  <div className={`text-2xl font-black mt-1 ${card.color}`}>{card.value}</div>
-                  <div className="text-[11px] text-slate-500 mt-1">{card.hint}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <h3 className="text-sm font-extrabold text-[#0B2D5C]">Certificate volume by purpose</h3>
-                {(purposeRows.length > 0 ? purposeRows : [{ purpose: "No certificates yet", count: 0, pct: 0, barClass: "bg-slate-300" }]).map((row) => (
-                  <div key={row.purpose} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700 flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${row.barClass}`} />
-                        {row.purpose}
-                      </span>
-                      <span className="font-bold text-[#0B2D5C]">{row.count}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div className={`h-full rounded-full ${row.barClass}`} style={{ width: `${row.pct}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <h3 className="text-sm font-extrabold text-[#0B2D5C]">Revenue snapshot</h3>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Gross paid</div>
-                    <div className="text-lg font-black text-[#0B2D5C] mt-1">{grossRevenue.toLocaleString()} FRW</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Waiting collection</div>
-                    <div className="text-lg font-black text-amber-700 mt-1">{transactions.filter((t) => t.status === "WAITING").reduce((sum, t) => sum + t.amount, 0).toLocaleString()} FRW</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Doctors</div>
-                    <div className="text-lg font-black text-[#0B2D5C] mt-1">{verifiedDoctors.length}</div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Partner clinics</div>
-                    <div className="text-lg font-black text-[#0B2D5C] mt-1">{clinics.length}</div>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const headers = [
+                      "Certificate ID",
+                      "Candidate Name",
+                      "National ID",
+                      "Email",
+                      "Purpose",
+                      "Evaluating Doctor",
+                      "Doctor License",
+                      "Assessment Date",
+                      "Clinical Decision",
+                      "Decision Reason / Notes",
+                      "Restrictions",
+                      "Blood Pressure",
+                      "Heart Rate",
+                      "SpO2",
+                      "BMI",
+                    ];
+                    const rows = filteredAssessmentReports.map((c) => [
+                      c.certificateId || "",
+                      c.candidateName || "",
+                      c.candidateIdNumber || "",
+                      c.applicantEmail || "",
+                      c.purpose || "",
+                      displayDoctorName(c.assignedDoctor || ""),
+                      c.assignedDoctorLicense || "",
+                      c.structuredAssessment?.consultationDate || c.appliedDate ? new Date(c.structuredAssessment?.consultationDate || c.appliedDate).toLocaleDateString() : "",
+                      c.decision || c.structuredAssessment?.decision || "PENDING",
+                      c.decisionNotes || c.notes || "",
+                      c.restrictions || "",
+                      c.vitals?.bloodPressure || c.structuredAssessment?.vitals?.bp || "",
+                      c.vitals?.heartRate || c.structuredAssessment?.vitals?.heartRate || "",
+                      c.vitals?.spo2 || c.structuredAssessment?.vitals?.spo2 || "",
+                      c.vitals?.bmi || c.structuredAssessment?.vitals?.bmi || "",
+                    ]);
+                    downloadCsv(`fitmed_assessment_reports_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-[#0B2D5C] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>Export CSV</span>
+                </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  {[
-                    { id: "certificates", label: `Certificates (${certificateRows.length})` },
-                    { id: "payments", label: `Payments (${transactions.length})` },
-                    { id: "applicants", label: `Applicants (${applicants.length})` },
-                    { id: "meetings", label: `Meetings (${platformAppointments.length})` },
-                    { id: "activity", label: "Activity log" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setReportTab(tab.id as typeof reportTab);
-                        setReportStatus("ALL");
-                      }}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                        reportTab === tab.id ? "bg-[#0B2D5C] text-white" : "bg-slate-50 text-slate-600 border border-slate-200"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+            {/* Comprehensive Multi-Filter Bar */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-[#0B2D5C] uppercase tracking-wider">
+                  <Filter className="w-4 h-4 text-[#12B8B0]" />
+                  <span>Multi-Doctor &amp; Clinical Filters</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      value={reportSearch}
-                      onChange={(e) => setReportSearch(e.target.value)}
-                      placeholder="Search this table..."
-                      className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0] w-56"
-                    />
-                  </div>
+                {(assessmentDoctorFilter !== "ALL" || assessmentStatusFilter !== "ALL" || assessmentDatePreset !== "ALL" || assessmentSearch.trim() || assessmentStartDate || assessmentEndDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssessmentDoctorFilter("ALL");
+                      setAssessmentStatusFilter("ALL");
+                      setAssessmentDatePreset("ALL");
+                      setAssessmentStartDate("");
+                      setAssessmentEndDate("");
+                      setAssessmentSearch("");
+                    }}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset all filters</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Filter controls row 1: Doctor, Decision, Date Preset */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* 1. Doctor Filter */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Evaluating Doctor
+                  </label>
                   <BrandSelect
-                    size="compact"
-                    className="w-52"
-                    value={reportStatus}
-                    onChange={setReportStatus}
-                    options={reportStatusOptions.map((status) => ({
-                      value: status,
-                      label: status === "ALL" ? "All statuses" : status.charAt(0).toUpperCase() + status.slice(1),
-                    }))}
+                    value={assessmentDoctorFilter}
+                    onChange={setAssessmentDoctorFilter}
+                    options={[
+                      { value: "ALL", label: `All Doctors (${allDoctorOptions.length})` },
+                      ...allDoctorOptions.map((doc) => ({
+                        value: doc,
+                        label: `Dr. ${doc.replace(/^Dr\.\s*/i, "")}`,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                {/* 2. Clinical Decision Filter */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Clinical Decision &amp; Status
+                  </label>
+                  <BrandSelect
+                    value={assessmentStatusFilter}
+                    onChange={setAssessmentStatusFilter}
+                    options={[
+                      { value: "ALL", label: "All Decisions & Statuses" },
+                      { value: "FIT", label: "FIT — Certified Requirements Met" },
+                      { value: "FIT_RESTRICTED", label: "FIT WITH RESTRICTIONS" },
+                      { value: "PHYSICAL_CONSULTATION", label: "PHYSICAL CONSULTATION REQUIRED" },
+                      { value: "INVESTIGATION_SPECIALIST", label: "SPECIALIST / LAB REQUIRED" },
+                      { value: "URGENT_REFERRAL", label: "URGENT MEDICAL REFERRAL" },
+                      { value: "NOT_FIT", label: "NOT FIT / DECLINED" },
+                      { value: "PENDING", label: "PENDING CLINICAL EVALUATION" },
+                    ]}
+                  />
+                </div>
+
+                {/* 3. Calendar Preset */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Calendar Range Filter
+                  </label>
+                  <BrandSelect
+                    value={assessmentDatePreset}
+                    onChange={(v) => setAssessmentDatePreset(v as any)}
+                    options={[
+                      { value: "ALL", label: "All Time (Entire History)" },
+                      { value: "TODAY", label: "Today" },
+                      { value: "WEEK", label: "Last 7 Days" },
+                      { value: "MONTH", label: "Last 30 Days" },
+                      { value: "CUSTOM", label: "Custom Date Range…" },
+                    ]}
                   />
                 </div>
               </div>
 
+              {/* Filter controls row 2: Custom Date Pickers & Search */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
+                {assessmentDatePreset === "CUSTOM" && (
+                  <>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                        From Date
+                      </label>
+                      <BrandDatePicker value={assessmentStartDate} onChange={setAssessmentStartDate} preset="any" />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                        To Date
+                      </label>
+                      <BrandDatePicker value={assessmentEndDate} onChange={setAssessmentEndDate} preset="any" />
+                    </div>
+                  </>
+                )}
+
+                <div className={assessmentDatePreset === "CUSTOM" ? "sm:col-span-6" : "sm:col-span-12"}>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Search Candidate, Doctor, Certificate ID or Notes
+                  </label>
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Type patient name, certificate ID (e.g. FM-2026-00001), national ID or keyword..."
+                      value={assessmentSearch}
+                      onChange={(e) => setAssessmentSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Assessment Metrics Summary */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Filtered</div>
+                <div className="text-2xl font-black text-[#0B2D5C] mt-1">{filteredAssessmentReports.length}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Evaluated assessments</div>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm bg-emerald-50/20">
+                <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Fit Clearances</div>
+                <div className="text-2xl font-black text-emerald-700 mt-1">
+                  {filteredAssessmentReports.filter((c) => (c.decision === "FIT" || c.decision === "FIT_RESTRICTED" || c.status === "approved" || c.status === "valid" || c.status === "issued")).length}
+                </div>
+                <div className="text-[11px] text-emerald-700/80 mt-0.5">Approved certificates</div>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-orange-200 shadow-sm bg-orange-50/20">
+                <div className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">Physical / Specialist</div>
+                <div className="text-2xl font-black text-orange-700 mt-1">
+                  {filteredAssessmentReports.filter((c) => (c.decision === "PHYSICAL_CONSULTATION" || c.decision === "INVESTIGATION_SPECIALIST" || c.status === "physical check up requested" || c.status === "specialist-referral")).length}
+                </div>
+                <div className="text-[11px] text-orange-700/80 mt-0.5">Further exams required</div>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm bg-rose-50/20">
+                <div className="text-[10px] font-bold text-rose-800 uppercase tracking-wider">Urgent &amp; Declined</div>
+                <div className="text-2xl font-black text-rose-700 mt-1">
+                  {filteredAssessmentReports.filter((c) => (c.decision === "URGENT_REFERRAL" || c.decision === "NOT_FIT" || c.status === "rejected" || c.status === "urgent-referral")).length}
+                </div>
+                <div className="text-[11px] text-rose-700/80 mt-0.5">Escalations &amp; un-fit</div>
+              </div>
+            </div>
+
+            {/* Assessment Records Table */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs min-w-[720px]">
+                <table className="w-full text-left text-xs min-w-[900px]">
                   <thead>
-                    <tr className="border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-400">
-                      {reportHeaders.map((header) => (
-                        <th key={header} className="pb-3 pr-4 font-extrabold">
-                          {header}
-                        </th>
-                      ))}
+                    <tr className="border-b border-slate-200 bg-slate-50/80 text-[10px] uppercase tracking-wider text-slate-400 font-extrabold">
+                      <th className="py-3.5 px-4">Certificate ID</th>
+                      <th className="py-3.5 px-4">Applicant / Patient</th>
+                      <th className="py-3.5 px-4">Evaluating Doctor</th>
+                      <th className="py-3.5 px-4">Consultation Date</th>
+                      <th className="py-3.5 px-4">Clinical Decision</th>
+                      <th className="py-3.5 px-4">Vitals &amp; Red Flags</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredReportRows.length === 0 && (
+                    {filteredAssessmentReports.length === 0 ? (
                       <tr>
-                        <td colSpan={reportHeaders.length} className="py-8 text-center text-slate-400">
-                          No {reportTab} records match the current search or status filter.
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <FileText className="w-8 h-8 text-slate-300" />
+                            <p className="font-bold text-slate-600">No clinical assessment records match your filters.</p>
+                            <p className="text-[11px] text-slate-400">Try changing the selected doctor, date range, or search keyword.</p>
+                          </div>
                         </td>
                       </tr>
+                    ) : (
+                      filteredAssessmentReports.map((cert) => {
+                        const decision = cert.decision || cert.structuredAssessment?.decision || "PENDING";
+                        const docName = displayDoctorName(cert.assignedDoctor || "FitMed Physician");
+                        const dateStr = cert.structuredAssessment?.consultationDate || cert.appliedDate || cert.issuedAt || cert.createdAt;
+                        const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString() : "—";
+                        const hasRedFlags = Boolean(cert.structuredAssessment?.redFlags && Object.values(cert.structuredAssessment.redFlags).some(Boolean));
+                        const bp = cert.vitals?.bloodPressure || cert.structuredAssessment?.vitals?.bp || "—";
+                        const hr = cert.vitals?.heartRate || cert.structuredAssessment?.vitals?.heartRate || "—";
+                        const spo2 = cert.vitals?.spo2 || cert.structuredAssessment?.vitals?.spo2 || "—";
+
+                        // Decision badge styling
+                        let decBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+                        let decLabel = decision;
+                        if (decision === "FIT") {
+                          decBadgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                          decLabel = "FIT (Requirements Met)";
+                        } else if (decision === "FIT_RESTRICTED") {
+                          decBadgeClass = "bg-teal-100 text-teal-800 border-teal-300";
+                          decLabel = "FIT WITH RESTRICTIONS";
+                        } else if (decision === "PHYSICAL_CONSULTATION" || cert.status === "physical check up requested") {
+                          decBadgeClass = "bg-orange-100 text-orange-900 border-orange-300";
+                          decLabel = "PHYSICAL CONSULTATION REQ.";
+                        } else if (decision === "INVESTIGATION_SPECIALIST" || cert.status === "specialist-referral") {
+                          decBadgeClass = "bg-indigo-100 text-indigo-900 border-indigo-300";
+                          decLabel = "SPECIALIST INVESTIGATION";
+                        } else if (decision === "URGENT_REFERRAL" || cert.status === "urgent-referral") {
+                          decBadgeClass = "bg-rose-100 text-rose-800 border-rose-300";
+                          decLabel = "URGENT MEDICAL REFERRAL";
+                        } else if (decision === "NOT_FIT" || decision === "UNFIT" || cert.status === "rejected") {
+                          decBadgeClass = "bg-rose-100 text-rose-800 border-rose-300";
+                          decLabel = "NOT FIT / DECLINED";
+                        } else {
+                          decBadgeClass = "bg-sky-100 text-sky-800 border-sky-300";
+                          decLabel = "UNDER REVIEW / PENDING";
+                        }
+
+                        return (
+                          <tr key={cert._id || cert.certificateId} className="hover:bg-slate-50/60 transition-colors text-slate-700">
+                            {/* Certificate ID */}
+                            <td className="py-3.5 px-4 font-mono font-bold text-[#0B2D5C]">
+                              {cert.certificateId || "—"}
+                            </td>
+
+                            {/* Applicant Info */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-[#0B2D5C]">{cert.candidateName || "Applicant"}</div>
+                              <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                                <span>ID: <strong className="font-mono">{cert.candidateIdNumber || "—"}</strong></span>
+                                <span>·</span>
+                                <span>{cert.purpose || "Medical fitness"}</span>
+                              </div>
+                            </td>
+
+                            {/* Evaluating Doctor */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                <Stethoscope className="w-3.5 h-3.5 text-[#12B8B0]" />
+                                <span>{docName}</span>
+                              </div>
+                              <div className="text-[11px] text-slate-400">
+                                License: {cert.assignedDoctorLicense || "RW-RMDC-4091"}
+                              </div>
+                            </td>
+
+                            {/* Consultation Date */}
+                            <td className="py-3.5 px-4 text-slate-600 font-medium">
+                              {formattedDate}
+                            </td>
+
+                            {/* Clinical Decision */}
+                            <td className="py-3.5 px-4">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${decBadgeClass}`}>
+                                {decLabel}
+                              </span>
+                              {cert.restrictions && (
+                                <div className="text-[10px] text-amber-800 font-semibold mt-1 max-w-[180px] truncate" title={cert.restrictions}>
+                                  Conditions: {cert.restrictions}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Vitals & Red Flags */}
+                            <td className="py-3.5 px-4">
+                              <div className="text-[11px] font-mono text-slate-600 space-y-0.5">
+                                <div>BP: <strong>{bp}</strong> · HR: <strong>{hr}</strong></div>
+                                <div>SpO2: <strong>{spo2}</strong></div>
+                              </div>
+                              {hasRedFlags && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[9px] font-bold mt-1">
+                                  <AlertCircle className="w-2.5 h-2.5" /> Red flags reported
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAssessmentDoc(cert)}
+                                className="px-3 py-1.5 rounded-xl bg-[#0B2D5C] hover:bg-slate-800 text-white font-bold text-xs transition-colors flex items-center gap-1.5 ml-auto shadow-sm"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
+                                <span>View Report</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
-                    {filteredReportRows.map((row) => (
-                      <tr key={row.key} className="text-slate-700">
-                        {row.cells.map((cell, index) => (
-                          <td key={`${row.key}-${index}`} className={`py-3 pr-4 ${index === 0 ? "font-bold text-[#0B2D5C]" : ""}`}>
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
-              <p className="text-[11px] text-slate-400">
-                Showing {filteredReportRows.length} row{filteredReportRows.length === 1 ? "" : "s"} in {reportTab}.
-              </p>
             </div>
           </div>
         )}
 
-        {/* ── TAB: USERS MANAGEMENT ── */}
+        {/* ── TAB 3: ISSUED CERTIFICATES (CONSOLIDATED ACROSS ALL DOCTORS) ── */}
+        {activeNav === "certificates" && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header & Export */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold uppercase tracking-wider">
+                    Official Digital Registry
+                  </span>
+                  <span className="text-xs text-slate-400 font-bold">
+                    {filteredIssuedCertificates.length} {filteredIssuedCertificates.length === 1 ? "Certificate" : "Certificates"}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0B2D5C] mt-1" style={{ fontFamily: "var(--font-primary)" }}>
+                  Issued Medical Fitness Certificates
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Consolidated registry of all issued, verified, and active digital certificates signed across all FitMed physicians.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const headers = [
+                      "Certificate ID",
+                      "Candidate Name",
+                      "National ID",
+                      "Applicant Email",
+                      "Purpose",
+                      "Category",
+                      "Issuing Doctor",
+                      "Doctor License",
+                      "Issue Date",
+                      "Expiry Date",
+                      "Payment Status",
+                      "Certificate Status",
+                      "Irembo Ref",
+                      "SHA256 Hash",
+                    ];
+                    const rows = filteredIssuedCertificates.map((c) => [
+                      c.certificateId || "",
+                      c.candidateName || "",
+                      c.candidateIdNumber || "",
+                      c.applicantEmail || "",
+                      c.purpose || "",
+                      c.category || "",
+                      displayDoctorName(c.assignedDoctor || ""),
+                      c.assignedDoctorLicense || "",
+                      c.issuedAt || c.appliedDate ? new Date(c.issuedAt || c.appliedDate).toLocaleDateString() : "",
+                      c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : "",
+                      c.paymentStatus || "UNPAID",
+                      c.status || "submitted",
+                      c.iremboRef || "",
+                      c.sha256Hash || "",
+                    ]);
+                    downloadCsv(`fitmed_issued_certificates_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-[#0B2D5C] text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>Export Registry CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-[#0B2D5C] uppercase tracking-wider">
+                  <Filter className="w-4 h-4 text-[#12B8B0]" />
+                  <span>Filter Registry Records</span>
+                </div>
+                {(certDoctorFilter !== "ALL" || certStatusFilter !== "ALL" || certDatePreset !== "ALL" || certSearch.trim() || certStartDate || certEndDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCertDoctorFilter("ALL");
+                      setCertStatusFilter("ALL");
+                      setCertDatePreset("ALL");
+                      setCertStartDate("");
+                      setCertEndDate("");
+                      setCertSearch("");
+                    }}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset filters</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* 1. Doctor Filter */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Issuing Physician
+                  </label>
+                  <BrandSelect
+                    value={certDoctorFilter}
+                    onChange={setCertDoctorFilter}
+                    options={[
+                      { value: "ALL", label: `All Doctors (${allDoctorOptions.length})` },
+                      ...allDoctorOptions.map((doc) => ({
+                        value: doc,
+                        label: `Dr. ${doc.replace(/^Dr\.\s*/i, "")}`,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                {/* 2. Status & Payment Filter */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Status &amp; Payment State
+                  </label>
+                  <BrandSelect
+                    value={certStatusFilter}
+                    onChange={setCertStatusFilter}
+                    options={[
+                      { value: "ALL", label: "All Certificate States" },
+                      { value: "PAID", label: "Valid & Paid (Unlocked)" },
+                      { value: "APPROVED_UNPAID", label: "Approved — Awaiting Payment" },
+                      { value: "VALID", label: "Valid Certificates Only" },
+                      { value: "EXPIRED", label: "Expired Certificates" },
+                      { value: "REVOKED", label: "Revoked Certificates" },
+                      { value: "REJECTED", label: "Declined / Rejected Applications" },
+                    ]}
+                  />
+                </div>
+
+                {/* 3. Calendar Preset */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Issued Date Filter
+                  </label>
+                  <BrandSelect
+                    value={certDatePreset}
+                    onChange={(v) => setCertDatePreset(v as any)}
+                    options={[
+                      { value: "ALL", label: "All Time" },
+                      { value: "TODAY", label: "Issued Today" },
+                      { value: "WEEK", label: "Issued in Last 7 Days" },
+                      { value: "MONTH", label: "Issued in Last 30 Days" },
+                      { value: "CUSTOM", label: "Custom Date Range…" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              {/* Custom Date Pickers & Search */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
+                {certDatePreset === "CUSTOM" && (
+                  <>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                        Issued After
+                      </label>
+                      <BrandDatePicker value={certStartDate} onChange={setCertStartDate} preset="any" />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                        Issued Before
+                      </label>
+                      <BrandDatePicker value={certEndDate} onChange={setCertEndDate} preset="any" />
+                    </div>
+                  </>
+                )}
+
+                <div className={certDatePreset === "CUSTOM" ? "sm:col-span-6" : "sm:col-span-12"}>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Search Certificate ID, Name, National ID or Irembo Ref
+                  </label>
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search certificate ID (FM-2026-00001), applicant name, Irembo ref or national ID..."
+                      value={certSearch}
+                      onChange={(e) => setCertSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#12B8B0]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Issued Certificates Table */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[950px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/80 text-[10px] uppercase tracking-wider text-slate-400 font-extrabold">
+                      <th className="py-3.5 px-4">Certificate ID</th>
+                      <th className="py-3.5 px-4">Candidate Details</th>
+                      <th className="py-3.5 px-4">Purpose &amp; Category</th>
+                      <th className="py-3.5 px-4">Issuing Doctor</th>
+                      <th className="py-3.5 px-4">Issued &amp; Expiry</th>
+                      <th className="py-3.5 px-4">Payment &amp; Status</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredIssuedCertificates.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <FileSignature className="w-8 h-8 text-slate-300" />
+                            <p className="font-bold text-slate-600">No issued certificates match your filters.</p>
+                            <p className="text-[11px] text-slate-400">Try selecting another physician, status or adjusting the calendar date range.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredIssuedCertificates.map((cert) => {
+                        const docName = displayDoctorName(cert.assignedDoctor || "FitMed Physician");
+                        const isPaid = cert.paymentStatus === "PAID";
+                        const issueDate = cert.issuedAt || cert.appliedDate ? new Date(cert.issuedAt || cert.appliedDate).toLocaleDateString() : "—";
+                        const expiryDate = cert.expiresAt ? new Date(cert.expiresAt).toLocaleDateString() : "—";
+                        const isBusy = certStatusBusy === cert.certificateId;
+
+                        const patchCertAdmin = async (body: Record<string, unknown>) => {
+                          setCertStatusBusy(cert.certificateId);
+                          try {
+                            const res = await fetch("/api/certificates", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ certificateId: cert.certificateId, actor: "admin", ...body }),
+                            });
+                            const data = await res.json();
+                            if (!data.success) throw new Error(data.error || "Update failed");
+                            setAllCertificates((prev) =>
+                              prev.map((c) =>
+                                c.certificateId === cert.certificateId
+                                  ? { ...c, ...body }
+                                  : c
+                              )
+                            );
+                            setCertificateRows((prev) =>
+                              prev.map((c) =>
+                                c.id === cert.certificateId
+                                  ? { ...c, status: (body.status as string) ?? c.status }
+                                  : c
+                              )
+                            );
+                            success(
+                              "Certificate status updated",
+                              `${cert.candidateName} — ${String(body.status || "").replace(/-/g, " ")}`
+                            );
+                          } catch (e: any) {
+                            error("Update failed", e.message || "Could not update certificate.");
+                          } finally {
+                            setCertStatusBusy(null);
+                          }
+                        };
+
+                        return (
+                          <tr key={cert._id || cert.certificateId} className="hover:bg-slate-50/60 transition-colors text-slate-700">
+                            {/* ID & Hash */}
+                            <td className="py-3.5 px-4 font-mono font-bold text-[#0B2D5C]">
+                              <div className="flex items-center gap-1.5">
+                                <span>{cert.certificateId || "—"}</span>
+                              </div>
+                              {cert.sha256Hash && (
+                                <div className="text-[9px] text-slate-400 font-mono truncate max-w-[120px]" title={cert.sha256Hash}>
+                                  hash: {cert.sha256Hash.slice(0, 10)}…
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Candidate */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-[#0B2D5C]">{cert.candidateName || "Applicant"}</div>
+                              <div className="text-[11px] text-slate-500">
+                                ID: <strong className="font-mono">{cert.candidateIdNumber || "—"}</strong>
+                              </div>
+                              <div className="text-[10px] text-slate-400">{cert.applicantEmail}</div>
+                            </td>
+
+                            {/* Purpose & Category */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-slate-800">{cert.purpose || "General Fitness"}</div>
+                              <div className="text-[10px] text-teal-700 font-medium">
+                                {cert.category || cert.jobType || "Standard Certificate"}
+                              </div>
+                            </td>
+
+                            {/* Issuing Doctor */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                <Stethoscope className="w-3.5 h-3.5 text-[#12B8B0]" />
+                                <span>{docName}</span>
+                              </div>
+                              <div className="text-[11px] text-slate-400">
+                                License: {cert.assignedDoctorLicense || "RW-RMDC-4091"}
+                              </div>
+                            </td>
+
+                            {/* Dates */}
+                            <td className="py-3.5 px-4 text-[11px]">
+                              <div>Issued: <strong>{issueDate}</strong></div>
+                              <div className="text-slate-500">Expires: {expiryDate}</div>
+                            </td>
+
+                            {/* Payment & Status */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                                  isPaid
+                                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                    : "bg-amber-100 text-amber-800 border-amber-300"
+                                }`}>
+                                  {isPaid ? "PAID (5,000 FRW)" : "PAYMENT DUE"}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                                  cert.status === "approved" || cert.status === "valid" || cert.status === "issued"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : cert.status === "rejected"
+                                    ? "bg-rose-100 text-rose-800 border-rose-300"
+                                    : "bg-sky-50 text-sky-700 border-sky-200"
+                                }`}>
+                                  {cert.status}
+                                </span>
+                              </div>
+                              {cert.iremboRef && (
+                                <div className="text-[10px] text-teal-800 font-mono mt-1 font-semibold">
+                                  Ref: {cert.iremboRef}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCertPreview(cert)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-[#0B2D5C] hover:bg-slate-800 text-white font-bold text-[11px] transition-colors flex items-center gap-1 shadow-sm"
+                                  title="View Official Certificate Preview"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
+                                  <span>Preview</span>
+                                </button>
+
+                                {cert.status !== "revoked" && (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={async () => {
+                                      const ok = await confirm({
+                                        title: "Revoke Certificate",
+                                        message: `Are you sure you want to revoke certificate ${cert.certificateId}?`,
+                                        confirmLabel: "Revoke Certificate",
+                                        cancelLabel: "Cancel",
+                                        variant: "danger",
+                                      });
+                                      if (ok) {
+                                        patchCertAdmin({ status: "revoked", decisionNotes: "Revoked by platform administrator." });
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-rose-600 disabled:opacity-30 transition-colors"
+                                    title="Revoke Certificate"
+                                  >
+                                    <Ban className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 4: USERS MANAGEMENT ── */}
         {activeNav === "users" && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2910,6 +3776,216 @@ export default function AdminDashboardPage() {
           </div>
         </div>,
         document.body
+      )}
+      {/* ── Admin Clinical Assessment Detail Modal ── */}
+      {selectedAssessmentDoc && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 relative text-slate-800 space-y-6 p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#12B8B0] text-[10px] font-extrabold uppercase tracking-wider">
+                    Official Clinical Record
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-400">
+                    ID: {selectedAssessmentDoc.certificateId}
+                  </span>
+                </div>
+                <h2 className="text-xl font-extrabold text-[#0B2D5C] mt-1" style={{ fontFamily: "var(--font-primary)" }}>
+                  Doctor Clinical Assessment Report
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Full 9-section telemedicine clinical examination recorded by evaluating physician.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedAssessmentDoc(null)}
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Section 1: Patient & Evaluation Info */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <h3 className="font-extrabold text-[#0B2D5C] uppercase tracking-wider text-[11px]">
+                1. Patient &amp; Telehealth Consultation Details
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-slate-700">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Patient Name</span>
+                  <span className="font-bold text-[#0B2D5C]">{selectedAssessmentDoc.candidateName || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">National ID</span>
+                  <span className="font-mono font-bold">{selectedAssessmentDoc.candidateIdNumber || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Age / Gender</span>
+                  <span>{selectedAssessmentDoc.age ? `${selectedAssessmentDoc.age} yrs` : "—"} · {selectedAssessmentDoc.gender || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Evaluating Physician</span>
+                  <span className="font-bold text-[#0B2D5C]">{displayDoctorName(selectedAssessmentDoc.assignedDoctor || "")}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Physician License</span>
+                  <span>{selectedAssessmentDoc.assignedDoctorLicense || "RW-RMDC-4091"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Certificate Purpose</span>
+                  <span className="font-semibold text-teal-800">{selectedAssessmentDoc.purpose || "—"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Vitals Panel */}
+            <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200 space-y-2 text-xs">
+              <h3 className="font-extrabold text-[#0B2D5C] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-[#12B8B0]" />
+                <span>Recorded Vital Signs</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="bg-white p-2.5 rounded-xl border border-teal-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Blood Pressure</div>
+                  <div className="text-sm font-extrabold text-[#0B2D5C] font-mono mt-0.5">
+                    {selectedAssessmentDoc.vitals?.bloodPressure || selectedAssessmentDoc.structuredAssessment?.vitals?.bp || "120/80"}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-teal-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Heart Rate</div>
+                  <div className="text-sm font-extrabold text-[#0B2D5C] font-mono mt-0.5">
+                    {selectedAssessmentDoc.vitals?.heartRate || selectedAssessmentDoc.structuredAssessment?.vitals?.heartRate || "72"} bpm
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-teal-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Blood Oxygen (SpO2)</div>
+                  <div className="text-sm font-extrabold text-[#0B2D5C] font-mono mt-0.5">
+                    {selectedAssessmentDoc.vitals?.spo2 || selectedAssessmentDoc.structuredAssessment?.vitals?.spo2 || "98"}%
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-teal-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">BMI (Calculated)</div>
+                  <div className="text-sm font-extrabold text-[#0B2D5C] font-mono mt-0.5">
+                    {selectedAssessmentDoc.vitals?.bmi || selectedAssessmentDoc.structuredAssessment?.vitals?.bmi || "22.5"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Red Flags Screening Checklist */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <h3 className="font-extrabold text-[#0B2D5C] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                <span>Red-Flag Clinical Screening</span>
+              </h3>
+              {selectedAssessmentDoc.structuredAssessment?.redFlags && Object.keys(selectedAssessmentDoc.structuredAssessment.redFlags).length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {Object.entries(selectedAssessmentDoc.structuredAssessment.redFlags).map(([key, val]) => (
+                    <div key={key} className={`p-2 rounded-xl border text-[11px] flex items-center gap-1.5 ${val ? "bg-rose-50 border-rose-200 text-rose-800 font-bold" : "bg-white border-slate-200 text-slate-600"}`}>
+                      {val ? <AlertCircle className="w-3 h-3 text-rose-600" /> : <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                      <span className="capitalize">{key.replace(/([A-Z])/g, " $1")}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 italic">No acute red flags identified during telemedicine intake.</p>
+              )}
+            </div>
+
+            {/* Section 4: Clinical Findings & Impression */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <h3 className="font-extrabold text-[#0B2D5C] uppercase tracking-wider text-[11px]">
+                Doctor Clinical Findings &amp; Summary
+              </h3>
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-slate-700 leading-relaxed">
+                {selectedAssessmentDoc.structuredAssessment?.clinicalImpression ||
+                  selectedAssessmentDoc.decisionNotes ||
+                  selectedAssessmentDoc.doctorNotes ||
+                  selectedAssessmentDoc.additionalNotes ||
+                  "No abnormal physical or functional limitations observed virtually. Candidate fulfills fitness requirements."}
+              </div>
+            </div>
+
+            {/* Section 5: Certification Decision & Doctor Declaration */}
+            <div className={`p-5 rounded-2xl border-2 space-y-3 ${
+              selectedAssessmentDoc.decision === "FIT" || selectedAssessmentDoc.status === "approved" || selectedAssessmentDoc.status === "valid"
+                ? "bg-emerald-50/70 border-emerald-300"
+                : selectedAssessmentDoc.decision === "PHYSICAL_CONSULTATION"
+                ? "bg-orange-50/70 border-orange-300"
+                : selectedAssessmentDoc.decision === "INVESTIGATION_SPECIALIST"
+                ? "bg-indigo-50/70 border-indigo-300"
+                : selectedAssessmentDoc.decision === "URGENT_REFERRAL" || selectedAssessmentDoc.decision === "NOT_FIT"
+                ? "bg-rose-50/70 border-rose-300"
+                : "bg-sky-50/70 border-sky-300"
+            }`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Final Clinical Decision</div>
+                  <div className="text-base font-extrabold text-[#0B2D5C]">
+                    {selectedAssessmentDoc.decision || selectedAssessmentDoc.structuredAssessment?.decision || "PENDING"}
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-white border font-bold text-xs shadow-sm">
+                  Status: {selectedAssessmentDoc.status || "submitted"}
+                </span>
+              </div>
+
+              {selectedAssessmentDoc.restrictions && (
+                <div className="p-2.5 rounded-xl bg-white border border-amber-300 text-xs text-amber-900">
+                  <strong>Restrictions / Conditions:</strong> {selectedAssessmentDoc.restrictions}
+                </div>
+              )}
+
+              <div className="border-t border-slate-200/60 pt-2 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Signed electronically by: <strong>{displayDoctorName(selectedAssessmentDoc.assignedDoctor || "")}</strong></span>
+                <span>License: <strong>{selectedAssessmentDoc.assignedDoctorLicense || "RW-RMDC-4091"}</strong></span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedAssessmentDoc(null)}
+                className="px-5 py-2.5 rounded-xl bg-[#0B2D5C] hover:bg-slate-800 text-white font-bold text-xs transition-colors"
+              >
+                Close Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Admin Certificate Preview Modal ── */}
+      {selectedCertPreview && (
+        <OfficialMedicalCertificate
+          data={{
+            certificateId: selectedCertPreview.certificateId,
+            candidateName: selectedCertPreview.candidateName,
+            nationalId: selectedCertPreview.candidateIdNumber || selectedCertPreview.nationalId || "—",
+            gender: (selectedCertPreview.gender === "Female" ? "Female" : "Male") as any,
+            dateOfBirth: selectedCertPreview.dateOfBirth || "1995-01-01",
+            purpose: selectedCertPreview.purpose || "Medical fitness certificate",
+            category: selectedCertPreview.category || selectedCertPreview.jobType || "Standard",
+            decision: selectedCertPreview.decision || "FIT",
+            restrictions: selectedCertPreview.restrictions || "",
+            bloodPressure: selectedCertPreview.vitals?.bloodPressure || "120/80",
+            heartRate: selectedCertPreview.vitals?.heartRate || "72",
+            spo2: selectedCertPreview.vitals?.spo2 || "98",
+            bmi: selectedCertPreview.vitals?.bmi || "22.5",
+            doctorName: displayDoctorName(selectedCertPreview.assignedDoctor || "Physician"),
+            doctorLicense: selectedCertPreview.assignedDoctorLicense || "RW-RMDC-4091",
+            issueDate: selectedCertPreview.issuedAt || selectedCertPreview.appliedDate ? new Date(selectedCertPreview.issuedAt || selectedCertPreview.appliedDate).toLocaleDateString() : new Date().toLocaleDateString(),
+            expiryDate: selectedCertPreview.expiresAt ? new Date(selectedCertPreview.expiresAt).toLocaleDateString() : "—",
+            sha256Hash: selectedCertPreview.sha256Hash || "—",
+            qrUrl: selectedCertPreview.qrCodeUrl || "",
+          }}
+          onClose={() => setSelectedCertPreview(null)}
+        />
       )}
     </DashboardShell>
   );

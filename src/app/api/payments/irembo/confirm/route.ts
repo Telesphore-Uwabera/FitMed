@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { getIremboInvoice, channelFromIremboMethod } from "@/lib/iremboPay";
-import { markCertificatePaid } from "@/lib/certificatePayment";
+import { isCertificatePayable, markCertificatePaid } from "@/lib/certificatePayment";
+import Certificate from "@/models/Certificate";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,16 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
+    if (certificateId) {
+      const cert = await Certificate.findOne({ certificateId });
+      if (cert && !isCertificatePayable(cert)) {
+        return NextResponse.json(
+          { success: false, error: "Only approved certificates with a FIT decision can be paid." },
+          { status: 400 }
+        );
+      }
+    }
+
     const fetched = await getIremboInvoice(reference);
     if (!fetched.success || !fetched.invoice) {
       return NextResponse.json({ success: false, error: fetched.error || "Could not verify IremboPay." }, { status: 400 });

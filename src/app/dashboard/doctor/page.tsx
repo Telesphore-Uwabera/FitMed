@@ -54,10 +54,11 @@ import OfficialMedicalCertificate from "@/components/OfficialMedicalCertificate"
 import DoctorAssessmentForm, { DoctorDecision } from "@/components/DoctorAssessmentForm";
 import WebRTCVideoCall, { FITMED_LIVE_ROOM } from "@/components/WebRTCVideoCall";
 import { useSession } from "@/lib/useSession";
-import { consultationRoomId, formatChatMessages } from "@/lib/consultation";
+import { consultationRoomId, formatChatMessages, formatCertificateCard, normalizeDecision, normalizeStatus } from "@/lib/consultation";
 import { toOfficialCertificateData } from "@/lib/certificateDisplay";
 import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessmentForm";
 import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
+import CertificateActionPanel from "@/components/CertificateActionPanel";
 import { useToast } from "@/components/ToastProvider";
 import { subscribeLiveRefresh, broadcastLiveRefresh } from "@/lib/liveRefresh";
 import { useDialog } from "@/components/DialogProvider";
@@ -566,6 +567,15 @@ export default function DoctorDashboardPage() {
   const [appPayment, setAppPayment] = useState("all");
   const [appDate, setAppDate] = useState("all");
   const [selectedApplication, setSelectedApplication] = useState<any | null>(null);
+
+  // ── ASSESSMENT FORM RECORDS STATE ──────────────────────────────────────────
+  const [assessSearch, setAssessSearch] = useState("");
+  const [assessDecision, setAssessDecision] = useState("all");
+  const [assessDate, setAssessDate] = useState("all");
+  const [assessCompletion, setAssessCompletion] = useState("all"); // "all" | "complete" | "incomplete"
+  const [selectedAssessment, setSelectedAssessment] = useState<any | null>(null);
+  // ────────────────────────────────────────────────────────────────────────────
+
   const [issuedCertificates, setIssuedCertificates] = useState<
     { id: string; name: string; candidate: string; purpose: string; decision: string; date: string; avatarUrl?: string }[]
   >([]);
@@ -661,6 +671,58 @@ export default function DoctorDashboardPage() {
     }
     return true;
   });
+
+  // ── FILTERED ASSESSMENT FORM RECORDS ───────────────────────────────────────
+  const filteredAssessments = allApplications.filter((cert) => {
+    const query = assessSearch.trim().toLowerCase();
+    if (query) {
+      const haystack = [
+        cert.candidateName,
+        cert.applicantEmail,
+        cert.certificateId,
+        cert.purpose,
+        cert.structuredAssessment?.occupation,
+        cert.structuredAssessment?.employer,
+        cert.structuredAssessment?.doctorName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    const hasStructured = Boolean(cert.structuredAssessment?.doctorDeclaration !== undefined && cert.structuredAssessment?.patientName);
+    if (assessCompletion === "complete" && !hasStructured) return false;
+    if (assessCompletion === "incomplete" && hasStructured) return false;
+    if (assessDecision !== "all") {
+      const d = String(cert.structuredAssessment?.decision || cert.decision || "PENDING").toUpperCase().replace(/_/g, " ");
+      if (assessDecision === "FIT" && d !== "FIT") return false;
+      if (assessDecision === "RESTRICT" && !d.includes("RESTRICT")) return false;
+      if (assessDecision === "FURTHER" && !d.includes("FURTHER") && !d.includes("PHYSICAL") && !d.includes("INVESTIGATION")) return false;
+      if (assessDecision === "NOT_FIT" && !d.includes("NOT FIT") && !d.includes("UNFIT") && !d.includes("URGENT")) return false;
+    }
+    if (assessDate !== "all") {
+      const dateStr = cert.structuredAssessment?.consultationDate || cert.appliedDate;
+      if (dateStr) {
+        const d = new Date(dateStr);
+        const now = new Date();
+        if (assessDate === "today" && d.toDateString() !== now.toDateString()) return false;
+        if (assessDate === "week" && d < new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) return false;
+        if (assessDate === "month" && d < new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)) return false;
+      }
+    }
+    return true;
+  });
+
+  const assessmentStats = {
+    total: allApplications.length,
+    complete: allApplications.filter((c) => Boolean(c.structuredAssessment?.patientName)).length,
+    incomplete: allApplications.filter((c) => !c.structuredAssessment?.patientName).length,
+    fit: allApplications.filter((c) => {
+      const d = String(c.structuredAssessment?.decision || c.decision || "").toUpperCase();
+      return d === "FIT";
+    }).length,
+  };
+  // ────────────────────────────────────────────────────────────────────────────
 
   const applicationToCandidate = (cert: any) => ({
     id: cert.certificateId,
@@ -783,24 +845,24 @@ export default function DoctorDashboardPage() {
         {/* ── MAIN INFO STAT CARDS ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Card 1: Pending Queue */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-50/60 to-transparent dark:from-teal-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/15 border border-[#12B8B0]/30 flex items-center justify-center">
                   <ClipboardList className="w-5 h-5 text-[#12B8B0]" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   Live
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Pending Queue</div>
-              <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Pending Queue</div>
+              <div className="text-3xl font-extrabold text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>
                 {queue.length}
-                <span className="text-sm font-semibold text-slate-400 ml-1">candidates</span>
+                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 ml-1">candidates</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
                 <Activity className="w-3 h-3 text-[#12B8B0]" />
                 Awaiting clinical evaluation
               </div>
@@ -808,74 +870,74 @@ export default function DoctorDashboardPage() {
           </div>
 
           {/* Card 2: Certificates Issued Today */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-50/60 to-transparent dark:from-sky-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center">
-                  <FileCheck className="w-5 h-5 text-sky-600" />
+                <div className="w-11 h-11 rounded-xl bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-700 flex items-center justify-center">
+                  <FileCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
                   Database
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Certs Issued</div>
-              <div className="text-3xl font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Certs Issued</div>
+              <div className="text-3xl font-extrabold text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>
                 {issuedCount}
-                <span className="text-sm font-semibold text-slate-400 ml-1">certs</span>
+                <span className="text-sm font-semibold text-slate-400 dark:text-slate-500 ml-1">certs</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <Award className="w-3 h-3 text-sky-500" />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                <Award className="w-3 h-3 text-sky-500 dark:text-sky-400" />
                 {issuedTodayCount} issued today
               </div>
             </div>
           </div>
 
           {/* Card 3: Current Shift */}
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-50/60 to-transparent dark:from-violet-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center">
-                  <Sun className="w-5 h-5 text-violet-600" />
+                <div className="w-11 h-11 rounded-xl bg-violet-100 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-700 flex items-center justify-center">
+                  <Sun className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                 </div>
                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                  doctorStatus === "ONLINE" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : doctorStatus === "BUSY" ? "bg-orange-50 border-orange-200 text-orange-700"
-                  : "bg-slate-100 border-slate-200 text-slate-500"
+                  doctorStatus === "ONLINE" ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400"
+                  : doctorStatus === "BUSY" ? "bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-400"
+                  : "bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400"
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${doctorStatus === "ONLINE" ? "bg-emerald-500 animate-pulse" : doctorStatus === "BUSY" ? "bg-orange-500" : "bg-slate-400"}`} />
                   {doctorStatus}
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Shift</div>
-              <div className="text-lg font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Active Shift</div>
+              <div className="text-lg font-extrabold text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>
                 {shiftToday.label}
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-violet-500" />
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-violet-500 dark:text-violet-400" />
                 {shiftToday.hours}
               </div>
             </div>
           </div>
 
           {/* Card 4: Doctor License */}
-          <div className="bg-gradient-to-br from-[#071d3d] to-[#0B2D5C] rounded-2xl p-5 sm:p-6 border border-sky-500/30 shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[#12B8B0]/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="bg-white dark:bg-[#0d1f38] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-50/60 to-transparent dark:from-teal-900/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-[#12B8B0]/20 border border-[#12B8B0]/40 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-teal-100 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-700 flex items-center justify-center">
                   <ShieldCheck className="w-5 h-5 text-[#12B8B0]" />
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#12B8B0]/20 border border-[#12B8B0]/30 text-[#12B8B0] text-[10px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700 text-teal-700 dark:text-teal-400 text-[10px] font-bold uppercase tracking-wider">
                   {doctorProfile.isVerified ? "Verified" : "On file"}
                 </span>
               </div>
-              <div className="text-xs font-bold text-sky-300/80 uppercase tracking-wider mb-1">License ID</div>
-              <div className="text-lg font-extrabold text-white font-mono" style={{ fontFamily: "var(--font-primary)" }}>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">License ID</div>
+              <div className="text-lg font-extrabold text-[#0B2D5C] dark:text-slate-100 font-mono" style={{ fontFamily: "var(--font-primary)" }}>
                 {displayValue(doctorProfile.licenseNumber)}
               </div>
-              <div className="text-[11px] text-sky-200/70 mt-1.5 flex items-center gap-1">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
                 <Stethoscope className="w-3 h-3 text-[#12B8B0]" />
                 {displayValue(doctorProfile.specialty, "Physician")}
               </div>
@@ -975,46 +1037,6 @@ export default function DoctorDashboardPage() {
                           <span>Applied: {candidate.appliedDate}</span>
                           <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">NEW</span>
                         </div>
-                        <BrandSelect
-                          size="compact"
-                          value={candidate.fullCertificate?.status || "submitted"}
-                          options={[
-                            { value: "submitted", label: "Submitted" },
-                            { value: "under-review", label: "Under Review" },
-                            { value: "approved", label: "Approved" },
-                            { value: "rejected", label: "Rejected" },
-                          ]}
-                          onChange={async (newStatus) => {
-                            try {
-                              await fetch(`/api/certificates`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  certificateId: candidate.id,
-                                  status: newStatus,
-                                }),
-                              });
-                              success("Status Updated", `Application status changed to ${newStatus}`);
-                              setQueue(queue.map((c) =>
-                                c.id === candidate.id
-                                  ? { ...c, fullCertificate: { ...c.fullCertificate, status: newStatus } }
-                                  : c
-                              ));
-                            } catch {
-                              error("Error", "Failed to update status");
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            setIdCandidate(candidate);
-                            setShowIdModal(true);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0B2D5C] font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <IdCard className="w-3 h-3 text-[#12B8B0]" />
-                          <span>View ID</span>
-                        </button>
                       </div>
                     </div>
 
@@ -1033,18 +1055,61 @@ export default function DoctorDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Doctor Actions */}
+                    {/* ── Primary Status Actions ── */}
                     <div className="mt-4 pt-4 border-t border-slate-100">
+                      <CertificateActionPanel
+                        certificateId={candidate.id}
+                        candidateName={candidate.name}
+                        applicantEmail={candidate.applicantEmail}
+                        applicantPhone={candidate.phone}
+                        purpose={candidate.purpose}
+                        currentStatus={candidate.fullCertificate?.status || "submitted"}
+                        currentDecision={candidate.fullCertificate?.decision || ""}
+                        doctorId={doctorProfile.id || session?.email || ""}
+                        doctorEmail={session?.email || doctorProfile.email || ""}
+                        doctorName={doctorProfile.name || session?.name || "Physician"}
+                        doctorSpecialty={doctorProfile.specialty || "Occupational Health & Telehealth Physician"}
+                        onStatusChanged={(newStatus, newDecision) => {
+                          setQueue((prev) =>
+                            prev.map((c) =>
+                              c.id === candidate.id
+                                ? {
+                                    ...c,
+                                    fullCertificate: {
+                                      ...c.fullCertificate,
+                                      status: newStatus,
+                                      ...(newDecision ? { decision: newDecision } : {}),
+                                    },
+                                  }
+                                : c
+                            )
+                          );
+                          if (["approved", "rejected"].includes(newStatus)) {
+                            setQueue((prev) => prev.filter((c) => c.id !== candidate.id));
+                          }
+                          broadcastLiveRefresh();
+                          success(
+                            "Status updated",
+                            `${candidate.name} — ${normalizeStatus(newStatus)}${newDecision ? ` · ${normalizeDecision(newDecision)}` : ""}`
+                          );
+                        }}
+                        onAppointmentCreated={(apt) => setDoctorAppointments((prev) => [apt, ...prev])}
+                      />
+                    </div>
+
+                    {/* ── Secondary Clinical Tools ── */}
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <p className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-2">Clinical tools</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         <button
                           onClick={() => {
                             setSelectedCandidate(candidate);
                             setShowEvaluateSignModal(true);
                           }}
-                          className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Evaluate</span>
+                          <FileText className="w-3.5 h-3.5 text-sky-600" />
+                          <span>Screening Answers</span>
                         </button>
                         <button
                           onClick={() => {
@@ -1052,10 +1117,10 @@ export default function DoctorDashboardPage() {
                             setShowStructuredAssessmentModal(true);
                             markUnderReview(candidate.id);
                           }}
-                          className="px-3 py-2 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <ClipboardList className="w-3.5 h-3.5" />
-                          <span>Assess</span>
+                          <ClipboardList className="w-3.5 h-3.5 text-[#12B8B0]" />
+                          <span>Assessment Form</span>
                         </button>
                         <button
                           onClick={() => {
@@ -1064,20 +1129,20 @@ export default function DoctorDashboardPage() {
                             setDoctorDocuments(candidate.fullCertificate?.doctorDocuments || []);
                             setShowDoctorNotesModal(true);
                           }}
-                          className="px-3 py-2 rounded-lg bg-[#0B2D5C] hover:bg-slate-800 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                         >
                           <FileCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
-                          <span>Notes</span>
+                          <span>Notes & Docs</span>
                         </button>
                         <button
                           onClick={() => {
-                            setSelectedCandidate(candidate);
-                            goToNav("telehealth");
+                            setIdCandidate(candidate);
+                            setShowIdModal(true);
                           }}
-                          className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+                          className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <Video className="w-3.5 h-3.5" />
-                          <span>Video</span>
+                          <IdCard className="w-3.5 h-3.5 text-[#12B8B0]" />
+                          <span>View ID</span>
                         </button>
                       </div>
                     </div>
@@ -1207,8 +1272,7 @@ export default function DoctorDashboardPage() {
                       <th className="px-5 py-3">Applicant</th>
                       <th className="px-3 py-3">Certificate</th>
                       <th className="px-3 py-3">Purpose</th>
-                      <th className="px-3 py-3">Status</th>
-                      <th className="px-3 py-3">Decision</th>
+                      <th className="px-3 py-3">Status (as seen by applicant)</th>
                       <th className="px-3 py-3">Payment</th>
                       <th className="px-3 py-3">Received</th>
                       <th className="px-5 py-3 text-right">Details</th>
@@ -1222,41 +1286,54 @@ export default function DoctorDashboardPage() {
                         </td>
                       </tr>
                     )}
-                    {filteredApplications.map((cert) => (
-                      <tr
-                        key={cert.certificateId || cert._id}
-                        className="hover:bg-slate-50 cursor-pointer"
-                        onClick={() => setSelectedApplication(cert)}
-                      >
-                        <td className="px-5 py-4">
-                          <div className="font-bold text-[#0B2D5C]">{cert.candidateName}</div>
-                          <div className="text-slate-500 mt-0.5">{cert.applicantEmail}</div>
-                          <div className="text-slate-400 font-mono mt-0.5">{cert.candidateIdNumber || "—"}</div>
-                        </td>
-                        <td className="px-3 py-4 font-mono font-bold text-[#0B2D5C]">{cert.certificateId}</td>
-                        <td className="px-3 py-4 text-slate-700 max-w-[180px]">{cert.purpose || "—"}</td>
-                        <td className="px-3 py-4">
-                          <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] uppercase">
-                            {cert.status || "submitted"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-4 font-bold text-slate-700">{cert.decision || "Waiting"}</td>
-                        <td className="px-3 py-4">
-                          <span className={`font-bold ${String(cert.paymentStatus).toUpperCase() === "PAID" ? "text-emerald-700" : "text-amber-700"}`}>
-                            {cert.paymentStatus || "UNPAID"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-4 text-slate-500 whitespace-nowrap">
-                          {cert.appliedDate ? new Date(cert.appliedDate).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 text-[#0B2D5C] border border-teal-200 font-bold">
-                            <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
-                            Open
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredApplications.map((cert) => {
+                      const card = formatCertificateCard(cert);
+                      const sl = card.statusLabel;
+                      const badgeCls =
+                        sl.includes("VERIFIED FIT") || sl.includes("FIT (WITH") ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                        : sl.includes("APPROVED") ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : sl.includes("DECLINED") || sl.includes("NOT FIT") ? "bg-rose-100 text-rose-800 border-rose-300"
+                        : sl.includes("PHYSICAL") ? "bg-orange-100 text-orange-800 border-orange-300"
+                        : sl.includes("SPECIALIST") ? "bg-indigo-100 text-indigo-800 border-indigo-300"
+                        : sl.includes("URGENT") ? "bg-rose-100 text-rose-800 border-rose-300"
+                        : sl.includes("FURTHER") ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : sl.includes("UNDER REVIEW") ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : "bg-sky-100 text-sky-800 border-sky-300";
+                      return (
+                        <tr
+                          key={cert.certificateId || cert._id}
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setSelectedApplication(cert)}
+                        >
+                          <td className="px-5 py-4">
+                            <div className="font-bold text-[#0B2D5C]">{cert.candidateName}</div>
+                            <div className="text-slate-500 mt-0.5">{cert.applicantEmail}</div>
+                            <div className="text-slate-400 font-mono mt-0.5">{cert.candidateIdNumber || "—"}</div>
+                          </td>
+                          <td className="px-3 py-4 font-mono font-bold text-[#0B2D5C]">{cert.certificateId}</td>
+                          <td className="px-3 py-4 text-slate-700 max-w-[180px]">{cert.purpose || "—"}</td>
+                          <td className="px-3 py-4">
+                            <span className={`px-2 py-1 rounded-full font-bold text-[10px] uppercase border ${badgeCls}`}>
+                              {sl}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4">
+                            <span className={`font-bold ${String(cert.paymentStatus).toUpperCase() === "PAID" ? "text-emerald-700" : "text-amber-700"}`}>
+                              {cert.paymentStatus || "UNPAID"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 text-slate-500 whitespace-nowrap">
+                            {cert.appliedDate ? new Date(cert.appliedDate).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 text-[#0B2D5C] border border-teal-200 font-bold">
+                              <Eye className="w-3.5 h-3.5 text-[#12B8B0]" />
+                              Open
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1933,6 +2010,179 @@ export default function DoctorDashboardPage() {
                 </button>
               </div>
             </div>
+
+            {/* ── Assessment Form Records ────────────────────────────────── */}
+            <div className="bg-white dark:bg-[#0d1f38] rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-extrabold text-[#0B2D5C] dark:text-slate-100">Medical Fitness Assessment Form Records</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    All structured assessment forms filled for applicants — create, edit, or delete per record.
+                  </p>
+                </div>
+                {/* Stat pills */}
+                <div className="flex flex-wrap gap-2 text-[11px] font-bold shrink-0">
+                  <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                    {assessmentStats.total} total
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700">
+                    {assessmentStats.complete} complete
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700">
+                    {assessmentStats.incomplete} pending
+                  </span>
+                </div>
+              </div>
+
+              {/* Search + filters */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={assessSearch}
+                    onChange={(e) => setAssessSearch(e.target.value)}
+                    placeholder="Search applicant, certificate ID, purpose…"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-[#0e1c31] text-xs focus:outline-none focus:border-[#12B8B0]"
+                  />
+                </div>
+                <BrandSelect
+                  size="compact"
+                  value={assessCompletion}
+                  onChange={setAssessCompletion}
+                  options={[
+                    { value: "all", label: "All forms" },
+                    { value: "complete", label: "Completed" },
+                    { value: "incomplete", label: "Not yet filled" },
+                  ]}
+                />
+                <BrandSelect
+                  size="compact"
+                  value={assessDecision}
+                  onChange={setAssessDecision}
+                  options={[
+                    { value: "all", label: "All decisions" },
+                    { value: "FIT", label: "FIT" },
+                    { value: "RESTRICT", label: "FIT with restrictions" },
+                    { value: "FURTHER", label: "Further assessment" },
+                    { value: "NOT_FIT", label: "Not fit" },
+                  ]}
+                />
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 font-extrabold uppercase">
+                      <th className="pb-3">Official Document No.</th>
+                      <th className="pb-3">Candidate</th>
+                      <th className="pb-3">Purpose</th>
+                      <th className="pb-3">Decision</th>
+                      <th className="pb-3">Assessment Date</th>
+                      <th className="pb-3">Form</th>
+                      <th className="pb-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700 font-medium text-slate-700 dark:text-slate-300">
+                    {filteredAssessments.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-400">
+                          No records match the current filters.
+                        </td>
+                      </tr>
+                    )}
+                    {filteredAssessments.map((cert) => {
+                      const sa = cert.structuredAssessment;
+                      const hasForm = Boolean(sa?.patientName);
+                      const decisionRaw = sa?.decision || cert.decision || "PENDING";
+                      const decisionLabel = normalizeDecision(decisionRaw);
+                      const decisionCls =
+                        decisionRaw === "FIT" ? "text-emerald-700 dark:text-emerald-400 font-extrabold"
+                        : decisionRaw === "FIT_RESTRICTED" ? "text-sky-700 dark:text-sky-400 font-extrabold"
+                        : decisionRaw === "NOT_FIT" || decisionRaw === "URGENT_REFERRAL" ? "text-rose-700 dark:text-rose-400 font-extrabold"
+                        : decisionRaw === "PENDING" ? "text-slate-400 font-semibold"
+                        : "text-amber-700 dark:text-amber-400 font-extrabold";
+                      return (
+                        <tr key={cert.certificateId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="py-3.5 font-bold text-[#0B2D5C] dark:text-slate-200 font-mono">{cert.certificateId}</td>
+                          <td className="py-3.5">
+                            <div className="font-bold text-[#0B2D5C] dark:text-slate-100">{cert.candidateName}</div>
+                            <div className="text-slate-400 text-[11px]">{cert.applicantEmail}</div>
+                          </td>
+                          <td className="py-3.5 text-slate-600 dark:text-slate-400 max-w-[160px] truncate">{cert.purpose || "—"}</td>
+                          <td className={`py-3.5 ${decisionCls}`}>{decisionLabel}</td>
+                          <td className="py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                            {sa?.consultationDate || (cert.appliedDate ? new Date(cert.appliedDate).toLocaleDateString() : "—")}
+                          </td>
+                          <td className="py-3.5">
+                            {hasForm ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 text-[10px] font-bold">
+                                <CheckCircle2 className="w-3 h-3" /> Complete
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700 text-[10px] font-bold">
+                                Not filled
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Create / Edit */}
+                              <button
+                                onClick={() => {
+                                  setSelectedCandidate(applicationToCandidate(cert));
+                                  setSelectedAssessment(cert);
+                                  setShowStructuredAssessmentModal(true);
+                                  if (!hasForm) markUnderReview(cert.certificateId);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold text-[10px] flex items-center gap-1 transition-colors"
+                              >
+                                <FileText className="w-3 h-3" />
+                                {hasForm ? "Edit" : "Fill form"}
+                              </button>
+                              {/* Delete */}
+                              {hasForm && (
+                                <button
+                                  onClick={async () => {
+                                    const ok = await confirm({
+                                      title: "Delete assessment form?",
+                                      message: `This will permanently remove the structured assessment for ${cert.candidateName}. The certificate record itself is kept.`,
+                                      confirmLabel: "Delete",
+                                      variant: "danger",
+                                    });
+                                    if (!ok) return;
+                                    try {
+                                      await fetch("/api/certificates", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ certificateId: cert.certificateId, structuredAssessment: null }),
+                                      });
+                                      broadcastLiveRefresh();
+                                      success("Assessment deleted", `Form for ${cert.candidateName} has been removed.`);
+                                    } catch {
+                                      error("Delete failed", "Could not remove the assessment.");
+                                    }
+                                  }}
+                                  className="px-2 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-[10px] flex items-center gap-1 border border-rose-200 dark:border-rose-800 transition-colors"
+                                  title="Delete assessment form"
+                                >
+                                  <X className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Showing {filteredAssessments.length} of {allApplications.length} records
+              </p>
+            </div>
           </div>
         )}
 
@@ -2333,16 +2583,16 @@ export default function DoctorDashboardPage() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     certificateId,
-                    decision: "FURTHER_ASSESSMENT",
+                    decision: "PHYSICAL_CONSULTATION",
                     decisionNotes: notes || "",
-                    status: "under-review",
+                    status: "physical check up requested",
                   }),
                 });
               } catch (err) {
                 console.warn("Failed to update certificate in database:", err);
               }
 
-              warning("Physical Checkup Requested", `${candidateName} — Status updated to PHYSICAL CHECK UP REQUESTED at accredited clinic.`);
+              warning("Physical Checkup Requested", `${candidateName} — Status updated to PHYSICAL CONSULTATION REQUIRED at accredited clinic.`);
               setQueue((prev) => prev.filter((c) => c.id !== candidate?.id));
             } else if (decision === "INVESTIGATION_SPECIALIST") {
               try {
@@ -2351,17 +2601,31 @@ export default function DoctorDashboardPage() {
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     certificateId,
-                    decision: "FURTHER_ASSESSMENT",
+                    decision: "INVESTIGATION_SPECIALIST",
                     decisionNotes: notes || "",
-                    status: "under-review",
+                    status: "specialist-referral",
                   }),
                 });
               } catch (err) {
                 console.warn("Failed to update certificate in database:", err);
               }
 
-              warning("Specialist Referral Issued", `${candidateName} — Certification status set to UNDER-REVIEW pending lab diagnostics.`);
+              warning("Specialist Referral Issued", `${candidateName} — Certification status set to SPECIALIST INVESTIGATION REQUIRED.`);
             } else {
+              try {
+                await fetch(`/api/certificates`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    certificateId,
+                    decision: "URGENT_REFERRAL",
+                    decisionNotes: notes || "",
+                    status: "urgent-referral",
+                  }),
+                });
+              } catch (err) {
+                console.warn("Failed to update certificate in database:", err);
+              }
               error("Urgent Referral Activated", `${candidateName} — Emergency escalation protocol triggered.`);
             }
             setShowSignModal(false);
@@ -2509,52 +2773,89 @@ export default function DoctorDashboardPage() {
                 <img src={selectedApplication.nationalIdImageUrl} alt="ID document" className="w-full max-h-64 object-contain rounded-2xl border border-slate-200 bg-slate-50" />
               </div>
             )}
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCandidate(applicationToCandidate(selectedApplication));
-                  setSelectedApplication(null);
-                  setShowEvaluateSignModal(true);
+
+            {/* ── Primary Status Actions ── */}
+            <div className="pt-4 border-t border-slate-100">
+              <CertificateActionPanel
+                certificateId={selectedApplication.certificateId}
+                candidateName={selectedApplication.candidateName}
+                applicantEmail={selectedApplication.applicantEmail}
+                applicantPhone={selectedApplication.applicantPhone || ""}
+                purpose={selectedApplication.purpose || ""}
+                currentStatus={selectedApplication.status || "submitted"}
+                currentDecision={selectedApplication.decision || ""}
+                doctorId={doctorProfile.id || session?.email || ""}
+                doctorEmail={session?.email || doctorProfile.email || ""}
+                doctorName={doctorProfile.name || session?.name || "Physician"}
+                doctorSpecialty={doctorProfile.specialty || "Occupational Health & Telehealth Physician"}
+                onStatusChanged={(newStatus, newDecision) => {
+                  setSelectedApplication((prev: any) =>
+                    prev ? { ...prev, status: newStatus, ...(newDecision ? { decision: newDecision } : {}) } : prev
+                  );
+                  broadcastLiveRefresh();
+                  success(
+                    "Status updated",
+                    `${selectedApplication.candidateName} — ${normalizeStatus(newStatus)}${newDecision ? ` · ${normalizeDecision(newDecision)}` : ""}`
+                  );
+                  if (["approved", "rejected"].includes(newStatus)) setSelectedApplication(null);
                 }}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                View screening answers
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCandidate(applicationToCandidate(selectedApplication));
-                  setSelectedApplication(null);
-                  setShowStructuredAssessmentModal(true);
-                  markUnderReview(selectedApplication.certificateId);
-                }}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                Open assessment
-              </button>
-              {String(selectedApplication.paymentStatus || "").toUpperCase() === "PAID" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCertForModal({
-                    id: selectedApplication.certificateId,
-                    candidate: selectedApplication.candidateName,
-                    name: selectedApplication.candidateName,
-                    purpose: selectedApplication.purpose,
-                    decision: selectedApplication.decision,
-                    date: selectedApplication.appliedDate ? new Date(selectedApplication.appliedDate).toLocaleDateString() : "—",
-                    avatarUrl: selectedApplication.avatarUrl,
-                    fullCertificate: selectedApplication,
-                  });
-                  setSelectedApplication(null);
-                  setShowOfficialCertModal(true);
-                }}
-                className="px-4 py-2.5 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold"
-              >
-                View certificate
-              </button>
-              )}
+                onAppointmentCreated={(apt) => setDoctorAppointments((prev) => [apt, ...prev])}
+              />
+            </div>
+
+            {/* ── Secondary Clinical Tools ── */}
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-2">Clinical tools</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCandidate(applicationToCandidate(selectedApplication));
+                    setSelectedApplication(null);
+                    setShowEvaluateSignModal(true);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5 text-sky-600" />
+                  Screening answers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCandidate(applicationToCandidate(selectedApplication));
+                    setSelectedApplication(null);
+                    setShowStructuredAssessmentModal(true);
+                    markUnderReview(selectedApplication.certificateId);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+                >
+                  <ClipboardList className="w-3.5 h-3.5 text-[#12B8B0]" />
+                  Assessment form
+                </button>
+                {String(selectedApplication.paymentStatus || "").toUpperCase() === "PAID" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCertForModal({
+                        id: selectedApplication.certificateId,
+                        candidate: selectedApplication.candidateName,
+                        name: selectedApplication.candidateName,
+                        purpose: selectedApplication.purpose,
+                        decision: selectedApplication.decision,
+                        date: selectedApplication.appliedDate ? new Date(selectedApplication.appliedDate).toLocaleDateString() : "—",
+                        avatarUrl: selectedApplication.avatarUrl,
+                        fullCertificate: selectedApplication,
+                      });
+                      setSelectedApplication(null);
+                      setShowOfficialCertModal(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-[#0B2D5C] text-white text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <FileSignature className="w-3.5 h-3.5 text-[#12B8B0]" />
+                    View certificate
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -2719,6 +3020,7 @@ export default function DoctorDashboardPage() {
           candidate={selectedCandidate}
           doctorName={session?.name || doctorProfile.name || "Physician"}
           doctorLicense={doctorProfile.licenseNumber || "—"}
+          initialData={selectedAssessment?.structuredAssessment ?? null}
           onComplete={async (assessmentData) => {
             try {
               const certificateId = selectedCandidate.id;
@@ -2731,10 +3033,19 @@ export default function DoctorDashboardPage() {
                   decision: assessmentData.decision,
                   restrictions: assessmentData.restrictions,
                   decisionNotes: assessmentData.decisionReason,
-                  status: assessmentData.decision === "FIT" ? "approved" : assessmentData.decision === "FIT_RESTRICTED" ? "approved" : "under-review",
+                  status:
+                    assessmentData.decision === "FIT" || assessmentData.decision === "FIT_RESTRICTED"
+                      ? "approved"
+                      : assessmentData.decision === "PHYSICAL_CONSULTATION"
+                      ? "physical check up requested"
+                      : assessmentData.decision === "INVESTIGATION_SPECIALIST"
+                      ? "specialist-referral"
+                      : assessmentData.decision === "URGENT_REFERRAL"
+                      ? "urgent-referral"
+                      : "under-review",
                 }),
               });
-              success("Assessment Saved", "Structured assessment saved successfully");
+              success("Assessment Saved", `Structured assessment saved with decision: ${assessmentData.decision}`);
               setShowStructuredAssessmentModal(false);
               // Refresh queue
               const res = await fetch("/api/certificates");
@@ -2771,7 +3082,7 @@ export default function DoctorDashboardPage() {
               error("Error", "Failed to save assessment");
             }
           }}
-          onClose={() => setShowStructuredAssessmentModal(false)}
+          onClose={() => { setShowStructuredAssessmentModal(false); setSelectedAssessment(null); }}
         />
       )}
 

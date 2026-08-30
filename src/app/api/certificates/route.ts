@@ -18,6 +18,7 @@ import {
 import { nextKey, normalizeCertificateKeys } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
 import { isCloudinaryUrl } from "@/lib/imageUtils";
+import { isCertificatePayable } from "@/lib/certificatePayment";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +34,23 @@ export async function GET(request: NextRequest) {
       } catch (normErr) {
         console.warn("Certificate key normalize skipped:", normErr);
       }
+
+      // Enforce business rule: Only approved certificates with a FIT decision can be marked PAID
+      try {
+        await Certificate.updateMany(
+          {
+            paymentStatus: "PAID",
+            $or: [
+              { status: { $nin: ["approved", "valid", "issued"] } },
+              { decision: { $nin: ["FIT", "FIT_RESTRICTED", "FIT WITH RESTRICTIONS"] } },
+            ],
+          },
+          { $set: { paymentStatus: "UNPAID" } }
+        );
+      } catch (sanErr) {
+        console.warn("Certificate payment status sanitize skipped:", sanErr);
+      }
+
       const query: any = {};
       if (status) query.status = status;
       if (applicantEmail) query.applicantEmail = { $regex: `^${applicantEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
@@ -347,6 +365,8 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
+      const actor: string = String(body.actor || "doctor");
+
       const updateData: Record<string, unknown> = {};
       if (decision) updateData.decision = decision;
       if (restrictions !== undefined) updateData.restrictions = restrictions;
@@ -357,14 +377,30 @@ export async function PATCH(request: NextRequest) {
           updateData.approvedAt = new Date();
         }
       }
-      if (paymentStatus) updateData.paymentStatus = paymentStatus;
-      if (String(paymentStatus || "").toUpperCase() === "PAID") {
-        updateData.iremboRef = await nextKey("irembo");
+      if (paymentStatus) {
+        if (String(paymentStatus).toUpperCase() === "PAID") {
+          const effectiveStatus = String(status || certDoc?.status || "").toLowerCase();
+          const effectiveDecision = String(decision || certDoc?.decision || certDoc?.structuredAssessment?.decision || "").toUpperCase();
+          const isApprovedStatus = ["approved", "valid", "issued"].includes(effectiveStatus);
+          const isFitDecision =
+            (effectiveDecision === "FIT" || effectiveDecision === "FIT_RESTRICTED" || effectiveDecision === "FIT WITH RESTRICTIONS" || effectiveDecision.includes("RESTRICT")) &&
+            !effectiveDecision.includes("NOT") &&
+            !effectiveDecision.includes("UNFIT");
+          if (!isApprovedStatus || !isFitDecision) {
+            return NextResponse.json(
+              { success: false, error: "Only approved certificates with a FIT clinical decision can be marked as PAID." },
+              { status: 400 }
+            );
+          }
+          updateData.iremboRef = await nextKey("irembo");
+        }
+        updateData.paymentStatus = paymentStatus;
       }
       if (iremboRef && String(paymentStatus || "").toUpperCase() !== "PAID") updateData.iremboRef = iremboRef;
       if (doctorNotes !== undefined) updateData.doctorNotes = doctorNotes;
       if (doctorDocuments) updateData.doctorDocuments = doctorDocuments;
-      if (structuredAssessment) updateData.structuredAssessment = structuredAssessment;
+      // Allow null to explicitly clear the structuredAssessment (DELETE action for doctor CRUD)
+      if (structuredAssessment !== undefined) updateData.structuredAssessment = structuredAssessment ?? null;
 
       const updated = await Certificate.findOneAndUpdate(
         certDoc ? { _id: certDoc._id } : { certificateId: certKey },
@@ -402,7 +438,7 @@ export async function PATCH(request: NextRequest) {
             { upsert: true, returnDocument: "after" }
           ).catch(() => null);
         }
-        await notifyCertificateEmails(updated.toObject(), { status, paymentStatus, decision, decisionNotes });
+        await notifyCertificateEmails(updated.toObject(), { status, paymentStatus, decision, decisionNotes, actor });
       }
 
       return NextResponse.json({ success: true, certificate: updated });
@@ -417,13 +453,17 @@ export async function PATCH(request: NextRequest) {
 
 async function notifyCertificateEmails(
   cert: Record<string, unknown>,
-  change: { status?: string; paymentStatus?: string; decision?: string; decisionNotes?: string }
+  change: { status?: string; paymentStatus?: string; decision?: string; decisionNotes?: string; actor?: string }
 ) {
   const email = String(cert.applicantEmail || "");
   const name = String(cert.candidateName || "Applicant");
   const certId = String(cert.certificateId || "");
   const purpose = String(cert.purpose || "Medical fitness");
-  const doctor = String(cert.assignedDoctor || "FitMed Physician").replace(/\s*\(You\)\s*$/, "");
+  // Use actor label: "admin" → "FitMed Admin", otherwise the assigned doctor name
+  const isAdmin = String(change.actor || "").toLowerCase() === "admin";
+  const doctor = isAdmin
+    ? "FitMed Admin"
+    : String(cert.assignedDoctor || "FitMed Physician").replace(/\s*\(You\)\s*$/, "");
   const dash = `${FITMED_APP_URL}/dashboard/user`;
   const doctorDash = `${FITMED_APP_URL}/dashboard/doctor`;
   const payLink = `${FITMED_APP_URL}/dashboard/user?pay=${encodeURIComponent(certId)}`;
@@ -435,7 +475,7 @@ async function notifyCertificateEmails(
   if (!email || !certId) return;
 
   let doctorEmail = FITMED_DOCTOR_EMAIL;
-  if (cert.assignedDoctorId && mongoose.isValidObjectId(String(cert.assignedDoctorId))) {
+  if (!isAdmin && cert.assignedDoctorId && mongoose.isValidObjectId(String(cert.assignedDoctorId))) {
     const assigned = await Doctor.findById(cert.assignedDoctorId).select("email").lean();
     if (assigned?.email) doctorEmail = String(assigned.email);
   }
@@ -482,23 +522,25 @@ async function notifyCertificateEmails(
       snippet: `Pay 5,000 FRW to unlock official document ${certId}.`,
       href: payLink,
     });
-    await notifyPerson({
-      toEmail: doctorEmail,
-      toName: doctor,
-      role: "doctor",
-      subject: `You approved ${certId}`,
-      htmlContent: EmailTemplates.certificateStatusNotification(
-        doctor,
-        certId,
-        purpose,
-        "Approved — waiting for payment",
-        doctor,
-        `${name} has been asked to pay 5,000 FRW.`,
-        doctorDash
-      ),
-      snippet: `${name} was notified to pay for ${certId}.`,
-      href: doctorDash,
-    });
+    if (!isAdmin) {
+      await notifyPerson({
+        toEmail: doctorEmail,
+        toName: doctor,
+        role: "doctor",
+        subject: `You approved ${certId}`,
+        htmlContent: EmailTemplates.certificateStatusNotification(
+          doctor,
+          certId,
+          purpose,
+          "Approved — waiting for payment",
+          doctor,
+          `${name} has been asked to pay 5,000 FRW.`,
+          doctorDash
+        ),
+        snippet: `${name} was notified to pay for ${certId}.`,
+        href: doctorDash,
+      });
+    }
     return;
   }
 
@@ -514,10 +556,12 @@ async function notifyCertificateEmails(
         purpose,
         "Under review",
         doctor,
-        "A licensed physician is reviewing your application. You will be notified of the next step.",
+        isAdmin
+          ? "An administrator has placed your application under review. A licensed physician will assess it shortly."
+          : "A licensed physician is reviewing your application. You will be notified of the next step.",
         dash
       ),
-      snippet: `${certId} is now under doctor review.`,
+      snippet: `${certId} is now under review.`,
       href: dash,
     });
     return;
@@ -539,6 +583,75 @@ async function notifyCertificateEmails(
         dash
       ),
       snippet: `${certId} was not issued. See your dashboard for details.`,
+      href: dash,
+    });
+    return;
+  }
+
+  // Video consultation scheduled
+  if (status === "video appointment requested") {
+    await notifyPerson({
+      toEmail: email,
+      toName: name,
+      role: "user",
+      subject: `Video consultation scheduled for your FitMed application ${certId}`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        name,
+        certId,
+        purpose,
+        "Video consultation scheduled",
+        doctor,
+        String(change.decisionNotes || "A video consultation has been scheduled. Sign in to your dashboard to see the meeting details and join link."),
+        `${FITMED_APP_URL}/dashboard/user?tab=appointments`
+      ),
+      snippet: `Video consultation scheduled for ${certId}. Check your dashboard for the meeting link.`,
+      href: `${FITMED_APP_URL}/dashboard/user?tab=appointments`,
+    });
+    return;
+  }
+
+  // Physical check-up requested
+  if (status === "physical check up requested") {
+    await notifyPerson({
+      toEmail: email,
+      toName: name,
+      role: "user",
+      subject: `In-person examination required for your FitMed application ${certId}`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        name,
+        certId,
+        purpose,
+        "Physical check-up required",
+        doctor,
+        String(
+          change.decisionNotes ||
+          "An in-person physical examination is required before your certificate can be issued. You will be contacted shortly with clinic details and appointment information."
+        ),
+        dash
+      ),
+      snippet: `${certId} requires an in-person physical examination. Details will follow.`,
+      href: dash,
+    });
+    return;
+  }
+
+  // Admin-triggered generic status change not covered above
+  if (isAdmin && status) {
+    await notifyPerson({
+      toEmail: email,
+      toName: name,
+      role: "user",
+      subject: `Your FitMed application ${certId} has been updated`,
+      htmlContent: EmailTemplates.certificateStatusNotification(
+        name,
+        certId,
+        purpose,
+        status.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        doctor,
+        String(change.decisionNotes || "An administrator has updated your application. Please open your dashboard for details."),
+        dash
+      ),
+      snippet: `Admin updated ${certId} to: ${status}.`,
       href: dash,
     });
     return;

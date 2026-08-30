@@ -7,6 +7,18 @@ import { notifyPerson } from "@/lib/notify";
 import { EmailTemplates, FITMED_ADMIN_EMAIL, FITMED_APP_URL, FITMED_DOCTOR_EMAIL } from "@/lib/brevo";
 import { IREMBO_FEE_RWF } from "@/lib/iremboPay";
 
+export function isCertificatePayable(cert: any): boolean {
+  if (!cert) return false;
+  const status = String(cert.status || "").toLowerCase().trim();
+  const isApprovedStatus = ["approved", "valid", "issued"].includes(status);
+  const decision = String(cert.decision || cert.structuredAssessment?.decision || "").toUpperCase().trim();
+  const isFitDecision =
+    (decision === "FIT" || decision === "FIT_RESTRICTED" || decision === "FIT WITH RESTRICTIONS" || decision.includes("RESTRICT")) &&
+    !decision.includes("NOT") &&
+    !decision.includes("UNFIT");
+  return isApprovedStatus && isFitDecision;
+}
+
 export async function markCertificatePaid(opts: {
   certificateId?: string;
   invoiceNumber?: string;
@@ -22,6 +34,14 @@ export async function markCertificatePaid(opts: {
 
   const cert = await Certificate.findOne({ $or: or });
   if (!cert) return { success: false, error: "Certificate not found." };
+
+  if (!isCertificatePayable(cert)) {
+    return {
+      success: false,
+      error: "Only approved certificates with a FIT clinical decision are allowed to be paid.",
+    };
+  }
+
   if (String(cert.paymentStatus || "").toUpperCase() === "PAID") {
     return { success: true, certificate: cert, alreadyPaid: true };
   }

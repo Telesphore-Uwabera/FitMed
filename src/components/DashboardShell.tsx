@@ -127,18 +127,19 @@ const roleConfigs: Record<
     badgeBorder: "border-amber-500/30",
     badgeText: "text-amber-400",
     navItems: [
-      { id: "overview",   label: "System Analytics",       icon: LayoutDashboard },
-      { id: "reports",    label: "Reports & History",       icon: Activity },
-      { id: "doctors",    label: "Doctor Accounts",         icon: UserCheck },
-      { id: "users",      label: "Users Management",        icon: Users },
-      { id: "payments",   label: "Payment Transactions",    icon: CreditCard },
-      { id: "inquiries",  label: "Contact Inquiries",       icon: Mail },
-      { id: "clinics",    label: "Partner Clinic Network",  icon: Building2 },
-      { id: "schedules",  label: "Schedules",               icon: Calendar },
-      { id: "newsletter", label: "News Broadcast",          icon: Send },
-      { id: "revenue",    label: "Financials & Revenue",    icon: DollarSign },
-      { id: "security",   label: "Privacy & activity log",      icon: Lock },
-      { id: "settings",   label: "Platform Governance",     icon: Settings },
+      { id: "overview",     label: "System Analytics",       icon: LayoutDashboard },
+      { id: "reports",      label: "Assessment Reports",     icon: FileTextIcon },
+      { id: "certificates", label: "Issued Certificates",    icon: FileSignature },
+      { id: "doctors",      label: "Doctor Accounts",        icon: UserCheck },
+      { id: "users",        label: "Users Management",       icon: Users },
+      { id: "payments",     label: "Payment Transactions",   icon: CreditCard },
+      { id: "inquiries",    label: "Contact Inquiries",      icon: Mail },
+      { id: "clinics",      label: "Partner Clinic Network", icon: Building2 },
+      { id: "schedules",    label: "Schedules",              icon: Calendar },
+      { id: "newsletter",   label: "News Broadcast",         icon: Send },
+      { id: "revenue",      label: "Financials & Revenue",   icon: DollarSign },
+      { id: "security",     label: "Privacy & activity log", icon: Lock },
+      { id: "settings",     label: "Platform Governance",    icon: Settings },
     ],
   },
 };
@@ -193,7 +194,9 @@ export default function DashboardShell({
       // Continue signing out locally even if the request fails.
     }
     localStorage.removeItem("fitmed_session");
-    router.push("/signin");
+    // Hard redirect — ensures the browser picks up the cleared auth cookie
+    // before making the next request, preventing middleware from bouncing back.
+    window.location.href = "/signin";
   };
 
   const currentNavLabel =
