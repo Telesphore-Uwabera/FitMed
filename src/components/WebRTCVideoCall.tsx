@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import {
   BadgeCheck,
+  ChevronDown,
+  FlipHorizontal,
+  Maximize2,
   MessageSquare,
   Mic,
   MicOff,
   Minimize2,
-  Maximize2,
   MonitorOff,
   MonitorUp,
   Moon,
@@ -16,8 +18,11 @@ import {
   Send,
   Shield,
   Sun,
+  SwitchCamera,
   Video,
   VideoOff,
+  Volume2,
+  VolumeX,
   Wifi,
   X,
 } from "lucide-react";
@@ -75,9 +80,15 @@ export default function WebRTCVideoCall({
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [screenSharing, setScreenSharing] = useState(false);
   const [callStatus, setCallStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
-  const [chatOpen, setChatOpen] = useState(true);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
+
+  // Chat state (default closed on mobile to prevent squeezing the video screen)
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [messages, setMessages] = useState<CallChatMessage[]>(initialMessages);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const [callDuration, setCallDuration] = useState(0);
   const [mediaError, setMediaError] = useState("");
   const [remoteMuted, setRemoteMuted] = useState(false);
@@ -88,6 +99,7 @@ export default function WebRTCVideoCall({
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -99,31 +111,21 @@ export default function WebRTCVideoCall({
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Theme-derived colour tokens ────────────────────────────────────────────
-  const bg     = dark ? "bg-slate-950"   : "bg-gray-50";
-  const bgCard = dark ? "bg-slate-900"   : "bg-white";
-  const bgMid  = dark ? "bg-slate-800"   : "bg-gray-200";
-  const border = dark ? "border-slate-800" : "border-gray-200";
-  const borderMid = dark ? "border-slate-700" : "border-gray-300";
-  const txt    = dark ? "text-white"     : "text-gray-900";
-  const txtMid = dark ? "text-slate-300" : "text-gray-600";
-  const txtSub = dark ? "text-slate-400" : "text-gray-500";
-  const txtMono= dark ? "text-slate-500" : "text-gray-400";
-  const ctrlBg = dark ? "bg-slate-700"   : "bg-gray-200";
-  const ctrlTxt= dark ? "text-white"     : "text-gray-800";
-  const inputBg= dark ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500" : "bg-gray-100 border-gray-300 text-gray-900 placeholder-gray-400";
-  const chipBg = dark ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" : "bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300";
-  const overlayPanel = dark ? "bg-slate-900/80" : "bg-white/80";
-  const overlayBorder = dark ? "border-slate-700" : "border-gray-300";
-  const waitingBg = dark ? "bg-slate-900" : "bg-gray-100";
+  const bg = dark ? "bg-slate-950" : "bg-slate-900";
+  const bgCard = dark ? "bg-slate-900" : "bg-slate-900/90";
+  const border = dark ? "border-slate-800" : "border-slate-700/60";
+  const txt = "text-white";
+  const txtSub = "text-slate-400";
+  const chipBg = dark
+    ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+    : "bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700";
 
   const ICE_SERVERS: RTCConfiguration = {
     iceServers: [
-      // Google public STUN servers
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
       { urls: "stun:stun2.l.google.com:19302" },
-      // Open Relay TURN servers (free, no auth required)
-      // These relay traffic when direct P2P is blocked by NAT/firewall/mobile
+      { urls: "stun:stun3.l.google.com:19302" },
       {
         urls: "turn:openrelay.metered.ca:80",
         username: "openrelayproject",
@@ -155,9 +157,15 @@ export default function WebRTCVideoCall({
   };
 
   const attachLocalTracks = (pc: RTCPeerConnection, stream: MediaStream) => {
-    const existing = new Set(pc.getSenders().map((s) => s.track?.id));
+    const existingTracks = new Set(pc.getSenders().map((s) => s.track?.id).filter(Boolean));
     stream.getTracks().forEach((track) => {
-      if (!existing.has(track.id)) pc.addTrack(track, stream);
+      if (!existingTracks.has(track.id)) {
+        try {
+          pc.addTrack(track, stream);
+        } catch (e) {
+          console.warn("Could not add track:", e);
+        }
+      }
     });
   };
 
@@ -187,9 +195,24 @@ export default function WebRTCVideoCall({
     };
 
     pc.ontrack = (event) => {
-      const stream = event.streams[0] || new MediaStream([event.track]);
+      let stream = remoteStream;
+      if (event.streams && event.streams[0]) {
+        stream = event.streams[0];
+      } else {
+        if (!stream) stream = new MediaStream();
+        stream.addTrack(event.track);
+      }
       setRemoteStream(stream);
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+        remoteVideoRef.current.play().catch(() => {});
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream;
+        remoteAudioRef.current.play().catch(() => {});
+      }
+
       setCallStatus("connected");
       onRemoteJoined?.();
     };
@@ -201,22 +224,20 @@ export default function WebRTCVideoCall({
       }
       if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
         setCallStatus("disconnected");
-        setRemoteStream(null);
       }
     };
 
-    if (localStreamRef.current) attachLocalTracks(pc, localStreamRef.current);
+    if (localStreamRef.current) {
+      attachLocalTracks(pc, localStreamRef.current);
+    }
     return pc;
-  }, [roomId, onRemoteJoined]);
+  }, [roomId, onRemoteJoined, remoteStream]);
 
   const startCall = useCallback(async () => {
     if (makingOfferRef.current || role !== "doctor") return;
-    if (peerConnectionRef.current?.localDescription) return;
 
-    // If local media is not yet ready, wait a moment and retry once.
-    // This fixes the race where user-connected fires before getUserMedia resolves.
     if (!localStreamRef.current || !socketRef.current) {
-      setTimeout(() => void startCall(), 1500);
+      setTimeout(() => void startCall(), 1200);
       return;
     }
 
@@ -225,12 +246,14 @@ export default function WebRTCVideoCall({
     try {
       const pc = createPeerConnection();
       attachLocalTracks(pc, stream);
-      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
       await pc.setLocalDescription(offer);
       socketRef.current.emit("offer", { roomId, offer });
     } catch (err) {
       console.error("[WebRTC] startCall failed:", err);
-      makingOfferRef.current = false;
     } finally {
       makingOfferRef.current = false;
     }
@@ -238,17 +261,66 @@ export default function WebRTCVideoCall({
 
   const handleOffer = useCallback(
     async (offer: RTCSessionDescriptionInit) => {
-      const stream = localStreamRef.current;
+      let stream = localStreamRef.current;
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: true,
+          });
+          localStreamRef.current = stream;
+          cameraStreamRef.current = stream;
+          setLocalStream(stream);
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        } catch (err) {
+          console.warn("Could not get user media in handleOffer:", err);
+        }
+      }
+
       const pc = createPeerConnection();
       if (stream) attachLocalTracks(pc, stream);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       await flushIce();
-      const answer = await pc.createAnswer();
+      const answer = await pc.createAnswer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
       await pc.setLocalDescription(answer);
       socketRef.current?.emit("answer", { roomId, answer });
     },
     [createPeerConnection, roomId]
   );
+
+  // ── Switch Front / Back Camera (Google Meet feature) ──────────────────────
+  const toggleFlipCamera = async () => {
+    const nextMode = facingMode === "user" ? "environment" : "user";
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const pc = peerConnectionRef.current;
+      if (pc) {
+        const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+        if (sender && newVideoTrack) {
+          await sender.replaceTrack(newVideoTrack);
+        }
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getVideoTracks().forEach((t) => t.stop());
+      }
+      localStreamRef.current = newStream;
+      cameraStreamRef.current = newStream;
+      setLocalStream(newStream);
+      setFacingMode(nextMode);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream;
+      }
+    } catch (err) {
+      console.warn("Could not switch camera:", err);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -269,7 +341,7 @@ export default function WebRTCVideoCall({
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       } catch (error) {
         console.error("Error accessing media devices:", error);
-        setMediaError("Camera or microphone permission was denied. Allow access to join the live room.");
+        setMediaError("Camera or microphone permission was denied. Allow access in your browser settings to join.");
       }
 
       const socket = io(socketUrl(), {
@@ -290,8 +362,6 @@ export default function WebRTCVideoCall({
         if (role === "doctor") void startCall();
       });
 
-      // Both peers in room: always attempt (re)start so the doctor
-      // can retry if user-connected fired before local media was ready.
       socket.on("call-ready", () => {
         if (role === "doctor") void startCall();
       });
@@ -302,7 +372,7 @@ export default function WebRTCVideoCall({
 
       socket.on("answer", async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
         const pc = peerConnectionRef.current;
-        if (pc && !pc.currentRemoteDescription) {
+        if (pc) {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
           await flushIce();
         }
@@ -324,6 +394,7 @@ export default function WebRTCVideoCall({
       socket.on("user-disconnected", () => {
         setRemoteStream(null);
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
         setCallStatus("disconnected");
         peerConnectionRef.current?.close();
         peerConnectionRef.current = null;
@@ -331,6 +402,9 @@ export default function WebRTCVideoCall({
 
       socket.on("chat-message", (msg: CallChatMessage) => {
         setMessages((prev) => [...prev, msg]);
+        if (!chatOpen) {
+          setUnreadCount((c) => c + 1);
+        }
       });
 
       socket.on("media-state", (state: { muted?: boolean }) => {
@@ -351,7 +425,6 @@ export default function WebRTCVideoCall({
       cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
       peerConnectionRef.current?.close();
     };
-    // Start the room once per mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, role, userName]);
 
@@ -360,7 +433,14 @@ export default function WebRTCVideoCall({
   }, [localStream]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) remoteVideoRef.current.srcObject = remoteStream;
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(() => {});
+    }
   }, [remoteStream]);
 
   useEffect(() => {
@@ -370,26 +450,30 @@ export default function WebRTCVideoCall({
         setSpeaking(false);
         return;
       }
-      const ctx = new AudioContext();
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      let raf = 0;
-      const tick = () => {
-        if (ctx.state === "suspended") void ctx.resume();
-        analyser.getByteFrequencyData(data);
-        const avg = data.reduce((sum, value) => sum + value, 0) / data.length / 255;
-        setLevel(avg);
-        setSpeaking(avg > 0.06);
-        raf = requestAnimationFrame(tick);
-      };
-      tick();
-      return () => {
-        cancelAnimationFrame(raf);
-        void ctx.close();
-      };
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        let raf = 0;
+        const tick = () => {
+          if (ctx.state === "suspended") void ctx.resume();
+          analyser.getByteFrequencyData(data);
+          const avg = data.reduce((sum, value) => sum + value, 0) / data.length / 255;
+          setLevel(avg);
+          setSpeaking(avg > 0.06);
+          raf = requestAnimationFrame(tick);
+        };
+        tick();
+        return () => {
+          cancelAnimationFrame(raf);
+          void ctx.close();
+        };
+      } catch {
+        return () => {};
+      }
     };
     const stopLocal = listen(localStream, setLocalLevel, setLocalSpeaking);
     const stopRemote = listen(remoteStream, setRemoteLevel, setRemoteSpeaking);
@@ -419,6 +503,13 @@ export default function WebRTCVideoCall({
     });
     setIsCameraOff(next);
     socketRef.current?.emit("media-state", { roomId, muted: isMuted, cameraOff: next });
+  };
+
+  const toggleSpeaker = () => {
+    const next = !isSpeakerMuted;
+    setIsSpeakerMuted(next);
+    if (remoteVideoRef.current) remoteVideoRef.current.muted = next;
+    if (remoteAudioRef.current) remoteAudioRef.current.muted = next;
   };
 
   const stopScreenShare = async () => {
@@ -483,7 +574,7 @@ export default function WebRTCVideoCall({
         }),
       });
     } catch {
-      /* live socket already delivered */
+      /* socket already delivered */
     }
   };
 
@@ -502,21 +593,22 @@ export default function WebRTCVideoCall({
 
   const floating = variant === "floating";
   const voiceActive = !isMuted && localSpeaking;
+
   const shellClass =
     variant === "overlay"
-      ? `fixed inset-0 z-[90] ${bg} flex flex-col`
+      ? `fixed inset-0 z-[90] ${bg} flex flex-col overflow-hidden select-none`
       : floating
-        ? `relative h-full min-h-[12rem] rounded-2xl overflow-hidden border ${border} ${bg} flex flex-col shadow-2xl`
-        : `relative min-h-[640px] h-[min(78vh,820px)] rounded-3xl overflow-hidden border ${border} ${bg} flex flex-col shadow-2xl`;
+        ? `relative h-full min-h-[14rem] rounded-3xl overflow-hidden border ${border} ${bg} flex flex-col shadow-2xl select-none`
+        : `relative min-h-[580px] h-[min(85vh,860px)] w-full rounded-3xl overflow-hidden border ${border} ${bg} flex flex-col shadow-2xl select-none`;
 
   const VoiceBars = ({ level, active }: { level: number; active: boolean }) => (
-    <span className="flex items-end gap-0.5 h-4">
+    <span className="flex items-end gap-0.5 h-3.5">
       {[0.45, 1, 0.7, 1.15, 0.55].map((weight, index) => (
         <span
           key={index}
-          className={`w-[3px] rounded-full ${active ? "bg-[#12B8B0]" : dark ? "bg-slate-500" : "bg-gray-400"}`}
+          className={`w-[2.5px] rounded-full ${active ? "bg-[#12B8B0]" : "bg-white/40"}`}
           style={{
-            height: active ? `${Math.max(4, Math.min(16, 4 + level * 22 * weight))}px` : "4px",
+            height: active ? `${Math.max(3, Math.min(14, 3 + level * 20 * weight))}px` : "3px",
             transition: "height 80ms linear",
           }}
         />
@@ -526,196 +618,322 @@ export default function WebRTCVideoCall({
 
   return (
     <div className={shellClass}>
-      {/* ── Header bar ─────────────────────────────────────────────── */}
-      <div className={`flex items-center justify-between px-4 sm:px-6 py-3 ${bgCard}/90 border-b ${border} flex-shrink-0`}>
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-bold text-emerald-400">
-              {callStatus === "connected" ? "Live" : "Signaling"} · {formatDuration(callDuration)}
-            </span>
+      {/* Hidden dedicated audio track for 100% reliable sound playback on all devices */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+
+      {/* ── Top Header (Google Meet Style) ─────────────────────────── */}
+      <div className="absolute top-0 inset-x-0 z-30 p-3 sm:p-5 flex items-center justify-between pointer-events-none">
+        {/* Left: Participant & Room Info */}
+        <div className="flex items-center gap-2 pointer-events-auto bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 text-white shadow-lg">
+          <span className={`w-2.5 h-2.5 rounded-full ${callStatus === "connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold truncate max-w-[130px] sm:max-w-[200px]">{remoteName}</span>
+            <BadgeCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
           </div>
-          {!floating && (
-          <div className="hidden sm:flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-[#12B8B0]" />
-            <span className={`text-[11px] ${txtSub} font-medium`}>Encrypted WebRTC</span>
-          </div>
-          )}
-          <span className={`text-[10px] ${txtMono} font-mono truncate`}>
-            {appointmentId || roomId}
+          <span className="text-[11px] text-white/70 font-mono font-medium pl-1 border-l border-white/20">
+            {formatDuration(callDuration)}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs ${txtMid} font-semibold hidden md:block truncate max-w-[240px]`}>{purpose}</span>
+
+        {/* Right: Quick actions (Speaker, Camera flip, Theme, Chat toggle, Minimize) */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Speaker toggle */}
+          <button
+            onClick={toggleSpeaker}
+            className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all ${
+              isSpeakerMuted ? "bg-rose-600/90 text-white" : "bg-black/40 hover:bg-black/60 text-white border border-white/10"
+            }`}
+            title={isSpeakerMuted ? "Unmute Speaker" : "Mute Speaker"}
+          >
+            {isSpeakerMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+
+          {/* Flip camera (front / back) */}
+          <button
+            onClick={() => void toggleFlipCamera()}
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 text-white border border-white/10 backdrop-blur-md transition-all"
+            title="Switch Camera (Front/Back)"
+          >
+            <SwitchCamera className="w-4 h-4" />
+          </button>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center ${bgMid} ${txtMid} transition-colors`}
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 text-white border border-white/10 backdrop-blur-md transition-all"
             title={dark ? "Switch to light mode" : "Switch to dark mode"}
           >
             {dark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
           </button>
-          {!floating && (
+
+          {/* Chat toggle */}
           <button
-            onClick={() => setChatOpen((v) => !v)}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-              chatOpen ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40" : `${bgMid} ${txtMid}`
+            onClick={() => {
+              setChatOpen((v) => !v);
+              setUnreadCount(0);
+            }}
+            className={`w-9 h-9 rounded-full flex items-center justify-center relative backdrop-blur-md transition-all ${
+              chatOpen ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-black/40 hover:bg-black/60 text-white border border-white/10"
             }`}
-            title="Toggle chat"
+            title="Toggle In-Call Chat"
           >
             <MessageSquare className="w-4 h-4" />
+            {unreadCount > 0 && !chatOpen && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-[9px] font-black text-slate-950 flex items-center justify-center animate-bounce">
+                {unreadCount}
+              </span>
+            )}
           </button>
-          )}
+
           {onMinimize && !floating && (
             <button
               onClick={onMinimize}
-              className={`w-9 h-9 rounded-xl ${bgMid} ${txtMid} flex items-center justify-center`}
-              title="Keep meeting while you work"
+              className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white border border-white/10 backdrop-blur-md flex items-center justify-center"
+              title="Minimize meeting"
             >
               <Minimize2 className="w-4 h-4" />
             </button>
           )}
+
           {floating && onExpand && (
-            <button onClick={onExpand} className={`w-9 h-9 rounded-xl ${bgMid} ${txtMid} flex items-center justify-center`} title="Return to full meeting">
+            <button
+              onClick={onExpand}
+              className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white border border-white/10 backdrop-blur-md flex items-center justify-center"
+              title="Expand meeting"
+            >
               <Maximize2 className="w-4 h-4" />
             </button>
           )}
+
           {variant === "overlay" && (
-            <button onClick={endCall} className={`w-9 h-9 rounded-xl ${bgMid} ${txtMid} flex items-center justify-center`} title="Close">
+            <button
+              onClick={endCall}
+              className="w-9 h-9 rounded-full bg-black/40 hover:bg-rose-600 text-white border border-white/10 backdrop-blur-md flex items-center justify-center"
+              title="Close"
+            >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex-1 flex min-h-0">
-        <div className="flex-1 relative flex items-center justify-center p-3 sm:p-5 min-w-0">
-          {/* ── Main video stage ──────────────────────────────────────── */}
-          <div className={`relative w-full ${floating ? "h-full min-h-[11rem]" : "max-w-5xl aspect-video"} rounded-3xl overflow-hidden border ${border} ${bgCard} shadow-2xl`}>
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className={`absolute inset-0 w-full h-full object-cover ${remoteStream ? "opacity-100" : "opacity-0"}`}
-            />
-            {!remoteStream && (
-              <div className={`absolute inset-0 flex flex-col items-center justify-center gap-3 ${waitingBg}`}>
-                <div className="w-16 h-16 relative flex items-center justify-center">
-                  <span className="absolute inset-0 rounded-full border border-amber-300/70 animate-ping" />
-                  <span className="absolute inset-3 rounded-full bg-amber-100/10 border border-amber-300/60 flex items-center justify-center">
-                    <span className="w-3 h-3 rounded-full bg-[#12B8B0] animate-pulse" />
-                  </span>
-                </div>
-                <p className={`text-sm font-semibold ${txt}`}>
-                  {mediaError || (role === "doctor" ? `Waiting for ${remoteName} to join` : `Connecting to ${remoteName}…`)}
+      {/* ── Main Stage (Google Meet Layout) ────────────────────────── */}
+      <div className="relative flex-1 w-full h-full min-h-0 overflow-hidden flex">
+        {/* Remote Video Container (Fills entire screen) */}
+        <div className="relative flex-1 w-full h-full min-h-0 bg-slate-950 overflow-hidden flex items-center justify-center">
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              remoteStream ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
+          {/* Waiting / Connecting Placeholder */}
+          {!remoteStream && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-6 text-center z-10">
+              <div className="w-20 h-20 relative flex items-center justify-center">
+                <span className="absolute inset-0 rounded-full border-2 border-[#12B8B0]/40 animate-ping" />
+                <span className="absolute inset-2 rounded-full bg-[#12B8B0]/10 border border-[#12B8B0]/60 flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-full bg-[#12B8B0] animate-pulse" />
+                </span>
+              </div>
+              <div className="space-y-1.5 max-w-sm">
+                <p className="text-base font-bold text-white">
+                  {mediaError || (role === "doctor" ? `Waiting for ${remoteName} to connect` : `Connecting to Dr. ${remoteName}…`)}
                 </p>
-                <p className={`text-[11px] ${txtSub} max-w-sm text-center`}>
-                  Stay in this room. Audio and video start automatically when both sides are present.
+                <p className="text-xs text-slate-400">
+                  Stay in this room. Video and high-definition audio start automatically when both sides are present.
                 </p>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300">
+                <Shield className="w-3.5 h-3.5 text-[#12B8B0]" />
+                <span>Encrypted Direct Medical WebRTC</span>
+              </div>
+            </div>
+          )}
+
+          {/* Remote audio indicators & state overlay */}
+          <div className="absolute bottom-28 left-4 z-20 flex items-center gap-2">
+            {remoteSpeaking && !remoteMuted && (
+              <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-white text-xs">
+                <span>{remoteName}</span>
+                <VoiceBars level={remoteLevel} active />
               </div>
             )}
-
-            <div className={`absolute top-4 left-4 flex items-center gap-2 ${overlayPanel} backdrop-blur-sm px-3 py-1.5 rounded-xl border ${overlayBorder}`}>
-              <span className={`w-2 h-2 rounded-full ${remoteStream ? "bg-emerald-400" : "bg-amber-400"}`} />
-              <span className={`text-xs font-bold ${txt}`}>{remoteName}</span>
-              <BadgeCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
-              {remoteSpeaking && !remoteMuted && <VoiceBars level={remoteLevel} active />}
-              {remoteMuted && <MicOff className="w-3.5 h-3.5 text-rose-400" />}
-            </div>
-            <div className={`absolute top-4 right-4 flex items-center gap-1.5 ${overlayPanel} backdrop-blur-sm px-3 py-1.5 rounded-xl border ${overlayBorder}`}>
-              <Wifi className={`w-3 h-3 ${remoteStream ? "text-emerald-400" : dark ? "text-slate-500" : "text-gray-400"}`} />
-              <span className={`text-[10px] font-bold ${remoteStream ? "text-emerald-400" : txtSub}`}>
-                {remoteStream ? "HD" : "WAIT"}
-              </span>
-            </div>
-
-            {/* PiP local feed */}
-            <div className={`absolute bottom-4 right-4 w-36 sm:w-44 aspect-video rounded-2xl overflow-hidden border-2 border-[#12B8B0] shadow-2xl ${waitingBg}`}>
-              <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${isCameraOff ? "opacity-0" : "opacity-100"}`} />
-              {isCameraOff && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                  <VideoOff className={`w-5 h-5 ${txtSub}`} />
-                  <span className={`text-[9px] ${txtSub}`}>Camera off</span>
-                </div>
-              )}
-              {isMuted && (
-                <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-lg bg-rose-600/90 flex items-center justify-center">
-                  <MicOff className="w-3 h-3 text-white" />
-                </div>
-              )}
-              <div className="absolute bottom-1 left-2 flex items-center gap-1 text-[9px] bg-black/60 px-1.5 py-0.5 rounded text-white font-bold">
-                You
-                {!isMuted && <VoiceBars level={localLevel} active={voiceActive} />}
-              </div>
-            </div>
-
-            {screenSharing && (
-              <div className="absolute top-16 left-4 px-3 py-1.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] text-[10px] font-extrabold">
-                Sharing screen
+            {remoteMuted && (
+              <div className="flex items-center gap-1 bg-rose-600/80 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-xs font-bold">
+                <MicOff className="w-3.5 h-3.5" />
+                <span>Muted</span>
               </div>
             )}
           </div>
 
-          {/* ── Control bar ───────────────────────────────────────────── */}
-          <div className={`absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-5 py-3 rounded-3xl ${bgCard}/90 backdrop-blur-xl border ${border} shadow-2xl`}>
+          {/* ── Floating Local PiP Video (Google Meet Style) ────────── */}
+          <div className="absolute bottom-24 right-4 sm:bottom-28 sm:right-6 w-28 sm:w-40 aspect-[3/4] sm:aspect-video rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl bg-slate-900 z-20 group">
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover ${isCameraOff ? "opacity-0" : "opacity-100"}`}
+            />
+            {isCameraOff && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
+                <VideoOff className="w-5 h-5" />
+                <span className="text-[9px] font-bold">Camera off</span>
+              </div>
+            )}
+            {isMuted && (
+              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-rose-600 flex items-center justify-center text-white shadow">
+                <MicOff className="w-3 h-3" />
+              </div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                void toggleFlipCamera();
+              }}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-sm opacity-80 hover:opacity-100 transition-opacity"
+              title="Flip camera"
+            >
+              <FlipHorizontal className="w-3.5 h-3.5" />
+            </button>
+            <div className="absolute bottom-1.5 left-2 flex items-center gap-1 text-[10px] bg-black/60 px-2 py-0.5 rounded-full text-white font-bold backdrop-blur-sm">
+              <span>You</span>
+              {!isMuted && <VoiceBars level={localLevel} active={voiceActive} />}
+            </div>
+          </div>
+
+          {screenSharing && (
+            <div className="absolute top-16 left-4 z-20 px-3 py-1 rounded-full bg-[#12B8B0] text-[#0B2D5C] text-[10px] font-black shadow-lg">
+              Sharing screen
+            </div>
+          )}
+
+          {/* ── Bottom Controls Pill (Google Meet Floating Bar) ──────── */}
+          <div className="absolute bottom-5 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 sm:gap-3.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-slate-900/90 backdrop-blur-2xl border border-white/15 shadow-2xl">
+            {/* Mic Toggle */}
             <button
               onClick={toggleMute}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center relative overflow-hidden ${
-                isMuted ? "bg-rose-600 text-white" : voiceActive ? "bg-[#12B8B0] text-[#0B2D5C]" : `${ctrlBg} ${ctrlTxt}`
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${
+                isMuted
+                  ? "bg-rose-600 text-white shadow-lg shadow-rose-600/30"
+                  : voiceActive
+                    ? "bg-[#12B8B0] text-[#0B2D5C] font-bold"
+                    : "bg-white/10 hover:bg-white/20 text-white"
               }`}
-              title={isMuted ? "Unmute" : "Mute"}
+              title={isMuted ? "Unmute Microphone" : "Mute Microphone"}
             >
-              {isMuted ? <MicOff className="w-4 h-4" /> : voiceActive ? <VoiceBars level={localLevel} active /> : <Mic className="w-4 h-4" />}
+              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
+
+            {/* Camera Toggle */}
             <button
               onClick={toggleCamera}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isCameraOff ? "bg-rose-600 text-white" : `${ctrlBg} ${ctrlTxt}`}`}
-              title={isCameraOff ? "Camera on" : "Camera off"}
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${
+                isCameraOff
+                  ? "bg-rose-600 text-white shadow-lg shadow-rose-600/30"
+                  : "bg-white/10 hover:bg-white/20 text-white"
+              }`}
+              title={isCameraOff ? "Turn Camera On" : "Turn Camera Off"}
             >
-              {isCameraOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+              {isCameraOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             </button>
+
+            {/* Screen Share (Desktop/Tablet) */}
             <button
               onClick={() => void toggleScreenShare()}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${screenSharing ? "bg-[#12B8B0] text-[#0B2D5C]" : `${ctrlBg} ${ctrlTxt}`}`}
-              title="Share screen"
+              className={`hidden sm:flex w-11 h-11 sm:w-12 sm:h-12 rounded-full items-center justify-center transition-all ${
+                screenSharing ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-white/10 hover:bg-white/20 text-white"
+              }`}
+              title={screenSharing ? "Stop Sharing" : "Share Screen"}
             >
-              {screenSharing ? <MonitorOff className="w-4 h-4" /> : <MonitorUp className="w-4 h-4" />}
+              {screenSharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
             </button>
-            <div className={`w-px h-8 ${dark ? "bg-slate-600" : "bg-gray-300"}`} />
+
+            {/* Mobile Chat Button */}
+            <button
+              onClick={() => {
+                setChatOpen((v) => !v);
+                setUnreadCount(0);
+              }}
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center relative transition-all ${
+                chatOpen ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-white/10 hover:bg-white/20 text-white"
+              }`}
+              title="Open Chat"
+            >
+              <MessageSquare className="w-5 h-5" />
+              {unreadCount > 0 && !chatOpen && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-[9px] font-black text-slate-950 flex items-center justify-center animate-bounce">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            <div className="w-px h-6 bg-white/20 mx-0.5" />
+
+            {/* End Call Button */}
             <button
               onClick={endCall}
-              className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center gap-1.5"
+              className="px-4 sm:px-5 h-11 sm:h-12 rounded-full bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-600/40 transition-all"
+              title="Leave Call"
             >
-              <PhoneOff className="w-3.5 h-3.5" />
-              Leave
+              <PhoneOff className="w-4 h-4" />
+              <span className="hidden sm:inline">Leave</span>
             </button>
           </div>
         </div>
 
-        {chatOpen && !floating && (
-          <div className={`w-[min(100%,20rem)] flex-shrink-0 ${bgCard} border-l ${border} flex flex-col`}>
+        {/* ── Chat: Slide-Up Bottom Sheet on Mobile / Sidebar on Desktop ── */}
+        {chatOpen && (
+          <div
+            className={`
+              fixed inset-x-0 bottom-0 z-50 rounded-t-3xl max-h-[80vh] h-[480px] bg-slate-900/95 backdrop-blur-2xl border-t border-slate-700 flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300
+              md:relative md:inset-auto md:w-80 md:h-full md:max-h-none md:rounded-none md:border-t-0 md:border-l md:animate-none
+            `}
+          >
+            {/* Mobile drag handle */}
+            <div className="md:hidden w-12 h-1.5 bg-slate-600 rounded-full mx-auto mt-3" />
+
             {/* Chat header */}
-            <div className={`flex items-center justify-between px-4 py-3 border-b ${border}`}>
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-[#12B8B0]" />
-                <h4 className={`text-xs font-extrabold ${txt} uppercase tracking-wider`}>In-call chat</h4>
+                <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">In-call messages</h4>
               </div>
-              <span className="text-[10px] text-emerald-500 font-bold bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                {messages.length} messages
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-400/10 px-2.5 py-0.5 rounded-full">
+                  {messages.length} msgs
+                </span>
+                <button
+                  onClick={() => setChatOpen(false)}
+                  className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                  title="Close chat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            {/* Messages */}
+
+            {/* Messages list */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.length === 0 && (
+                <div className="text-center py-8 text-slate-500 text-xs">
+                  No messages yet. Send a message to {remoteName}.
+                </div>
+              )}
               {messages.map((msg, i) => (
                 <div key={msg.id || i} className={`flex flex-col ${msg.sender === role ? "items-end" : "items-start"}`}>
-                  <span className={`text-[10px] ${txtMono} mb-1`}>
+                  <span className="text-[10px] text-slate-400 mb-1">
                     {msg.name} · {msg.time}
                   </span>
                   <div
-                    className={`px-3 py-2 rounded-2xl text-xs max-w-[88%] leading-relaxed ${
+                    className={`px-3.5 py-2.5 rounded-2xl text-xs max-w-[85%] leading-relaxed ${
                       msg.sender === role
-                        ? "bg-[#12B8B0] text-[#0B2D5C] font-semibold rounded-br-none"
-                        : `${bgMid} ${txtMid} rounded-bl-none`
+                        ? "bg-[#12B8B0] text-[#0B2D5C] font-bold rounded-br-none"
+                        : "bg-slate-800 text-slate-200 rounded-bl-none"
                     }`}
                   >
                     {msg.text}
@@ -724,31 +942,37 @@ export default function WebRTCVideoCall({
               ))}
               <div ref={chatEndRef} />
             </div>
-            {/* Quick-reply chips */}
-            <div className={`px-4 py-2 border-t ${border}`}>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
+
+            {/* Quick Chips */}
+            <div className="px-4 py-2 border-t border-slate-800">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 {chips.map((chip) => (
                   <button
                     key={chip}
                     type="button"
                     onClick={() => setChatMessage(chip)}
-                    className={`text-[9px] font-semibold ${chipBg} px-2 py-1 rounded-lg flex-shrink-0 whitespace-nowrap`}
+                    className={`text-[10px] font-semibold ${chipBg} px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap`}
                   >
                     {chip}
                   </button>
                 ))}
               </div>
             </div>
-            {/* Input */}
-            <form onSubmit={sendChat} className={`p-4 border-t ${border} flex items-center gap-2`}>
+
+            {/* Input Form */}
+            <form onSubmit={sendChat} className="p-3 sm:p-4 border-t border-slate-800 flex items-center gap-2">
               <input
                 type="text"
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
-                placeholder="Message…"
-                className={`flex-1 p-2.5 rounded-xl ${inputBg} text-xs focus:outline-none focus:border-[#12B8B0] border`}
+                placeholder="Send a message…"
+                className="flex-1 p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-[#12B8B0]"
               />
-              <button type="submit" className="w-9 h-9 rounded-xl bg-[#12B8B0] text-[#0B2D5C] flex items-center justify-center">
+              <button
+                type="submit"
+                className="w-10 h-10 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] flex items-center justify-center font-bold"
+                title="Send"
+              >
                 <Send className="w-4 h-4" />
               </button>
             </form>

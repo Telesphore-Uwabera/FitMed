@@ -85,13 +85,9 @@ export default function MeetJoinClient({ roomId }: { roomId: string }) {
 
   if (payload?.canJoin && apt) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-[#0B2D5C]">
-          <Video className="w-4 h-4 text-[#12B8B0]" />
-          Joining {apt.doctorName} · {apt.purpose}
-        </div>
+      <div className="w-full h-full min-h-[100dvh] sm:min-h-[580px] flex-1 flex flex-col overflow-hidden">
         <WebRTCVideoCall
-          roomId={apt.roomId}
+          roomId={apt.roomId || apt.appointmentId}
           userName={apt.applicantName}
           role="applicant"
           remoteName={apt.doctorName}
