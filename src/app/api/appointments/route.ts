@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     if (or.length && !applicantEmail) query.$or = or;
     if (status) query.status = status;
 
-    const appointments = await Appointment.find(query).sort({ scheduledDate: 1, scheduledTime: 1 }).lean();
+    const appointments = await Appointment.find(query).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ success: true, appointments });
   } catch (error: any) {
     console.error("GET appointments error:", error);

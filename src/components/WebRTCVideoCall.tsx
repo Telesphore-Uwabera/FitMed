@@ -11,14 +11,17 @@ import {
   Maximize2,
   MonitorOff,
   MonitorUp,
+  Moon,
   PhoneOff,
   Send,
   Shield,
+  Sun,
   Video,
   VideoOff,
   Wifi,
   X,
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 export const FITMED_LIVE_ROOM = "ROOM-FM-9941";
 
@@ -63,6 +66,9 @@ export default function WebRTCVideoCall({
   onMinimize,
   onExpand,
 }: WebRTCVideoCallProps) {
+  const { theme, toggleTheme } = useTheme();
+  const dark = theme === "dark";
+
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -91,6 +97,24 @@ export default function WebRTCVideoCall({
   const sharingRef = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Theme-derived colour tokens ────────────────────────────────────────────
+  const bg     = dark ? "bg-slate-950"   : "bg-gray-50";
+  const bgCard = dark ? "bg-slate-900"   : "bg-white";
+  const bgMid  = dark ? "bg-slate-800"   : "bg-gray-200";
+  const border = dark ? "border-slate-800" : "border-gray-200";
+  const borderMid = dark ? "border-slate-700" : "border-gray-300";
+  const txt    = dark ? "text-white"     : "text-gray-900";
+  const txtMid = dark ? "text-slate-300" : "text-gray-600";
+  const txtSub = dark ? "text-slate-400" : "text-gray-500";
+  const txtMono= dark ? "text-slate-500" : "text-gray-400";
+  const ctrlBg = dark ? "bg-slate-700"   : "bg-gray-200";
+  const ctrlTxt= dark ? "text-white"     : "text-gray-800";
+  const inputBg= dark ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500" : "bg-gray-100 border-gray-300 text-gray-900 placeholder-gray-400";
+  const chipBg = dark ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" : "bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-300";
+  const overlayPanel = dark ? "bg-slate-900/80" : "bg-white/80";
+  const overlayBorder = dark ? "border-slate-700" : "border-gray-300";
+  const waitingBg = dark ? "bg-slate-900" : "bg-gray-100";
 
   const ICE_SERVERS: RTCConfiguration = {
     iceServers: [
@@ -444,17 +468,17 @@ export default function WebRTCVideoCall({
   const voiceActive = !isMuted && localSpeaking;
   const shellClass =
     variant === "overlay"
-      ? "fixed inset-0 z-[90] bg-slate-950 flex flex-col"
+      ? `fixed inset-0 z-[90] ${bg} flex flex-col`
       : floating
-        ? "relative h-full min-h-[12rem] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-2xl"
-        : "relative min-h-[640px] h-[min(78vh,820px)] rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 flex flex-col shadow-2xl";
+        ? `relative h-full min-h-[12rem] rounded-2xl overflow-hidden border ${border} ${bg} flex flex-col shadow-2xl`
+        : `relative min-h-[640px] h-[min(78vh,820px)] rounded-3xl overflow-hidden border ${border} ${bg} flex flex-col shadow-2xl`;
 
   const VoiceBars = ({ level, active }: { level: number; active: boolean }) => (
     <span className="flex items-end gap-0.5 h-4">
       {[0.45, 1, 0.7, 1.15, 0.55].map((weight, index) => (
         <span
           key={index}
-          className={`w-[3px] rounded-full ${active ? "bg-[#12B8B0]" : "bg-slate-500"}`}
+          className={`w-[3px] rounded-full ${active ? "bg-[#12B8B0]" : dark ? "bg-slate-500" : "bg-gray-400"}`}
           style={{
             height: active ? `${Math.max(4, Math.min(16, 4 + level * 22 * weight))}px` : "4px",
             transition: "height 80ms linear",
@@ -466,31 +490,40 @@ export default function WebRTCVideoCall({
 
   return (
     <div className={shellClass}>
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900/90 border-b border-slate-800 flex-shrink-0">
+      {/* ── Header bar ─────────────────────────────────────────────── */}
+      <div className={`flex items-center justify-between px-4 sm:px-6 py-3 ${bgCard}/90 border-b ${border} flex-shrink-0`}>
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-bold text-emerald-300">
+            <span className="text-xs font-bold text-emerald-400">
               {callStatus === "connected" ? "Live" : "Signaling"} · {formatDuration(callDuration)}
             </span>
           </div>
           {!floating && (
           <div className="hidden sm:flex items-center gap-2">
             <Shield className="w-3.5 h-3.5 text-[#12B8B0]" />
-            <span className="text-[11px] text-slate-400 font-medium">Encrypted WebRTC</span>
+            <span className={`text-[11px] ${txtSub} font-medium`}>Encrypted WebRTC</span>
           </div>
           )}
-          <span className="text-[10px] text-slate-500 font-mono truncate">
+          <span className={`text-[10px] ${txtMono} font-mono truncate`}>
             {appointmentId || roomId}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-300 font-semibold hidden md:block truncate max-w-[240px]">{purpose}</span>
+          <span className={`text-xs ${txtMid} font-semibold hidden md:block truncate max-w-[240px]`}>{purpose}</span>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center ${bgMid} ${txtMid} transition-colors`}
+            title={dark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {dark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+          </button>
           {!floating && (
           <button
             onClick={() => setChatOpen((v) => !v)}
             className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-              chatOpen ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40" : "bg-slate-800 text-slate-300"
+              chatOpen ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40" : `${bgMid} ${txtMid}`
             }`}
             title="Toggle chat"
           >
@@ -500,19 +533,19 @@ export default function WebRTCVideoCall({
           {onMinimize && !floating && (
             <button
               onClick={onMinimize}
-              className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center"
+              className={`w-9 h-9 rounded-xl ${bgMid} ${txtMid} flex items-center justify-center`}
               title="Keep meeting while you work"
             >
               <Minimize2 className="w-4 h-4" />
             </button>
           )}
           {floating && onExpand && (
-            <button onClick={onExpand} className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center" title="Return to full meeting">
+            <button onClick={onExpand} className={`w-9 h-9 rounded-xl ${bgMid} ${txtMid} flex items-center justify-center`} title="Return to full meeting">
               <Maximize2 className="w-4 h-4" />
             </button>
           )}
           {variant === "overlay" && (
-            <button onClick={endCall} className="w-9 h-9 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center" title="Close">
+            <button onClick={endCall} className={`w-9 h-9 rounded-xl ${bgMid} ${txtMid} flex items-center justify-center`} title="Close">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -521,7 +554,8 @@ export default function WebRTCVideoCall({
 
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 relative flex items-center justify-center p-3 sm:p-5 min-w-0">
-          <div className={`relative w-full ${floating ? "h-full min-h-[11rem]" : "max-w-5xl aspect-video"} rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl`}>
+          {/* ── Main video stage ──────────────────────────────────────── */}
+          <div className={`relative w-full ${floating ? "h-full min-h-[11rem]" : "max-w-5xl aspect-video"} rounded-3xl overflow-hidden border ${border} ${bgCard} shadow-2xl`}>
             <video
               ref={remoteVideoRef}
               autoPlay
@@ -529,42 +563,43 @@ export default function WebRTCVideoCall({
               className={`absolute inset-0 w-full h-full object-cover ${remoteStream ? "opacity-100" : "opacity-0"}`}
             />
             {!remoteStream && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900">
+              <div className={`absolute inset-0 flex flex-col items-center justify-center gap-3 ${waitingBg}`}>
                 <div className="w-16 h-16 relative flex items-center justify-center">
                   <span className="absolute inset-0 rounded-full border border-amber-300/70 animate-ping" />
                   <span className="absolute inset-3 rounded-full bg-amber-100/10 border border-amber-300/60 flex items-center justify-center">
                     <span className="w-3 h-3 rounded-full bg-[#12B8B0] animate-pulse" />
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-white">
+                <p className={`text-sm font-semibold ${txt}`}>
                   {mediaError || (role === "doctor" ? `Waiting for ${remoteName} to join` : `Connecting to ${remoteName}…`)}
                 </p>
-                <p className="text-[11px] text-slate-400 max-w-sm text-center">
+                <p className={`text-[11px] ${txtSub} max-w-sm text-center`}>
                   Stay in this room. Audio and video start automatically when both sides are present.
                 </p>
               </div>
             )}
 
-            <div className="absolute top-4 left-4 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-700">
+            <div className={`absolute top-4 left-4 flex items-center gap-2 ${overlayPanel} backdrop-blur-sm px-3 py-1.5 rounded-xl border ${overlayBorder}`}>
               <span className={`w-2 h-2 rounded-full ${remoteStream ? "bg-emerald-400" : "bg-amber-400"}`} />
-              <span className="text-xs font-bold text-white">{remoteName}</span>
+              <span className={`text-xs font-bold ${txt}`}>{remoteName}</span>
               <BadgeCheck className="w-3.5 h-3.5 text-[#12B8B0]" />
               {remoteSpeaking && !remoteMuted && <VoiceBars level={remoteLevel} active />}
               {remoteMuted && <MicOff className="w-3.5 h-3.5 text-rose-400" />}
             </div>
-            <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-700">
-              <Wifi className={`w-3 h-3 ${remoteStream ? "text-emerald-400" : "text-slate-500"}`} />
-              <span className={`text-[10px] font-bold ${remoteStream ? "text-emerald-400" : "text-slate-400"}`}>
+            <div className={`absolute top-4 right-4 flex items-center gap-1.5 ${overlayPanel} backdrop-blur-sm px-3 py-1.5 rounded-xl border ${overlayBorder}`}>
+              <Wifi className={`w-3 h-3 ${remoteStream ? "text-emerald-400" : dark ? "text-slate-500" : "text-gray-400"}`} />
+              <span className={`text-[10px] font-bold ${remoteStream ? "text-emerald-400" : txtSub}`}>
                 {remoteStream ? "HD" : "WAIT"}
               </span>
             </div>
 
-            <div className="absolute bottom-4 right-4 w-36 sm:w-44 aspect-video rounded-2xl overflow-hidden border-2 border-[#12B8B0] shadow-2xl bg-slate-900">
+            {/* PiP local feed */}
+            <div className={`absolute bottom-4 right-4 w-36 sm:w-44 aspect-video rounded-2xl overflow-hidden border-2 border-[#12B8B0] shadow-2xl ${waitingBg}`}>
               <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${isCameraOff ? "opacity-0" : "opacity-100"}`} />
               {isCameraOff && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-                  <VideoOff className="w-5 h-5 text-slate-500" />
-                  <span className="text-[9px] text-slate-500">Camera off</span>
+                  <VideoOff className={`w-5 h-5 ${txtSub}`} />
+                  <span className={`text-[9px] ${txtSub}`}>Camera off</span>
                 </div>
               )}
               {isMuted && (
@@ -585,11 +620,12 @@ export default function WebRTCVideoCall({
             )}
           </div>
 
-          <div className="absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-5 py-3 rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 shadow-2xl">
+          {/* ── Control bar ───────────────────────────────────────────── */}
+          <div className={`absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-5 py-3 rounded-3xl ${bgCard}/90 backdrop-blur-xl border ${border} shadow-2xl`}>
             <button
               onClick={toggleMute}
               className={`w-11 h-11 rounded-2xl flex items-center justify-center relative overflow-hidden ${
-                isMuted ? "bg-rose-600 text-white" : voiceActive ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-slate-700 text-white"
+                isMuted ? "bg-rose-600 text-white" : voiceActive ? "bg-[#12B8B0] text-[#0B2D5C]" : `${ctrlBg} ${ctrlTxt}`
               }`}
               title={isMuted ? "Unmute" : "Mute"}
             >
@@ -597,19 +633,19 @@ export default function WebRTCVideoCall({
             </button>
             <button
               onClick={toggleCamera}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isCameraOff ? "bg-rose-600 text-white" : "bg-slate-700 text-white"}`}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${isCameraOff ? "bg-rose-600 text-white" : `${ctrlBg} ${ctrlTxt}`}`}
               title={isCameraOff ? "Camera on" : "Camera off"}
             >
               {isCameraOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
             </button>
             <button
               onClick={() => void toggleScreenShare()}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${screenSharing ? "bg-[#12B8B0] text-[#0B2D5C]" : "bg-slate-700 text-white"}`}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center ${screenSharing ? "bg-[#12B8B0] text-[#0B2D5C]" : `${ctrlBg} ${ctrlTxt}`}`}
               title="Share screen"
             >
               {screenSharing ? <MonitorOff className="w-4 h-4" /> : <MonitorUp className="w-4 h-4" />}
             </button>
-            <div className="w-px h-8 bg-slate-600" />
+            <div className={`w-px h-8 ${dark ? "bg-slate-600" : "bg-gray-300"}`} />
             <button
               onClick={endCall}
               className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold flex items-center gap-1.5"
@@ -621,27 +657,29 @@ export default function WebRTCVideoCall({
         </div>
 
         {chatOpen && !floating && (
-          <div className="w-[min(100%,20rem)] flex-shrink-0 bg-slate-900 border-l border-slate-800 flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <div className={`w-[min(100%,20rem)] flex-shrink-0 ${bgCard} border-l ${border} flex flex-col`}>
+            {/* Chat header */}
+            <div className={`flex items-center justify-between px-4 py-3 border-b ${border}`}>
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-[#12B8B0]" />
-                <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">In-call chat</h4>
+                <h4 className={`text-xs font-extrabold ${txt} uppercase tracking-wider`}>In-call chat</h4>
               </div>
-              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] text-emerald-500 font-bold bg-emerald-400/10 px-2 py-0.5 rounded-full">
                 {messages.length} messages
               </span>
             </div>
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((msg, i) => (
                 <div key={msg.id || i} className={`flex flex-col ${msg.sender === role ? "items-end" : "items-start"}`}>
-                  <span className="text-[10px] text-slate-500 mb-1">
+                  <span className={`text-[10px] ${txtMono} mb-1`}>
                     {msg.name} · {msg.time}
                   </span>
                   <div
                     className={`px-3 py-2 rounded-2xl text-xs max-w-[88%] leading-relaxed ${
                       msg.sender === role
                         ? "bg-[#12B8B0] text-[#0B2D5C] font-semibold rounded-br-none"
-                        : "bg-slate-800 text-slate-200 rounded-bl-none"
+                        : `${bgMid} ${txtMid} rounded-bl-none`
                     }`}
                   >
                     {msg.text}
@@ -650,27 +688,29 @@ export default function WebRTCVideoCall({
               ))}
               <div ref={chatEndRef} />
             </div>
-            <div className="px-4 py-2 border-t border-slate-800">
+            {/* Quick-reply chips */}
+            <div className={`px-4 py-2 border-t ${border}`}>
               <div className="flex gap-1.5 overflow-x-auto pb-1">
                 {chips.map((chip) => (
                   <button
                     key={chip}
                     type="button"
                     onClick={() => setChatMessage(chip)}
-                    className="text-[9px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2 py-1 rounded-lg flex-shrink-0 whitespace-nowrap"
+                    className={`text-[9px] font-semibold ${chipBg} px-2 py-1 rounded-lg flex-shrink-0 whitespace-nowrap`}
                   >
                     {chip}
                   </button>
                 ))}
               </div>
             </div>
-            <form onSubmit={sendChat} className="p-4 border-t border-slate-800 flex items-center gap-2">
+            {/* Input */}
+            <form onSubmit={sendChat} className={`p-4 border-t ${border} flex items-center gap-2`}>
               <input
                 type="text"
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
                 placeholder="Message…"
-                className="flex-1 p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-[#12B8B0]"
+                className={`flex-1 p-2.5 rounded-xl ${inputBg} text-xs focus:outline-none focus:border-[#12B8B0] border`}
               />
               <button type="submit" className="w-9 h-9 rounded-xl bg-[#12B8B0] text-[#0B2D5C] flex items-center justify-center">
                 <Send className="w-4 h-4" />
