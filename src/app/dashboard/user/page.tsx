@@ -1619,7 +1619,7 @@ export default function UserDashboard() {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                   <div>
                     <h3 className="text-base font-bold text-[#0B2D5C]">Your personal details</h3>
-                    <p className="text-xs text-slate-500">Upload a clear photo of yourself. We resize it automatically so it loads quickly.</p>
+                    <p className="text-xs text-slate-500">Upload your Passport Photo and a copy of your National ID / Passport. These are required for medical certificate applications.</p>
                   </div>
                 </div>
 
