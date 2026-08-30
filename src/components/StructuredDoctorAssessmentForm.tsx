@@ -118,6 +118,10 @@ interface StructuredDoctorAssessmentFormProps {
   doctorLicense: string;
   /** Pass existing structuredAssessment data to open in edit mode */
   initialData?: Partial<StructuredAssessmentData> | null;
+  /** When true, locks form into read-only mode (for PAID certificates) */
+  readOnly?: boolean;
+  /** Optional callback to open applicant's full original submission */
+  onViewApplicantRequest?: () => void;
   onComplete: (data: StructuredAssessmentData) => void;
   onClose: () => void;
 }
@@ -144,23 +148,29 @@ const BLANK: StructuredAssessmentData = {
   knownConditions: [],
   previousSurgery: "",
   currentMedications: "",
-  allergies: "None known",
+  allergies: "",
   smokingAlcoholHistory: "",
   jobRequirements: [],
-  functionalAbility: "Yes",
+  functionalAbility: "Good general functional capacity for proposed role",
   functionalLimitation: "",
-  vitals: { bp: "", heartRate: "", respiratoryRate: "", spo2: "", temperature: "", weight: "", height: "", bmi: "" },
-  virtualExam: {
-    mentation: { alert: true, oriented: true, speechClear: true, appearsWell: true, noRespiratoryDistress: true, abnormality: "" },
-    hearing: { conversesNormally: true, hearsNormalVoice: true, hearingDifficulty: false, formalAssessmentRequired: false },
-    vision: { adequateVision: true, canReadScreen: true, usesGlasses: false, visualImpairment: false, formalAssessmentRequired: false },
-    neurological: {
-      facialSymmetry: true, speechAppropriate: true, upperLimbSymmetry: true, canStandIndependently: true,
-      canWalkSafely: true, gaitNormal: true, canPerformBalanceTask: true, abnormalityObserved: false, furtherAssessmentRequired: false,
-    },
-    otherSystems: { cardiorespiratory: "No obvious distress", skinGeneral: "No obvious abnormality", musculoskeletal: "No obvious limitation", abdomen: "No obvious abnormality" },
+  vitals: {
+    bp: "",
+    heartRate: "",
+    respiratoryRate: "16",
+    spo2: "",
+    temperature: "36.5",
+    weight: "",
+    height: "",
+    bmi: "",
   },
-  overallAssessment: "No significant abnormality identified virtually",
+  virtualExam: {
+    mentation: { alertOriented: true, appropriateAffect: true, intactSpeech: true, distressSigns: false },
+    hearing: { respondsNormally: true, asksRepetition: false },
+    vision: { wearsGlasses: false, grossVisualDeficit: false },
+    neurological: { normalGait: true, symmetricFacialMovement: true, tremorOrInvoluntaryMovement: false },
+    otherSystems: { skinPallorJaundice: "Normal", respiratoryEffort: "Normal / unlaboured", neckMobility: "Full range of motion", abdomen: "Soft / non-tender" },
+  },
+  overallAssessment: "",
   clinicalImpression: "",
   decision: "FIT",
   decisionReason: "",
@@ -202,6 +212,8 @@ export default function StructuredDoctorAssessmentForm({
   doctorName,
   doctorLicense,
   initialData,
+  readOnly = false,
+  onViewApplicantRequest,
   onComplete,
   onClose,
 }: StructuredDoctorAssessmentFormProps) {
@@ -263,6 +275,7 @@ export default function StructuredDoctorAssessmentForm({
 
   // Toggle a string in an array field (knownConditions / jobRequirements)
   const toggleArrayItem = (field: "knownConditions" | "jobRequirements", item: string) => {
+    if (readOnly) return;
     setAssessment((prev) => {
       const arr = prev[field];
       return {
@@ -292,6 +305,7 @@ export default function StructuredDoctorAssessmentForm({
   };
 
   const handleSubmit = () => {
+    if (readOnly) return;
     const errs = validate();
     if (errs.length) {
       setErrors(errs);
@@ -307,8 +321,10 @@ export default function StructuredDoctorAssessmentForm({
   const fieldCls = (key: string) => {
     const val = getFieldValue(assessment, key);
     const missing = errors.length > 0 && !String(val ?? "").trim();
-    return `w-full p-2 rounded-lg border text-xs focus:outline-none focus:border-[#12B8B0] transition-colors ${missing ? "border-rose-400 bg-rose-50" : "border-slate-200"}`;
+    return `w-full p-2 rounded-lg border text-xs focus:outline-none focus:border-[#12B8B0] transition-colors ${missing ? "border-rose-400 bg-rose-50" : "border-slate-200"} ${readOnly ? "bg-slate-50 text-slate-700 cursor-not-allowed" : ""}`;
   };
+
+  const fullCert = candidate?.fullCertificate;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in">
@@ -319,12 +335,6 @@ export default function StructuredDoctorAssessmentForm({
         className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl relative border border-slate-200 text-slate-800 flex flex-col my-auto"
         style={{ maxHeight: "calc(100vh - 3rem)" }}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors z-10"
-        >
-          <X className="w-5 h-5" />
-        </button>
 
         {/* ── Fixed header (never scrolls) ─────────────────────────────── */}
         <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-4 flex-shrink-0 border-b border-slate-100">
@@ -940,20 +950,32 @@ export default function StructuredDoctorAssessmentForm({
         </div>{/* end scrollable body */}
 
         {/* ── Fixed footer (never scrolls) ─────────────────────────────── */}
-        <div className="flex-shrink-0 flex justify-end gap-3 px-6 sm:px-8 py-4 bg-white/95 backdrop-blur-sm border-t border-slate-100 rounded-b-3xl">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] text-xs font-extrabold flex items-center gap-2 transition-colors shadow-sm"
-          >
-            <SaveIcon className="w-4 h-4" />
-            {isEditMode ? "Save Changes" : "Submit Assessment"}
-          </button>
+        <div className="flex-shrink-0 flex items-center justify-between px-6 sm:px-8 py-4 bg-white/95 backdrop-blur-sm border-t border-slate-100 rounded-b-3xl">
+          {readOnly ? (
+            <div className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Paid record locked. Read-only mode.</span>
+            </div>
+          ) : (
+            <div className="text-[11px] text-slate-400">All required fields marked with *</div>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+            >
+              {readOnly ? "Close Report" : "Cancel"}
+            </button>
+            {!readOnly && (
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] text-xs font-extrabold flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <SaveIcon className="w-4 h-4" />
+                {isEditMode ? "Save Changes" : "Submit Assessment"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
       </div>

@@ -2130,17 +2130,19 @@ export default function DoctorDashboardPage() {
                     <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 font-extrabold uppercase">
                       <th className="pb-3">Official Document No.</th>
                       <th className="pb-3">Candidate</th>
+                      <th className="pb-3">Related Request</th>
                       <th className="pb-3">Purpose</th>
                       <th className="pb-3">Decision</th>
+                      <th className="pb-3">Payment</th>
                       <th className="pb-3">Assessment Date</th>
-                      <th className="pb-3">Form</th>
+                      <th className="pb-3">Report Status</th>
                       <th className="pb-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700 font-medium text-slate-700 dark:text-slate-300">
                     {filteredAssessments.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400">
+                        <td colSpan={9} className="py-8 text-center text-slate-400">
                           No records match the current filters.
                         </td>
                       </tr>
@@ -2148,6 +2150,7 @@ export default function DoctorDashboardPage() {
                     {filteredAssessments.map((cert) => {
                       const sa = cert.structuredAssessment;
                       const hasForm = Boolean(sa?.patientName);
+                      const isPaid = String(cert.paymentStatus || "").toUpperCase() === "PAID";
                       const decisionRaw = sa?.decision || cert.decision || "PENDING";
                       const decisionLabel = normalizeDecision(decisionRaw);
                       const decisionCls =
@@ -2163,8 +2166,26 @@ export default function DoctorDashboardPage() {
                             <div className="font-bold text-[#0B2D5C] dark:text-slate-100">{cert.candidateName}</div>
                             <div className="text-slate-400 text-[11px]">{cert.applicantEmail}</div>
                           </td>
-                          <td className="py-3.5 text-slate-600 dark:text-slate-400 max-w-[160px] truncate">{cert.purpose || "—"}</td>
+                          <td className="py-3.5">
+                            <button
+                              onClick={() => {
+                                setSelectedCandidate(applicationToCandidate(cert));
+                                setShowEvaluateSignModal(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-[#0B2D5C] dark:bg-teal-950/40 dark:hover:bg-teal-900/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-bold text-[10px] flex items-center gap-1.5 transition-colors"
+                              title="View applicant original submission questionnaire"
+                            >
+                              <Eye className="w-3 h-3 text-[#12B8B0]" />
+                              <span>View Request</span>
+                            </button>
+                          </td>
+                          <td className="py-3.5 text-slate-600 dark:text-slate-400 max-w-[150px] truncate">{cert.purpose || "—"}</td>
                           <td className={`py-3.5 ${decisionCls}`}>{decisionLabel}</td>
+                          <td className="py-3.5">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isPaid ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700" : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700"}`}>
+                              ● {isPaid ? "PAID" : "UNPAID"}
+                            </span>
+                          </td>
                           <td className="py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {sa?.consultationDate || (cert.appliedDate ? new Date(cert.appliedDate).toLocaleDateString() : "—")}
                           </td>
@@ -2181,48 +2202,76 @@ export default function DoctorDashboardPage() {
                           </td>
                           <td className="py-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Create / Edit */}
-                              <button
-                                onClick={() => {
-                                  setSelectedCandidate(applicationToCandidate(cert));
-                                  setSelectedAssessment(cert);
-                                  setShowStructuredAssessmentModal(true);
-                                  if (!hasForm) markUnderReview(cert.certificateId);
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold text-[10px] flex items-center gap-1 transition-colors"
-                              >
-                                <FileText className="w-3 h-3" />
-                                {hasForm ? "Edit" : "Fill form"}
-                              </button>
-                              {/* Delete */}
-                              {hasForm && (
-                                <button
-                                  onClick={async () => {
-                                    const ok = await confirm({
-                                      title: "Delete assessment form?",
-                                      message: `This will permanently remove the structured assessment for ${cert.candidateName}. The certificate record itself is kept.`,
-                                      confirmLabel: "Delete",
-                                      variant: "danger",
-                                    });
-                                    if (!ok) return;
-                                    try {
-                                      await fetch("/api/certificates", {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ certificateId: cert.certificateId, structuredAssessment: null }),
-                                      });
-                                      broadcastLiveRefresh();
-                                      success("Assessment deleted", `Form for ${cert.candidateName} has been removed.`);
-                                    } catch {
-                                      error("Delete failed", "Could not remove the assessment.");
-                                    }
-                                  }}
-                                  className="px-2 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-[10px] flex items-center gap-1 border border-rose-200 dark:border-rose-800 transition-colors"
-                                  title="Delete assessment form"
-                                >
-                                  <X className="w-3 h-3" />
-                                  Delete
-                                </button>
+                              {isPaid ? (
+                                <>
+                                  {/* Read-Only View */}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedCandidate(applicationToCandidate(cert));
+                                      setSelectedAssessment(cert);
+                                      setShowStructuredAssessmentModal(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#0B2D5C] dark:text-slate-200 font-bold text-[10px] flex items-center gap-1 transition-colors border border-slate-200 dark:border-slate-700"
+                                    title="View completed assessment report (Read-Only)"
+                                  >
+                                    <Eye className="w-3 h-3 text-[#12B8B0]" />
+                                    View Report
+                                  </button>
+                                  <span className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800" title="Paid certificate report is permanently locked against modifications">
+                                    🔒 Locked
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  {/* Create / Edit (Unpaid -> Full CRUD) */}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedCandidate(applicationToCandidate(cert));
+                                      setSelectedAssessment(cert);
+                                      setShowStructuredAssessmentModal(true);
+                                      if (!hasForm) markUnderReview(cert.certificateId);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-bold text-[10px] flex items-center gap-1 transition-colors shadow-sm"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    {hasForm ? "Edit" : "Fill form"}
+                                  </button>
+                                  {/* Delete (Unpaid only) */}
+                                  {hasForm && (
+                                    <button
+                                      onClick={async () => {
+                                        const ok = await confirm({
+                                          title: "Delete assessment form?",
+                                          message: `This will permanently remove the structured assessment for ${cert.candidateName}. The certificate record itself is kept.`,
+                                          confirmLabel: "Delete",
+                                          variant: "danger",
+                                        });
+                                        if (!ok) return;
+                                        try {
+                                          const res = await fetch("/api/certificates", {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ certificateId: cert.certificateId, structuredAssessment: null }),
+                                          });
+                                          const data = await res.json();
+                                          if (!data.success) {
+                                            error("Delete failed", data.error || "Could not remove the assessment.");
+                                            return;
+                                          }
+                                          broadcastLiveRefresh();
+                                          success("Assessment deleted", `Form for ${cert.candidateName} has been removed.`);
+                                        } catch {
+                                          error("Delete failed", "Could not remove the assessment.");
+                                        }
+                                      }}
+                                      className="px-2 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-[10px] flex items-center gap-1 border border-rose-200 dark:border-rose-800 transition-colors"
+                                      title="Delete assessment form"
+                                    >
+                                      <X className="w-3 h-3" />
+                                      Delete
+                                    </button>
+                                  )}
+                                </>
                               )}
                             </div>
                           </td>
@@ -3074,6 +3123,8 @@ export default function DoctorDashboardPage() {
           doctorName={session?.name || doctorProfile.name || "Physician"}
           doctorLicense={doctorProfile.licenseNumber || "—"}
           initialData={selectedAssessment?.structuredAssessment ?? null}
+          readOnly={String(selectedAssessment?.paymentStatus || selectedCandidate?.fullCertificate?.paymentStatus || "").toUpperCase() === "PAID"}
+          onViewApplicantRequest={() => setShowEvaluateSignModal(true)}
           onComplete={async (assessmentData) => {
             try {
               const certificateId = selectedCandidate.id;

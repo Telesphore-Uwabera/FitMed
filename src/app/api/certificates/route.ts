@@ -439,7 +439,15 @@ export async function PATCH(request: NextRequest) {
       if (doctorNotes !== undefined) updateData.doctorNotes = doctorNotes;
       if (doctorDocuments) updateData.doctorDocuments = doctorDocuments;
       // Allow null to explicitly clear the structuredAssessment (DELETE action for doctor CRUD)
-      if (structuredAssessment !== undefined) updateData.structuredAssessment = structuredAssessment ?? null;
+      if (structuredAssessment !== undefined) {
+        if (String(certDoc?.paymentStatus || "").toUpperCase() === "PAID" && structuredAssessment !== undefined) {
+          return NextResponse.json(
+            { success: false, error: "Assessment report is locked because the certificate is already paid. Read-only access." },
+            { status: 403 }
+          );
+        }
+        updateData.structuredAssessment = structuredAssessment ?? null;
+      }
 
       const updated = await Certificate.findOneAndUpdate(
         certDoc ? { _id: certDoc._id } : { certificateId: certKey },
