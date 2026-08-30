@@ -1438,8 +1438,8 @@ export default function DoctorDashboardPage() {
                           const def = defaultUpcomingScheduleTime(15);
                           setRescheduleApt(apt);
                           setRescheduleForm({
-                            scheduledDate: apt.scheduledDate || def.scheduledDate,
-                            scheduledTime: apt.scheduledTime || def.scheduledTime,
+                            scheduledDate: def.scheduledDate,
+                            scheduledTime: def.scheduledTime,
                             durationMinutes: Number(apt.durationMinutes || 15),
                           });
                         }}
