@@ -222,7 +222,7 @@ export default function DoctorDashboardPage() {
     if (!id || id === FITMED_LIVE_ROOM) {
       const open = doctorAppointments.find((a) => {
         const status = meetingLifecycleStatus(a);
-        return status === "scheduled" || status === "in-progress" || status === "rescheduled";
+        return status === "scheduled" || status === "in-progress" || status === "rescheduled" || status === "rejoinable";
       });
       id = consultationRoomId(open) || "";
     }
