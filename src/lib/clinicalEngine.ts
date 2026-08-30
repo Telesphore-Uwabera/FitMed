@@ -109,10 +109,10 @@ function parseNum(val: string): number | null {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Vital Sign Checks
+// Vital Sign Checks (Standard ranges: BP 100/60-140/90, Pulse 60-100, SpO2 94-100%, Temp 36.0-37.5°C)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Returns reasons for Outcome D from vitals (critical thresholds) */
+/** Returns reasons for Outcome D from vitals (critical emergency thresholds) */
 function checkVitalsUrgent(vitals: WizardData["vitals"]): string[] {
   const flags: string[] = [];
 
@@ -135,39 +135,49 @@ function checkVitalsUrgent(vitals: WizardData["vitals"]): string[] {
     flags.push(`Critical oxygen saturation (SpO₂: ${vitals.spo2}% — urgent respiratory assessment required)`);
 
   const temp = parseNum(vitals.temperature);
-  if (temp !== null && temp >= 39.5)
-    flags.push(`High fever (Temperature: ${vitals.temperature}°C)`);
+  if (temp !== null) {
+    if (temp >= 39.5) flags.push(`High fever (Temperature: ${vitals.temperature}°C)`);
+    if (temp < 35.0)  flags.push(`Hypothermia (Temperature: ${vitals.temperature}°C)`);
+  }
 
   return flags;
 }
 
-/** Returns reasons for Outcome B from vitals (concerning thresholds) */
+/** Returns reasons for Outcome B from vitals (concerning thresholds requiring doctor review) */
 function checkVitalsConcerning(vitals: WizardData["vitals"]): string[] {
   const flags: string[] = [];
 
   const bp = parseBP(vitals.bp);
   if (bp) {
-    if (bp.systolic >= 160 && bp.systolic < 180)
-      flags.push(`Elevated blood pressure (${vitals.bp} mmHg) — clinical review required`);
-    else if (bp.diastolic >= 100 && bp.diastolic < 110)
-      flags.push(`Elevated diastolic blood pressure (${vitals.bp} mmHg) — clinical review required`);
-    if ((bp.systolic >= 80 && bp.systolic < 90) || (bp.diastolic >= 50 && bp.diastolic < 60))
-      flags.push(`Low blood pressure (${vitals.bp} mmHg) — clinical review required`);
+    // Normal is 100/60 to 140/90
+    if ((bp.systolic > 140 && bp.systolic < 180) || (bp.diastolic > 90 && bp.diastolic < 110))
+      flags.push(`Elevated blood pressure (${vitals.bp} mmHg) — doctor clinical review required (standard: 100/60–140/90 mmHg)`);
+    if ((bp.systolic >= 80 && bp.systolic < 100) || (bp.diastolic >= 50 && bp.diastolic < 60))
+      flags.push(`Low blood pressure (${vitals.bp} mmHg) — doctor clinical review required (standard: 100/60–140/90 mmHg)`);
   }
 
   const pulse = parseNum(vitals.pulse);
   if (pulse !== null) {
-    if (pulse > 100 && pulse < 130) flags.push(`Tachycardia (Pulse: ${vitals.pulse} bpm) — requires assessment`);
-    if (pulse > 40 && pulse <= 50)  flags.push(`Bradycardia (Pulse: ${vitals.pulse} bpm) — requires assessment`);
+    // Normal is 60 to 100
+    if (pulse > 100 && pulse < 130) flags.push(`Tachycardia (Pulse: ${vitals.pulse} bpm — standard: 60–100 bpm)`);
+    if (pulse < 60 && pulse > 40)   flags.push(`Bradycardia (Pulse: ${vitals.pulse} bpm — standard: 60–100 bpm)`);
   }
 
   const spo2 = parseNum(vitals.spo2);
-  if (spo2 !== null && spo2 > 90 && spo2 <= 94)
-    flags.push(`Reduced oxygen saturation (SpO₂: ${vitals.spo2}%) — requires assessment`);
+  if (spo2 !== null) {
+    // Normal is 94 to 100
+    if (spo2 > 90 && spo2 < 94)
+      flags.push(`Reduced oxygen saturation (SpO₂: ${vitals.spo2}% — standard: 94–100%)`);
+  }
 
   const temp = parseNum(vitals.temperature);
-  if (temp !== null && temp >= 38.0 && temp < 39.5)
-    flags.push(`Fever (Temperature: ${vitals.temperature}°C) — requires assessment`);
+  if (temp !== null) {
+    // Normal is 36.0 to 37.5
+    if (temp > 37.5 && temp < 39.5)
+      flags.push(`Elevated temperature / Fever (${vitals.temperature}°C — standard: 36.0–37.5°C)`);
+    if (temp >= 35.0 && temp < 36.0)
+      flags.push(`Low body temperature (${vitals.temperature}°C — standard: 36.0–37.5°C)`);
+  }
 
   return flags;
 }
@@ -390,39 +400,113 @@ function bpBandForAge(ageYears: number) {
   return BP_CHART_BY_AGE.find((band) => ageYears >= band.minYears && ageYears <= band.maxYears) || BP_CHART_BY_AGE[BP_CHART_BY_AGE.length - 1];
 }
 
+export interface VitalAssessment {
+  label: string;
+  color: string;
+  detail: string;
+  isNormal: boolean;
+}
+
+export function assessBloodPressure(
+  bp: string,
+  ageYears?: number | null
+): VitalAssessment | null {
+  const parsed = parseBP(bp);
+  if (!parsed) return null;
+  const { systolic, diastolic } = parsed;
+
+  if (systolic >= 180 || diastolic >= 110) {
+    return {
+      label: "Critical High",
+      color: "text-rose-600",
+      detail: "Critically elevated blood pressure (≥180/110 mmHg). Urgent medical evaluation required.",
+      isNormal: false,
+    };
+  }
+  if (systolic < 80 || diastolic < 50) {
+    return {
+      label: "Critical Low",
+      color: "text-rose-600",
+      detail: "Critically low blood pressure (<80/50 mmHg). Urgent medical evaluation required.",
+      isNormal: false,
+    };
+  }
+  if (systolic > 140 || diastolic > 90) {
+    return {
+      label: "Elevated / High",
+      color: "text-amber-600",
+      detail: `Above standard range (100/60–140/90 mmHg). Your doctor will review this with your age (${ageYears ? `${ageYears} yrs` : "as registered"}).`,
+      isNormal: false,
+    };
+  }
+  if (systolic < 100 || diastolic < 60) {
+    return {
+      label: "Low",
+      color: "text-sky-600",
+      detail: `Below standard range (100/60–140/90 mmHg). Your doctor will review this with your age (${ageYears ? `${ageYears} yrs` : "as registered"}).`,
+      isNormal: false,
+    };
+  }
+
+  return {
+    label: "Normal",
+    color: "text-emerald-600",
+    detail: "Standard normal range (100/60–140/90 mmHg). Doctor will make final assessment.",
+    isNormal: true,
+  };
+}
+
+export function assessPulse(pulseStr: string): VitalAssessment | null {
+  const pulse = parseNum(pulseStr);
+  if (pulse === null) return null;
+  if (pulse >= 130) {
+    return { label: "Severe Tachycardia", color: "text-rose-600", detail: "Severely high pulse rate (≥130 bpm).", isNormal: false };
+  }
+  if (pulse <= 40) {
+    return { label: "Severe Bradycardia", color: "text-rose-600", detail: "Severely low pulse rate (≤40 bpm).", isNormal: false };
+  }
+  if (pulse > 100) {
+    return { label: "High / Tachycardia", color: "text-amber-600", detail: "Above standard range (60–100 bpm). Doctor will evaluate.", isNormal: false };
+  }
+  if (pulse < 60) {
+    return { label: "Low / Bradycardia", color: "text-sky-600", detail: "Below standard range (60–100 bpm). Doctor will evaluate.", isNormal: false };
+  }
+  return { label: "Normal", color: "text-emerald-600", detail: "Standard normal range (60–100 bpm).", isNormal: true };
+}
+
+export function assessSpO2(spo2Str: string): VitalAssessment | null {
+  const spo2 = parseNum(spo2Str);
+  if (spo2 === null) return null;
+  if (spo2 <= 90) {
+    return { label: "Critical", color: "text-rose-600", detail: "Critical oxygen saturation (≤90%).", isNormal: false };
+  }
+  if (spo2 < 94) {
+    return { label: "Reduced", color: "text-amber-600", detail: "Below standard range (94–100%). Doctor will evaluate.", isNormal: false };
+  }
+  return { label: "Normal", color: "text-emerald-600", detail: "Standard normal range (94–100%).", isNormal: true };
+}
+
+export function assessTemperature(tempStr: string): VitalAssessment | null {
+  const temp = parseNum(tempStr);
+  if (temp === null) return null;
+  if (temp >= 39.5) {
+    return { label: "High Fever", color: "text-rose-600", detail: "High fever (≥39.5°C). Urgent medical review.", isNormal: false };
+  }
+  if (temp > 37.5) {
+    return { label: "Elevated / Fever", color: "text-amber-600", detail: "Above standard range (36.0–37.5°C). Doctor will evaluate.", isNormal: false };
+  }
+  if (temp < 35.0) {
+    return { label: "Hypothermia", color: "text-rose-600", detail: "Critically low body temperature (<35.0°C).", isNormal: false };
+  }
+  if (temp < 36.0) {
+    return { label: "Low", color: "text-sky-600", detail: "Below standard range (36.0–37.5°C). Doctor will evaluate.", isNormal: false };
+  }
+  return { label: "Normal", color: "text-emerald-600", detail: "Standard normal range (36.0–37.5°C).", isNormal: true };
+}
+
 export function assessBloodPressureByAge(
   bp: string,
   ageYears: number | null
 ): { label: string; color: string; detail: string } | null {
-  const parsed = parseBP(bp);
-  if (!parsed) return null;
-  if (ageYears === null) {
-    return {
-      label: "Enter date of birth in Profile",
-      color: "text-slate-500",
-      detail: "Age from your profile is required to classify this reading.",
-    };
-  }
-
-  const band = bpBandForAge(ageYears);
-  const { systolic, diastolic } = parsed;
-  let label = "Normal";
-  let color = "text-emerald-600";
-
-  if (systolic > band.max.sys || diastolic > band.max.dia) {
-    label = "High";
-    color = "text-rose-600";
-  } else if (systolic < band.min.sys || diastolic < band.min.dia) {
-    label = "Low";
-    color = "text-sky-600";
-  } else if (systolic > band.normal.sys || diastolic > band.normal.dia) {
-    label = "Elevated";
-    color = "text-amber-600";
-  }
-
-  return {
-    label,
-    color,
-    detail: `Typical for age ${ageYears} (${band.label}): ${band.normal.sys}/${band.normal.dia} · range ${band.min.sys}/${band.min.dia}–${band.max.sys}/${band.max.dia}`,
-  };
+  return assessBloodPressure(bp, ageYears);
 }

@@ -6,7 +6,19 @@ import {
   Check, ChevronRight, ChevronLeft, AlertTriangle, ShieldAlert,
   Thermometer, Heart, Wind, Droplets, Scale, ArrowUp, Calendar,
 } from "lucide-react";
-import { runClinicalEngine, calculateBMI, bmiCategory, ageFromDateOfBirth, assessBloodPressureByAge, WizardData, ClinicalDecision, RED_FLAG_DEFINITIONS } from "@/lib/clinicalEngine";
+import {
+  runClinicalEngine,
+  calculateBMI,
+  bmiCategory,
+  ageFromDateOfBirth,
+  assessBloodPressure,
+  assessPulse,
+  assessSpO2,
+  assessTemperature,
+  WizardData,
+  ClinicalDecision,
+  RED_FLAG_DEFINITIONS,
+} from "@/lib/clinicalEngine";
 import ClinicalOutcomeScreen from "@/components/ClinicalOutcomeScreen";
 import BrandSelect from "@/components/BrandSelect";
 import { DEFAULT_FITMED_PURPOSE, FITMED_SERVICE_TITLES } from "@/lib/fitmedServices";
@@ -43,10 +55,10 @@ const RED_FLAG_QUESTIONS: { key: string; label: string }[] = [
   { key: "severe_abdominal_pain",   label: "Severe abdominal pain?" },
   { key: "vomiting_blood",          label: "Vomiting blood?" },
   { key: "gi_bleeding",             label: "Significant gastrointestinal / rectal bleeding?" },
-  { key: "significant_bleeding",    label: "Significant or uncontrolled bleeding anywhere?" },
-  { key: "severe_allergic_reaction", label: "Severe allergic reaction (swelling, hives, breathing difficulty)?" },
-  { key: "severe_dehydration",      label: "Severe dehydration (very little urine, dizziness, weakness)?" },
-  { key: "serious_systemic_illness", label: "Signs of serious systemic illness (high fever, rigors, confusion)?" },
+  { key: "significant_bleeding",    label: "Significant or uncontrolled active bleeding?" },
+  { key: "severe_allergic_reaction",label: "Severe allergic reaction / breathing difficulty with swelling?" },
+  { key: "severe_dehydration",      label: "Severe dehydration, inability to retain liquids, or extreme weakness?" },
+  { key: "serious_systemic_illness",label: "High fever with confusion, stiff neck, or severe drowsiness?" },
   { key: "severe_trauma",           label: "Severe trauma or significant injury in the past 4 weeks?" },
 ];
 
@@ -138,22 +150,29 @@ function YesNoRow({
 }
 
 function VitalInput({
-  label, unit, value, onChange, placeholder, icon: Icon,
+  label, unit, value, onChange, placeholder, icon: Icon, referenceRange,
 }: {
   label: string; unit: string; value: string; onChange: (v: string) => void;
-  placeholder: string; icon: React.ElementType;
+  placeholder: string; icon: React.ElementType; referenceRange?: string;
 }) {
   return (
     <div>
-      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
-        <Icon className="w-3 h-3" /> {label} <span className="text-slate-400">({unit})</span>
-      </label>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+          <Icon className="w-3 h-3 text-[#12B8B0]" /> {label} <span className="text-slate-400">({unit})</span>
+        </label>
+        {referenceRange && (
+          <span className="text-[9px] font-bold text-slate-400 bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded">
+            {referenceRange}
+          </span>
+        )}
+      </div>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#12B8B0] focus:ring-1 focus:ring-[#12B8B0] bg-white"
+        className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#12B8B0] focus:ring-1 focus:ring-[#12B8B0] bg-white dark:bg-slate-800 dark:border-slate-700"
       />
     </div>
   );
@@ -182,7 +201,12 @@ export default function FitnessCertificateWizard({
   const [bmi, setBmi] = useState("");
   const [vitals, setVitals] = useState({ temperature: "", bp: "", pulse: "", spo2: "" });
   const profileAge = ageFromDateOfBirth(dateOfBirth);
-  const bpAssessment = assessBloodPressureByAge(vitals.bp, profileAge);
+  const bpAssessment = assessBloodPressure(vitals.bp, profileAge);
+  const pulseAssessment = assessPulse(vitals.pulse);
+  const spo2Assessment = assessSpO2(vitals.spo2);
+  const tempAssessment = assessTemperature(vitals.temperature);
+
+  const hasAnyVitalsEntered = Boolean(vitals.bp || vitals.pulse || vitals.spo2 || vitals.temperature);
 
   // BMI auto-calculate
   useEffect(() => {
@@ -500,24 +524,95 @@ export default function FitnessCertificateWizard({
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#0B2D5C]">Vital Signs</h4>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      Enter if available (home devices — thermometer, BP cuff, pulse oximeter). Leave blank if not available.
+                      Standard ranges: <strong>BP 100/60–140/90 mmHg</strong> · <strong>Pulse 60–100 bpm</strong> · <strong>SpO₂ 94–100%</strong> · <strong>Temp 36.0–37.5°C</strong>. Enter if available.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <VitalInput label="Temperature" unit="°C" value={vitals.temperature} onChange={(v) => setVitals((p) => ({ ...p, temperature: v }))} placeholder="e.g. 36.6" icon={Thermometer} />
-                    <VitalInput label="Blood Pressure" unit="mmHg" value={vitals.bp} onChange={(v) => setVitals((p) => ({ ...p, bp: v }))} placeholder="e.g. 120/80" icon={Heart} />
-                    <VitalInput label="Pulse" unit="bpm" value={vitals.pulse} onChange={(v) => setVitals((p) => ({ ...p, pulse: v }))} placeholder="e.g. 72" icon={Activity} />
-                    <VitalInput label="SpO₂" unit="%" value={vitals.spo2} onChange={(v) => setVitals((p) => ({ ...p, spo2: v }))} placeholder="e.g. 98" icon={Droplets} />
+                    <VitalInput
+                      label="Blood Pressure"
+                      unit="mmHg"
+                      value={vitals.bp}
+                      onChange={(v) => setVitals((p) => ({ ...p, bp: v }))}
+                      placeholder="e.g. 120/80"
+                      referenceRange="100/60–140/90"
+                      icon={Heart}
+                    />
+                    <VitalInput
+                      label="Pulse"
+                      unit="bpm"
+                      value={vitals.pulse}
+                      onChange={(v) => setVitals((p) => ({ ...p, pulse: v }))}
+                      placeholder="e.g. 72"
+                      referenceRange="60–100 bpm"
+                      icon={Activity}
+                    />
+                    <VitalInput
+                      label="SpO₂"
+                      unit="%"
+                      value={vitals.spo2}
+                      onChange={(v) => setVitals((p) => ({ ...p, spo2: v }))}
+                      placeholder="e.g. 98"
+                      referenceRange="94–100%"
+                      icon={Droplets}
+                    />
+                    <VitalInput
+                      label="Temperature"
+                      unit="°C"
+                      value={vitals.temperature}
+                      onChange={(v) => setVitals((p) => ({ ...p, temperature: v }))}
+                      placeholder="e.g. 36.6"
+                      referenceRange="36.0–37.5°C"
+                      icon={Thermometer}
+                    />
                   </div>
-                  {bpAssessment && (
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0e1c31] border-0 text-xs">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold text-slate-500">Blood pressure:</span>
-                        <span className={`text-lg font-extrabold ${bpAssessment.color}`}>
-                          {vitals.bp} <span className="text-sm font-bold">{bpAssessment.label}</span>
-                        </span>
+
+                  {hasAnyVitalsEntered && (
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0e1c31] border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                      <div className="font-bold text-slate-600 dark:text-slate-300 text-[11px] uppercase tracking-wider flex items-center justify-between">
+                        <span>Vital Signs Clinical Screening</span>
+                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold">Doctor Review Standard</span>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-slate-500">{bpAssessment.detail}</p>
+                      <div className="grid sm:grid-cols-2 gap-2 text-xs">
+                        {bpAssessment && (
+                          <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-500">BP:</span>
+                              <span className={`font-extrabold ${bpAssessment.color}`}>{vitals.bp} ({bpAssessment.label})</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">{bpAssessment.detail}</p>
+                          </div>
+                        )}
+                        {pulseAssessment && (
+                          <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-500">Pulse:</span>
+                              <span className={`font-extrabold ${pulseAssessment.color}`}>{vitals.pulse} bpm ({pulseAssessment.label})</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">{pulseAssessment.detail}</p>
+                          </div>
+                        )}
+                        {spo2Assessment && (
+                          <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-500">SpO₂:</span>
+                              <span className={`font-extrabold ${spo2Assessment.color}`}>{vitals.spo2}% ({spo2Assessment.label})</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">{spo2Assessment.detail}</p>
+                          </div>
+                        )}
+                        {tempAssessment && (
+                          <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-500">Temp:</span>
+                              <span className={`font-extrabold ${tempAssessment.color}`}>{vitals.temperature}°C ({tempAssessment.label})</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-1">{tempAssessment.detail}</p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 italic pt-1 border-t border-slate-200 dark:border-white/10">
+                        * Regardless of age, your evaluating doctor will make the final clinical decision according to the age registered and full medical profile.
+                      </p>
                     </div>
                   )}
                 </div>
