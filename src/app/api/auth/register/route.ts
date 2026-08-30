@@ -78,11 +78,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!finalAvatarUrl || !finalIdDocUrl) {
+    if (!finalAvatarUrl) {
       return NextResponse.json(
         {
           success: false,
-          error: "Passport photo and National ID document are both required to create your account.",
+          error: "Passport photo is required to create your account.",
         },
         { status: 400 }
       );
