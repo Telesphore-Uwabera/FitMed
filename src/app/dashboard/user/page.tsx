@@ -149,6 +149,7 @@ export default function UserDashboard() {
       if (uploaded.url) {
         setProfileData((prev) => ({ ...prev, avatarUrl: uploaded.url }));
         void fetch("/api/auth/me", {
+          credentials: "include",
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: profileData.email || session?.email, avatarUrl: uploaded.url }),
@@ -174,6 +175,7 @@ export default function UserDashboard() {
       if (uploaded.url) {
         setProfileData((prev) => ({ ...prev, nationalIdImageUrl: uploaded.url }));
         void fetch("/api/auth/me", {
+          credentials: "include",
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: profileData.email || session?.email, nationalIdImageUrl: uploaded.url }),
@@ -202,6 +204,7 @@ export default function UserDashboard() {
     if (!appointmentId) return;
     try {
       await fetch("/api/appointments", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appointmentId, status }),
@@ -256,7 +259,7 @@ export default function UserDashboard() {
     async function loadData(live = false) {
       try {
         if (!live) {
-          const meRes = await fetch(`/api/auth/me?email=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+          const meRes = await fetch(`/api/auth/me?email=${encodeURIComponent(email)}`, { credentials: "include", signal: AbortSignal.timeout(8000) });
           const meData = await meRes.json();
           if (meData.success && meData.user) {
             const u = meData.user;
@@ -280,7 +283,7 @@ export default function UserDashboard() {
       }
 
       try {
-        const aptRes = await fetch(`/api/appointments?applicantEmail=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+        const aptRes = await fetch(`/api/appointments?applicantEmail=${encodeURIComponent(email)}`, { credentials: "include", signal: AbortSignal.timeout(8000) });
         const aptData = await aptRes.json();
         if (aptData.success) {
           setAppointments(aptData.appointments || []);
@@ -305,7 +308,7 @@ export default function UserDashboard() {
       }
 
       try {
-        const clinicRes = await fetch("/api/clinics", { signal: AbortSignal.timeout(8000) });
+        const clinicRes = await fetch("/api/clinics", { credentials: "include", signal: AbortSignal.timeout(8000) });
         const clinicData = await clinicRes.json();
         setPartnerClinics(clinicData.success ? clinicData.clinics || [] : []);
       } catch {
@@ -313,7 +316,7 @@ export default function UserDashboard() {
       }
 
       try {
-        const refRes = await fetch(`/api/referrals?applicantEmail=${encodeURIComponent(email)}`, { signal: AbortSignal.timeout(8000) });
+        const refRes = await fetch(`/api/referrals?applicantEmail=${encodeURIComponent(email)}`, { credentials: "include", signal: AbortSignal.timeout(8000) });
         const refData = await refRes.json();
         setMyReferrals(refData.success ? refData.referrals || [] : []);
       } catch {
@@ -322,6 +325,7 @@ export default function UserDashboard() {
 
       try {
         const certRes = await fetch(`/api/certificates?applicantEmail=${encodeURIComponent(email)}`, {
+          credentials: "include",
           cache: "no-store",
           signal: AbortSignal.timeout(8000),
         });
@@ -350,7 +354,7 @@ export default function UserDashboard() {
       void loadData(true);
     }, 5000);
     const reminderTick = setInterval(() => {
-      void fetch("/api/meet/tick");
+      void fetch("/api/meet/tick", { credentials: "include" });
     }, 60 * 1000);
     return () => {
       stopLive();
@@ -406,6 +410,7 @@ export default function UserDashboard() {
 
       // Submit to API
       const res = await fetch("/api/certificates", {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submissionData),
@@ -519,6 +524,7 @@ export default function UserDashboard() {
         }
       }
       const res = await fetch("/api/auth/me", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1887,6 +1893,7 @@ export default function UserDashboard() {
                       }
                       try {
                         const res = await fetch("/api/auth/password", {
+                          credentials: "include",
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({

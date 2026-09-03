@@ -224,6 +224,7 @@ export default function AdminDashboardPage() {
     }
     try {
       const res = await fetch("/api/auth/password", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -249,6 +250,7 @@ export default function AdminDashboardPage() {
   const saveGovernanceSettings = async () => {
     try {
       const res = await fetch("/api/admin/settings", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(governanceSettings),
@@ -317,6 +319,7 @@ export default function AdminDashboardPage() {
   const approveDoctor = async (id: string, name: string) => {
     try {
       const res = await fetch("/api/admin/staff", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action: "approve" }),
@@ -411,6 +414,7 @@ export default function AdminDashboardPage() {
     const action = currentStatus === "Active" ? "suspend" : "activate";
     try {
       const res = await fetch("/api/admin/staff", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action }),
@@ -430,6 +434,7 @@ export default function AdminDashboardPage() {
   const resetStaffPassword = async (id: string, name: string) => {
     try {
       const res = await fetch("/api/admin/staff", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action: "reset-password" }),
@@ -455,7 +460,7 @@ export default function AdminDashboardPage() {
     });
     if (!ok) return;
     try {
-      const res = await fetch(`/api/admin/staff?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/staff?id=${encodeURIComponent(id)}`, { credentials: "include", method: "DELETE" });
       const data = await res.json();
       if (!data.success) {
         error("Account not deleted", data.error || "Please try again.");
@@ -480,7 +485,7 @@ export default function AdminDashboardPage() {
     try {
       const params = new URLSearchParams({ id });
       if (email) params.set("email", email);
-      const res = await fetch(`/api/admin/applicants?${params.toString()}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/applicants?${params.toString()}`, { credentials: "include", method: "DELETE" });
       const data = await res.json();
       if (!data.success) {
         error("Account not deleted", data.error || "Please try again.");
@@ -894,7 +899,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const loadAdminData = async () => {
       try {
-        const staffRes = await fetch("/api/admin/staff");
+        const staffRes = await fetch("/api/admin/staff", { credentials: "include" });
         const staffData = await staffRes.json();
         if (staffData.success) {
           const doctors = Array.isArray(staffData.doctors) ? staffData.doctors : [];
@@ -938,7 +943,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const appRes = await fetch("/api/admin/applicants", { cache: "no-store" });
+        const appRes = await fetch("/api/admin/applicants", { credentials: "include", cache: "no-store" });
         const appData = await appRes.json();
         if (appData.success) {
           setPendingApplicants(appData.pending || []);
@@ -950,7 +955,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const certRes = await fetch("/api/certificates", { cache: "no-store" });
+        const certRes = await fetch("/api/certificates", { credentials: "include", cache: "no-store" });
         const certData = await certRes.json();
         if (certData.success && Array.isArray(certData.certificates)) {
           setAllCertificates(certData.certificates);
@@ -980,7 +985,7 @@ export default function AdminDashboardPage() {
           setAllCertificates([]);
           setCertificateRows([]);
         }
-        const payRes = await fetch("/api/payments");
+        const payRes = await fetch("/api/payments", { credentials: "include" });
         const payData = await payRes.json();
         if (payData.success && Array.isArray(payData.payments) && payData.payments.length > 0) {
           setTransactions(payData.payments);
@@ -1026,7 +1031,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const inqRes = await fetch("/api/contact");
+        const inqRes = await fetch("/api/contact", { credentials: "include" });
         const inqData = await inqRes.json();
         if (inqData.success && Array.isArray(inqData.inquiries)) {
           setInquiries(
@@ -1051,7 +1056,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const clinicRes = await fetch("/api/clinics");
+        const clinicRes = await fetch("/api/clinics", { credentials: "include" });
         const clinicData = await clinicRes.json();
         setClinics(clinicData.success ? clinicData.clinics || [] : []);
       } catch {
@@ -1059,7 +1064,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const scheduleRes = await fetch("/api/schedules");
+        const scheduleRes = await fetch("/api/schedules", { credentials: "include" });
         const scheduleData = await scheduleRes.json();
         setDoctorSchedules(scheduleData.success ? scheduleData.schedules || [] : []);
         setPlatformAppointments(scheduleData.success ? scheduleData.appointments || [] : []);
@@ -1069,7 +1074,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const newsRes = await fetch("/api/admin/newsletter");
+        const newsRes = await fetch("/api/admin/newsletter", { credentials: "include" });
         const newsData = await newsRes.json();
         setSubscribers(newsData.success ? newsData.subscribers || [] : []);
       } catch {
@@ -1078,7 +1083,7 @@ export default function AdminDashboardPage() {
 
       try {
         if (adminRefresh === 0) {
-        const settingsRes = await fetch("/api/admin/settings");
+        const settingsRes = await fetch("/api/admin/settings", { credentials: "include" });
         const settingsData = await settingsRes.json();
         if (settingsData.success && settingsData.settings) {
           setGovernanceSettings((prev) => ({
@@ -1215,6 +1220,7 @@ export default function AdminDashboardPage() {
     const action = isActiveAccount(currentStatus) ? "suspend" : "activate";
     try {
       const res = await fetch("/api/admin/applicants", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, email, action }),
@@ -2018,6 +2024,7 @@ export default function AdminDashboardPage() {
                           setCertStatusBusy(cert.certificateId);
                           try {
                             const res = await fetch("/api/certificates", {
+                              credentials: "include",
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ certificateId: cert.certificateId, actor: "admin", ...body }),
@@ -2403,6 +2410,7 @@ export default function AdminDashboardPage() {
                         if (upload.url) finalAvatar = upload.url;
                       }
                       const res = await fetch("/api/admin/staff", {
+                        credentials: "include",
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -2845,6 +2853,7 @@ export default function AdminDashboardPage() {
                           if (!reply) return;
                           try {
                             const res = await fetch("/api/contact", {
+                              credentials: "include",
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ id: inq.id, action: "reply", message: reply }),
@@ -2875,6 +2884,7 @@ export default function AdminDashboardPage() {
                           onClick={async () => {
                             try {
                               const res = await fetch("/api/contact", {
+                                credentials: "include",
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ id: inq.id, status: "Resolved" }),
@@ -3150,6 +3160,7 @@ export default function AdminDashboardPage() {
                 setBroadcastBusy(true);
                 try {
                   const res = await fetch("/api/admin/newsletter", {
+                    credentials: "include",
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(broadcastForm),
@@ -3398,6 +3409,7 @@ export default function AdminDashboardPage() {
                                   onClick={async () => {
                                     try {
                                       const res = await fetch("/api/certificates", {
+                                        credentials: "include",
                                         method: "PATCH",
                                         headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify({ certificateId: txn.certId, action: "payment-reminder" }),

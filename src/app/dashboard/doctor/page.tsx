@@ -237,11 +237,12 @@ export default function DoctorDashboardPage() {
     localStorage.setItem(`fitmed_meeting:${id}`, "waiting");
     try {
       await fetch("/api/appointments", {
+        credentials: "include",
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appointmentId: id, status: "in-progress" }),
       });
-      const chatRes = await fetch(`/api/chat?consultationId=${encodeURIComponent(id)}`);
+      const chatRes = await fetch(`/api/chat?consultationId=${encodeURIComponent(id)}`, { credentials: "include" });
       const chatData = await chatRes.json();
       if (chatData.success && chatData.messages?.length) {
         setMessages(formatChatMessages(chatData.messages));
@@ -285,6 +286,7 @@ export default function DoctorDashboardPage() {
     // Persist to MongoDB
     try {
       await fetch("/api/chat", {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -385,7 +387,7 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const certRes = await fetch("/api/certificates", { cache: "no-store", signal: AbortSignal.timeout(15000) });
+        const certRes = await fetch("/api/certificates", { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(15000) });
         const certData = await certRes.json();
         const all = Array.isArray(certData.certificates) ? certData.certificates : [];
         const mine = all.filter((cert: Record<string, unknown>) => {
@@ -448,7 +450,7 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const clinicRes = await fetch("/api/clinics");
+        const clinicRes = await fetch("/api/clinics", { credentials: "include" });
         const clinicData = await clinicRes.json();
         setPartnerClinics(clinicData.success ? clinicData.clinics || [] : []);
       } catch {
@@ -456,7 +458,7 @@ export default function DoctorDashboardPage() {
       }
 
       try {
-        const refRes = await fetch("/api/referrals");
+        const refRes = await fetch("/api/referrals", { credentials: "include" });
         const refData = await refRes.json();
         setPhysicalReferrals(refData.success ? refData.referrals || [] : []);
       } catch {
@@ -469,7 +471,7 @@ export default function DoctorDashboardPage() {
       void loadData(true);
     }, 5000);
     const reminderTick = setInterval(() => {
-      void fetch("/api/meet/tick");
+      void fetch("/api/meet/tick", { credentials: "include" });
     }, 60 * 1000);
     return () => {
       stopLive();
@@ -529,6 +531,7 @@ export default function DoctorDashboardPage() {
     }
     try {
       const res = await fetch("/api/telehealth/invite", {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -756,6 +759,7 @@ export default function DoctorDashboardPage() {
   const markUnderReview = (certificateId?: string) => {
     if (!certificateId) return;
     void fetch("/api/certificates", {
+      credentials: "include",
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ certificateId, status: "under-review" }),
@@ -1459,6 +1463,7 @@ export default function DoctorDashboardPage() {
                           onClick={async () => {
                             try {
                               const res = await fetch("/api/appointments", {
+                                credentials: "include",
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ appointmentId: apt.appointmentId, action: "remind" }),
@@ -1496,6 +1501,7 @@ export default function DoctorDashboardPage() {
                       onClick={async () => {
                         try {
                           const res = await fetch("/api/appointments", {
+                            credentials: "include",
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ appointmentId: apt.appointmentId, action: "remind" }),
@@ -1905,6 +1911,7 @@ export default function DoctorDashboardPage() {
                   )
                 );
                 void fetch("/api/appointments", {
+                  credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ appointmentId: meetingRoomId, status: "completed" }),
@@ -2249,6 +2256,7 @@ export default function DoctorDashboardPage() {
                                         if (!ok) return;
                                         try {
                                           const res = await fetch("/api/certificates", {
+                                            credentials: "include",
                                             method: "PATCH",
                                             headers: { "Content-Type": "application/json" },
                                             body: JSON.stringify({ certificateId: cert.certificateId, structuredAssessment: null }),
@@ -2361,6 +2369,7 @@ export default function DoctorDashboardPage() {
                 e.preventDefault();
                 try {
                   const res = await fetch("/api/referrals", {
+                    credentials: "include",
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(referralForm),
@@ -2594,6 +2603,7 @@ export default function DoctorDashboardPage() {
                   }
                   try {
                     const res = await fetch("/api/auth/password", {
+                      credentials: "include",
                       method: "PATCH",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
@@ -2644,6 +2654,7 @@ export default function DoctorDashboardPage() {
               // Update certificate in database
               try {
                 await fetch(`/api/certificates`, {
+                  credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2663,6 +2674,7 @@ export default function DoctorDashboardPage() {
             } else if (decision === "REJECTED") {
               try {
                 await fetch(`/api/certificates`, {
+                  credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2681,6 +2693,7 @@ export default function DoctorDashboardPage() {
             } else if (decision === "PHYSICAL_CONSULTATION") {
               try {
                 await fetch(`/api/certificates`, {
+                  credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2699,6 +2712,7 @@ export default function DoctorDashboardPage() {
             } else if (decision === "INVESTIGATION_SPECIALIST") {
               try {
                 await fetch(`/api/certificates`, {
+                  credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -2716,6 +2730,7 @@ export default function DoctorDashboardPage() {
             } else {
               try {
                 await fetch(`/api/certificates`, {
+                  credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -3050,7 +3065,7 @@ export default function DoctorDashboardPage() {
                       const formData = new FormData();
                       formData.append("file", file);
                       formData.append("folder", "fitmed/doctor-documents");
-                      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+                      const uploadRes = await fetch("/api/upload", { credentials: "include", method: "POST", body: formData });
                       const uploadData = await uploadRes.json();
                       if (!uploadData.url) {
                         error("Document not saved", uploadData.error || "Upload failed.");
@@ -3082,6 +3097,7 @@ export default function DoctorDashboardPage() {
                   try {
                     const certificateId = selectedCandidate.id;
                     await fetch(`/api/certificates`, {
+                      credentials: "include",
                       method: "PATCH",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
@@ -3129,6 +3145,7 @@ export default function DoctorDashboardPage() {
             try {
               const certificateId = selectedCandidate.id;
               await fetch(`/api/certificates`, {
+                credentials: "include",
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -3152,7 +3169,7 @@ export default function DoctorDashboardPage() {
               success("Assessment Saved", `Structured assessment saved with decision: ${assessmentData.decision}`);
               setShowStructuredAssessmentModal(false);
               // Refresh queue
-              const res = await fetch("/api/certificates");
+              const res = await fetch("/api/certificates", { credentials: "include" });
               const data = await res.json();
               if (data.success) {
                 const formattedQueue = data.certificates
@@ -3510,8 +3527,8 @@ export default function DoctorDashboardPage() {
                   setIsRescheduling(true);
                   try {
                     const res = await fetch("/api/appointments", {
-                      method: "PATCH",
                       credentials: "include",
+                      method: "PATCH",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
                         appointmentId: rescheduleApt.appointmentId,

@@ -42,7 +42,7 @@ export default function DoctorReportsPage() {
       const meRes = await fetch("/api/doctors/me", { credentials: "include" });
       const meData = await meRes.json();
       const doctorId = meData.success ? meData.doctor?.id : "";
-      const res = await fetch(doctorId ? `/api/certificates?assignedDoctorId=${encodeURIComponent(doctorId)}` : "/api/certificates");
+      const res = await fetch(doctorId ? `/api/certificates?assignedDoctorId=${encodeURIComponent(doctorId)}` : "/api/certificates", { credentials: "include" });
       const data = await res.json();
       if (data.success) {
         setCertificates(data.certificates);
