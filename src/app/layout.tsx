@@ -57,10 +57,11 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/logo-4.webp",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: SITE_NAME,
+        alt: `${SITE_NAME} — Medical Fitness Certificate Online`,
+        type: "image/png",
       },
     ],
   },
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${SITE_NAME} — Medical Fitness Certificate Online`,
     description: DEFAULT_DESCRIPTION,
-    images: ["/logo-4.webp"],
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
