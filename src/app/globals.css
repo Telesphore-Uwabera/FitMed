@@ -831,11 +831,21 @@ html.dark:not(:has(.dashboard-app)) .bg-\[\#f4f7fb\] {
 html.dark:not(:has(.dashboard-app)) .bg-sky-50,
 html.dark:not(:has(.dashboard-app)) .bg-teal-50,
 html.dark:not(:has(.dashboard-app)) .bg-violet-50,
-html.dark:not(:has(.dashboard-app)) .bg-emerald-50,
-html.dark:not(:has(.dashboard-app)) .bg-amber-50,
-html.dark:not(:has(.dashboard-app)) .bg-rose-50,
 html.dark:not(:has(.dashboard-app)) .bg-indigo-50 {
   background-color: #0e1c31;
+}
+/* Decision framework tints — each gets its own color on public dark pages */
+html.dark:not(:has(.dashboard-app)) .bg-emerald-50 {
+  background-color: rgba(5, 46, 22, 0.5) !important;
+}
+html.dark:not(:has(.dashboard-app)) .bg-amber-50 {
+  background-color: rgba(69, 26, 3, 0.5) !important;
+}
+html.dark:not(:has(.dashboard-app)) .bg-orange-50 {
+  background-color: rgba(67, 20, 7, 0.5) !important;
+}
+html.dark:not(:has(.dashboard-app)) .bg-rose-50 {
+  background-color: rgba(69, 10, 10, 0.5) !important;
 }
 
 html.dark:not(:has(.dashboard-app)) .text-\[\#0B2D5C\],

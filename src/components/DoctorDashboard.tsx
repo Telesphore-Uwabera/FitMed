@@ -17,22 +17,22 @@ const decisions = [
   {
     label: "FIT",
     desc: "Medically fit for stated purpose",
-    cls: "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/25 dark:text-emerald-300 dark:border-emerald-700/50",
+    cls: "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50",
   },
   {
     label: "FIT WITH RESTRICTIONS",
     desc: "Fit with documented limitations",
-    cls: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/25 dark:text-amber-300 dark:border-amber-700/50",
+    cls: "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50",
   },
   {
     label: "FURTHER ASSESSMENT",
     desc: "Requires additional examination",
-    cls: "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-900/25 dark:text-orange-300 dark:border-orange-700/50",
+    cls: "bg-orange-50 text-orange-800 border-orange-300 dark:!bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/50",
   },
   {
     label: "NOT FIT",
     desc: "Not fit at time of assessment",
-    cls: "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-900/25 dark:text-rose-300 dark:border-rose-700/50",
+    cls: "bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50",
   },
 ];
 
@@ -77,8 +77,8 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
   return (
     <section className="relative py-28 section-light dark:bg-[#060e1a] overflow-hidden">
       <div className="container-wide">
-        <div className="grid lg:grid-cols-2 gap-16 xl:gap-24 items-center">
-          <motion.div ref={ref} initial={{ opacity: 0, x: -50 }} animate={isInView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.8 }}>
+        <div className="grid lg:grid-cols-2 gap-16 xl:gap-24 items-stretch">
+          <motion.div ref={ref} initial={{ opacity: 0, x: -50 }} animate={isInView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.8 }} className="flex flex-col">
             <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-5 badge-teal">For Licensed Doctors</span>
             <h2 className="text-4xl md:text-5xl font-extrabold mb-6 text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>The Clinical <span className="gradient-text">Workspace</span></h2>
             <p className="text-lg leading-relaxed mb-10 text-slate-500 dark:text-slate-300">Everything you need — applicant history, vitals, AI summaries, video consultation, and certificate issuance — in one secure, well-designed place.</p>
@@ -91,11 +91,15 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
                 </motion.div>
               ))}
             </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3 text-slate-400 dark:text-slate-500">Decision Framework</p>
-              <div className="grid grid-cols-2 gap-2">
+            {/* Decision Framework — pushed to bottom to align with doctor card footer */}
+            <div className="mt-auto">
+              <p className="text-sm font-extrabold uppercase tracking-widest mb-4 text-slate-400 dark:text-slate-500">Decision Framework</p>
+              <div className="grid grid-cols-2 gap-3">
                 {decisions.map((decision) => (
-                  <div key={decision.label} className={`px-3 py-2.5 rounded-xl border text-center ${decision.cls}`}><div className="text-[10px] font-extrabold tracking-wide">{decision.label}</div><div className="text-[10px] mt-0.5 font-medium opacity-90">{decision.desc}</div></div>
+                  <div key={decision.label} className={`px-4 py-4 rounded-2xl border-2 text-center ${decision.cls}`}>
+                    <div className="text-sm font-extrabold tracking-wide mb-1">{decision.label}</div>
+                    <div className="text-xs leading-relaxed font-medium opacity-90">{decision.desc}</div>
+                  </div>
                 ))}
               </div>
             </div>

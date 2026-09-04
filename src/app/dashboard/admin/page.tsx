@@ -1417,13 +1417,18 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="bg-[#082247] text-white rounded-3xl p-6 sm:p-8 border border-[#12B8B0]/30 shadow-lg space-y-4">
-                <h3 className="text-lg font-bold text-white">Certificate security</h3>
-                <p className="text-xs text-slate-300">
+              <div className="bg-white dark:bg-[#0d1e30] rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-[#12B8B0]/20 shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-[#12B8B0]/10 border border-teal-200 dark:border-[#12B8B0]/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-[#12B8B0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-[#0B2D5C] dark:text-slate-100">Certificate security</h3>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Issued certificates can be checked with a QR code so employers know they are genuine.
                 </p>
-                <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-[#12B8B0]">
-                  System status: Online<br />
+                <div className="p-4 rounded-2xl bg-teal-50 dark:bg-[#091628] border border-teal-200 dark:border-slate-700 text-xs text-teal-700 dark:text-[#12B8B0]">
+                  System status: <span className="font-bold">Online</span><br />
                   Last check: {auditLogs[0]?.time || "—"}
                 </div>
               </div>
