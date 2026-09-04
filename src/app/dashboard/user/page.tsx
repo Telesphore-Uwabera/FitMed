@@ -819,35 +819,35 @@ export default function UserDashboard() {
                         </div>
                       )}
                       {isPhysicalRequested && (
-                        <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-950 font-medium flex items-start gap-2">
-                          <Hospital className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/50 text-xs text-orange-950 dark:text-orange-200 font-medium flex items-start gap-2">
+                          <Hospital className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <strong className="text-orange-900 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
+                            <strong className="text-orange-900 dark:text-orange-300 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
                             The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.
                           </div>
                         </div>
                       )}
                       {isSpecialistRequested && (
-                        <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 font-medium flex items-start gap-2">
-                          <Stethoscope className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 text-xs text-indigo-950 dark:text-indigo-200 font-medium flex items-start gap-2">
+                          <Stethoscope className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <strong className="text-indigo-900 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
+                            <strong className="text-indigo-900 dark:text-indigo-300 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
                             The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.
                           </div>
                         </div>
                       )}
                       {isUrgent && (
-                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs text-rose-950 font-medium flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800/50 text-xs text-rose-950 dark:text-rose-200 font-medium flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <strong className="text-rose-900 block font-bold mb-0.5">Urgent Medical Referral</strong>
+                            <strong className="text-rose-900 dark:text-rose-300 block font-bold mb-0.5">Urgent Medical Referral</strong>
                             The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.
                           </div>
                         </div>
                       )}
                       {cert.notes && !isApproved && !isPhysicalRequested && !isSpecialistRequested && !isUrgent && (
-                        <div className="p-3 rounded-xl bg-slate-50 border-0 text-xs text-slate-700 font-medium">
-                          <strong className="text-[#0B2D5C]">Physician notice:</strong> {cert.notes}
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                          <strong className="text-[#0B2D5C] dark:text-slate-200">Physician notice:</strong> {cert.notes}
                         </div>
                       )}
                     </div>
@@ -1371,38 +1371,38 @@ export default function UserDashboard() {
                       </h3>
 
                       {isPhysicalRequested && (
-                        <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-950 font-medium flex items-start gap-2">
-                          <Hospital className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/50 text-xs text-orange-950 dark:text-orange-200 font-medium flex items-start gap-2">
+                          <Hospital className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <strong className="text-orange-900 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
+                            <strong className="text-orange-900 dark:text-orange-300 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
                             The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.
                           </div>
                         </div>
                       )}
 
                       {isSpecialistRequested && (
-                        <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 font-medium flex items-start gap-2">
-                          <Stethoscope className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 text-xs text-indigo-950 dark:text-indigo-200 font-medium flex items-start gap-2">
+                          <Stethoscope className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <strong className="text-indigo-900 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
+                            <strong className="text-indigo-900 dark:text-indigo-300 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
                             The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.
                           </div>
                         </div>
                       )}
 
                       {isUrgent && (
-                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs text-rose-950 font-medium flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                        <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800/50 text-xs text-rose-950 dark:text-rose-200 font-medium flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <strong className="text-rose-900 block font-bold mb-0.5">Urgent Medical Referral</strong>
+                            <strong className="text-rose-900 dark:text-rose-300 block font-bold mb-0.5">Urgent Medical Referral</strong>
                             The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.
                           </div>
                         </div>
                       )}
 
                       {cert.notes && !isPhysicalRequested && !isSpecialistRequested && !isUrgent && (
-                        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200/80 p-3 rounded-xl max-w-xl">
-                          <strong className="text-[#0B2D5C]">Physician Notice:</strong> {cert.notes}
+                        <p className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 p-3 rounded-xl max-w-xl">
+                          <strong className="text-[#0B2D5C] dark:text-slate-200">Physician Notice:</strong> {cert.notes}
                         </p>
                       )}
 
