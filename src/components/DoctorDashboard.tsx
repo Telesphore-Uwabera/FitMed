@@ -7,17 +7,33 @@ import Image from "next/image";
 import type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
 const features = [
-  { icon: ClipboardList, title: "Applicant Overview", desc: "Full history, vitals, medications, and AI-flagged red flags before the consultation.", color: "text-sky-600", bg: "bg-sky-50" },
-  { icon: Video, title: "Secure Video Call", desc: "End-to-end encrypted live video with built-in identity verification.", color: "text-teal-600", bg: "bg-teal-50" },
-  { icon: Brain, title: "AI Decision Support", desc: "Summaries, risk flags, and documentation assistance — you stay in control.", color: "text-violet-600", bg: "bg-violet-50" },
-  { icon: FileSignature, title: "Digital Signature", desc: "One-click digitally signed certificate issuance with a full audit trail.", color: "text-emerald-600", bg: "bg-emerald-50" },
+  { icon: ClipboardList, title: "Applicant Overview",  desc: "Full history, vitals, medications, and AI-flagged red flags before the consultation.", color: "text-sky-600",    bg: "bg-sky-50    dark:bg-sky-900/20" },
+  { icon: Video,         title: "Secure Video Call",    desc: "End-to-end encrypted live video with built-in identity verification.",              color: "text-teal-600",   bg: "bg-teal-50   dark:bg-teal-900/20" },
+  { icon: Brain,         title: "AI Decision Support",  desc: "Summaries, risk flags, and documentation assistance — you stay in control.",         color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-900/20" },
+  { icon: FileSignature, title: "Digital Signature",    desc: "One-click digitally signed certificate issuance with a full audit trail.",           color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
 ];
 
 const decisions = [
-  { label: "FIT", desc: "Medically fit for stated purpose", cls: "bg-green-50 text-green-700 border-green-200" },
-  { label: "FIT WITH RESTRICTIONS", desc: "Fit with documented limitations", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  { label: "FURTHER ASSESSMENT", desc: "Requires additional examination", cls: "bg-orange-50 text-orange-700 border-orange-200" },
-  { label: "NOT FIT", desc: "Not fit at time of assessment", cls: "bg-red-50 text-red-700 border-red-200" },
+  {
+    label: "FIT",
+    desc: "Medically fit for stated purpose",
+    cls: "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/25 dark:text-emerald-300 dark:border-emerald-700/50",
+  },
+  {
+    label: "FIT WITH RESTRICTIONS",
+    desc: "Fit with documented limitations",
+    cls: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/25 dark:text-amber-300 dark:border-amber-700/50",
+  },
+  {
+    label: "FURTHER ASSESSMENT",
+    desc: "Requires additional examination",
+    cls: "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-900/25 dark:text-orange-300 dark:border-orange-700/50",
+  },
+  {
+    label: "NOT FIT",
+    desc: "Not fit at time of assessment",
+    cls: "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-900/25 dark:text-rose-300 dark:border-rose-700/50",
+  },
 ];
 
 function initials(name: string) {
@@ -59,7 +75,7 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
   const photo = doctor?.image && !doctor.image.includes("images.unsplash.com") ? doctor.image : "";
 
   return (
-    <section className="relative py-28 section-light overflow-hidden">
+    <section className="relative py-28 section-light dark:bg-[#060e1a] overflow-hidden">
       <div className="container-wide">
         <div className="grid lg:grid-cols-2 gap-16 xl:gap-24 items-center">
           <motion.div ref={ref} initial={{ opacity: 0, x: -50 }} animate={isInView ? { opacity: 1, x: 0 } : {}} transition={{ duration: 0.8 }}>
@@ -69,14 +85,14 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
             <div className="grid sm:grid-cols-2 gap-4 mb-10">
               {features.map((feature, index) => (
                 <motion.div key={feature.title} initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.2 + index * 0.1 }} className={`rounded-2xl p-5 border-0 ${feature.bg} transition-all group`}>
-                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform"><feature.icon className={`w-4.5 h-4.5 ${feature.color}`} strokeWidth={1.5} /></div>
+                  <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform"><feature.icon className={`w-4.5 h-4.5 ${feature.color}`} strokeWidth={1.5} /></div>
                   <h4 className="text-sm font-bold mb-1 text-[#0B2D5C] dark:text-slate-100" style={{ fontFamily: "var(--font-primary)" }}>{feature.title}</h4>
                   <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-300">{feature.desc}</p>
                 </motion.div>
               ))}
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-3 text-slate-400">Decision Framework</p>
+              <p className="text-xs font-bold uppercase tracking-widest mb-3 text-slate-400 dark:text-slate-500">Decision Framework</p>
               <div className="grid grid-cols-2 gap-2">
                 {decisions.map((decision) => (
                   <div key={decision.label} className={`px-3 py-2.5 rounded-xl border text-center ${decision.cls}`}><div className="text-[10px] font-extrabold tracking-wide">{decision.label}</div><div className="text-[10px] mt-0.5 font-medium opacity-90">{decision.desc}</div></div>
