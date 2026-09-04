@@ -8,20 +8,6 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
-  NEXT_PUBLIC_SOCKET_URL = "https://teletech-api.onrender.com"
-
-# Pages and assets on Netlify. APIs, webhooks, and Socket.IO stay on Render.
-[[redirects]]
-  from = "/api/*"
-  to = "https://teletech-api.onrender.com/api/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/socket.io/*"
-  to = "https://teletech-api.onrender.com/socket.io/:splat"
-  status = 200
-  force = true
 
 [[headers]]
   for = "/*"
