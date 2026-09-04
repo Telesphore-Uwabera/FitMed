@@ -823,7 +823,7 @@ export default function UserDashboard() {
                           <Hospital className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <strong className="text-orange-900 dark:text-orange-300 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
-                            The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.
+                            <span className="text-orange-950 dark:text-orange-200">The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.</span>
                           </div>
                         </div>
                       )}
@@ -832,7 +832,7 @@ export default function UserDashboard() {
                           <Stethoscope className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <strong className="text-indigo-900 dark:text-indigo-300 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
-                            The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.
+                            <span className="text-indigo-950 dark:text-indigo-200">The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.</span>
                           </div>
                         </div>
                       )}
@@ -841,7 +841,7 @@ export default function UserDashboard() {
                           <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <strong className="text-rose-900 dark:text-rose-300 block font-bold mb-0.5">Urgent Medical Referral</strong>
-                            The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.
+                            <span className="text-rose-950 dark:text-rose-200">The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.</span>
                           </div>
                         </div>
                       )}
@@ -1375,7 +1375,7 @@ export default function UserDashboard() {
                           <Hospital className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <strong className="text-orange-900 dark:text-orange-300 block font-bold mb-0.5">In-Person Physical Examination Required</strong>
-                            The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.
+                            <span className="text-orange-950 dark:text-orange-200">The reviewing doctor determined that an in-person physical examination is required before this certificate can be completed. Please visit an accredited partner clinic.</span>
                           </div>
                         </div>
                       )}
@@ -1385,7 +1385,7 @@ export default function UserDashboard() {
                           <Stethoscope className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <strong className="text-indigo-900 dark:text-indigo-300 block font-bold mb-0.5">Specialist / Diagnostic Investigation Required</strong>
-                            The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.
+                            <span className="text-indigo-950 dark:text-indigo-200">The doctor has requested specialist evaluation or lab tests. Your record remains open under clinical review.</span>
                           </div>
                         </div>
                       )}
@@ -1395,7 +1395,7 @@ export default function UserDashboard() {
                           <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <strong className="text-rose-900 dark:text-rose-300 block font-bold mb-0.5">Urgent Medical Referral</strong>
-                            The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.
+                            <span className="text-rose-950 dark:text-rose-200">The examining physician identified findings requiring immediate medical attention. Please present to an urgent healthcare facility.</span>
                           </div>
                         </div>
                       )}
