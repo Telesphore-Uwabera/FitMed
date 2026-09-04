@@ -6,7 +6,6 @@ import { listAppointments, patchAppointment, saveAppointment } from "@/lib/memor
 import { nextKey } from "@/lib/sequentialIds";
 import { notifyPerson } from "@/lib/notify";
 import { canRescheduleMeeting, isMeetingClosed, publicMeetUrl } from "@/lib/meetingTime";
-import { processDueMeetingNotices } from "@/lib/meetingReminders";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +17,8 @@ export async function GET(request: NextRequest) {
     const doctorName = searchParams.get("doctorName");
 
     await connectToDatabase();
-    void processDueMeetingNotices().catch(() => null);
+    // processDueMeetingNotices runs on /api/meet/tick (called every 60 s) — not here,
+    // so it doesn't compete for DB connections on every appointment fetch.
     const query: Record<string, unknown> = {};
 
     if (applicantEmail) {

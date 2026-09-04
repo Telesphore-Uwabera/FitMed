@@ -469,7 +469,7 @@ export default function DoctorDashboardPage() {
     loadData(false);
     const stopLive = subscribeLiveRefresh(() => {
       void loadData(true);
-    }, 5000);
+    }, 30000);
     const reminderTick = setInterval(() => {
       void fetch("/api/meet/tick", { credentials: "include" });
     }, 60 * 1000);

@@ -1106,7 +1106,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     return subscribeLiveRefresh(() => {
       setAdminRefresh((n) => n + 1);
-    }, 5000);
+    }, 30000);
   }, []);
 
   const paidTransactions = transactions.filter((t) => t.status === "PAID");
