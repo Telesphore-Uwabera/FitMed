@@ -81,13 +81,13 @@
 /* ─── Base ───────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 88px;
+  scroll-padding-top: 120px;
   overflow-x: clip;
   color-scheme: light;
 }
 
 [id] {
-  scroll-margin-top: 88px;
+  scroll-margin-top: 120px;
 }
 
 html.dark {
@@ -932,4 +932,16 @@ html.dark:not(:has(.dashboard-app)) .badge-teal {
 .dashboard-app.dark .dashboard-main [class*="bg-[#082247]"] .text-slate-300,
 .dashboard-app.dark .dashboard-main div[class*="bg-[#0B2D5C]"] .text-slate-300 {
   color: #a8c0d8 !important;
+}
+
+/* ─── Top contact bar marquee ────────────────────────────────────────── */
+@keyframes marquee-contact {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee-contact {
+  animation: marquee-contact 28s linear infinite;
+}
+.animate-marquee-contact:hover {
+  animation-play-state: paused;
 }

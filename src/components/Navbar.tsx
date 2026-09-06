@@ -118,7 +118,7 @@ export default function Navbar() {
           opacity: { duration: 0.65 },
         }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50",
+          "fixed top-8 left-0 right-0 z-50",
           scrolled
             ? "bg-white/97 dark:bg-[#08162c]/95 backdrop-blur-xl shadow-md dark:shadow-black/30"
             : "bg-transparent"
@@ -256,7 +256,7 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 bottom-0 z-40 w-80 bg-white dark:bg-[#0c1c33] shadow-2xl xl:hidden flex flex-col"
+              className="fixed right-0 top-8 bottom-0 z-40 w-80 bg-white dark:bg-[#0c1c33] shadow-2xl xl:hidden flex flex-col"
               style={{ paddingTop: navH }}
             >
               {/* Nav links */}

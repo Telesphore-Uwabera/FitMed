@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { DialogProvider } from "@/components/DialogProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import JsonLd from "@/components/JsonLd";
+import TopContactBar from "@/components/TopContactBar";
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL, SITE_TAGLINE } from "@/lib/seo";
 
 const manrope = Manrope({
@@ -109,6 +110,7 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
+          <TopContactBar />
           <ToastProvider>
             <DialogProvider>{children}</DialogProvider>
           </ToastProvider>
