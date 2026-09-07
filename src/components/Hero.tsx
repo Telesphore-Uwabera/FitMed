@@ -14,24 +14,25 @@ import Link from "next/link";
 ──────────────────────────────────────────────────────────────── */
 const SLIDES = [
   {
+    type: "photo" as const,
     // African woman doctor on video call with patient — telemedicine
     url: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=1800&q=85&auto=format&fit=crop",
     alt: "African woman doctor conducting a secure video consultation with a patient",
     caption: "Request your verified medical fitness certificate",
   },
   {
+    type: "photo" as const,
     // Black woman running — fitness assessment context
     url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1800&q=85&auto=format&fit=crop",
     alt: "Black woman running as part of a fitness health assessment",
     caption: "Medical fitness certified — stay active with confidence",
   },
   {
-    // African nurse with tablet — digital health records
-    url: "https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=1800&q=85&auto=format&fit=crop",
-    alt: "African healthcare worker reviewing digital health records on a tablet",
+    type: "cert" as const,
     caption: "Digitally signed certificates issued in hours",
   },
   {
+    type: "photo" as const,
     // Black man working out / gym — occupational fitness context
     url: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=1800&q=85&auto=format&fit=crop",
     alt: "Black man exercising — medical fitness assessment for physical roles",
@@ -116,24 +117,111 @@ export default function Hero() {
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 1.3, ease: "easeInOut" }}
               >
-                <Image
-                  src={slide.url}
-                  alt={slide.alt}
-                  fill
-                  className="object-cover object-center"
-                  priority={i === 0}
-                  loading={i === 0 ? "eager" : "lazy"}
-                  sizes="100vw"
-                />
+                {slide.type === "cert" ? (
+                  /* ── Certificate slide — branded mockup ── */
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#0B2D5C] via-[#071d3d] to-[#0B2D5C] flex items-center justify-center overflow-hidden">
+                    {/* Background teal glow */}
+                    <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#12B8B0]/15 rounded-full blur-[120px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#12B8B0]/10 rounded-full blur-[100px] pointer-events-none" />
+
+                    {/* Certificate card mockup */}
+                    <div className="relative z-10 w-full max-w-2xl mx-auto px-6 flex items-center justify-center">
+                      <div className="bg-white rounded-3xl shadow-2xl border-4 border-[#12B8B0]/40 overflow-hidden w-full">
+                        {/* Header band */}
+                        <div className="bg-[#0B2D5C] px-8 py-5 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-[#12B8B0]/20 border border-[#12B8B0]/40 flex items-center justify-center">
+                              <Shield className="w-5 h-5 text-[#12B8B0]" />
+                            </div>
+                            <div>
+                              <div className="text-white text-sm font-extrabold tracking-wide">FITMED RWANDA</div>
+                              <div className="text-[#12B8B0] text-[11px] font-semibold">Medical Fitness Certificate</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider">Verified · FIT</span>
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-8 py-6 flex gap-6 items-start">
+                          {/* Left — candidate info */}
+                          <div className="flex-1 space-y-3">
+                            <div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Official Document No.</div>
+                              <div className="text-[#0B2D5C] font-black font-mono text-lg tracking-wider">FM-2026-00001</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              {[
+                                ["Candidate", "Jean Pierre Habimana"],
+                                ["Purpose", "General Employment Fitness"],
+                                ["Decision", "FIT — Requirements met"],
+                                ["Valid until", "28 Feb 2027"],
+                              ].map(([label, value]) => (
+                                <div key={label}>
+                                  <div className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">{label}</div>
+                                  <div className="text-[#0B2D5C] font-semibold mt-0.5">{value}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Right — QR + seal */}
+                          <div className="flex flex-col items-center gap-3 flex-shrink-0">
+                            {/* QR placeholder */}
+                            <div className="w-20 h-20 rounded-xl border-2 border-[#12B8B0]/40 bg-[#edf6f6] flex items-center justify-center p-1.5">
+                              <svg viewBox="0 0 21 21" className="w-full h-full text-[#0B2D5C]" fill="currentColor">
+                                <rect x="0" y="0" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+                                <rect x="1.5" y="1.5" width="6" height="6"/>
+                                <rect x="12" y="0" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+                                <rect x="13.5" y="1.5" width="6" height="6"/>
+                                <rect x="0" y="12" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+                                <rect x="1.5" y="13.5" width="6" height="6"/>
+                                <rect x="12" y="12" width="3" height="3"/><rect x="12" y="16" width="3" height="3"/>
+                                <rect x="16" y="12" width="3" height="3"/><rect x="18" y="16" width="3" height="3"/>
+                                <rect x="16" y="18" width="3" height="3"/>
+                              </svg>
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-bold text-center">Scan to verify</div>
+                          </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-8 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                          <div className="text-[10px] text-slate-400">Digitally signed · SHA-256 secured · QR verifiable</div>
+                          <div className="flex items-center gap-1 text-[#12B8B0]">
+                            <CheckCircle className="w-3 h-3" />
+                            <span className="text-[10px] font-bold">fitnessmed.rw</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Image
+                    src={slide.url}
+                    alt={slide.alt}
+                    fill
+                    className="object-cover object-center"
+                    priority={i === 0}
+                    loading={i === 0 ? "eager" : "lazy"}
+                    sizes="100vw"
+                  />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         ))}
 
-        {/* Layered overlays — light wash in light mode, brand navy in dark */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/78 to-white/45 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/10" />
-        <div className="absolute inset-0 bg-gradient-to-t from-white/88 via-transparent to-white/35 dark:from-[#0B2D5C]/60 dark:via-transparent dark:to-[#0B2D5C]/10" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#edf6f6]/50 to-transparent dark:from-[#071d3d]/15 dark:to-transparent" />
+        {/* Layered overlays — light wash in light mode, brand navy in dark — hidden on cert slide */}
+        {SLIDES[current].type !== "cert" && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/78 to-white/45 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-white/88 via-transparent to-white/35 dark:from-[#0B2D5C]/60 dark:via-transparent dark:to-[#0B2D5C]/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#edf6f6]/50 to-transparent dark:from-[#071d3d]/15 dark:to-transparent" />
+          </>
+        )}
       </div>
 
       {/* ── Hero content ─────────────────────────────────────── */}
