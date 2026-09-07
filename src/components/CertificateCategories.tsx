@@ -36,8 +36,8 @@ const categories = [
     badge: "Telemedicine Eligible",
     badgeColor: "badge-fit",
     color: "from-teal-500 to-teal-600",
-    // Black students on campus — education fitness clearance
-    img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=500&q=75&auto=format&fit=crop",
+    // African university students on Kigali campus — education fitness clearance
+    img: "/category-education.jpg",
     desc: "Health clearance for educational institutions and student admissions.",
     examples: ["University enrolment", "School sports clearance", "Scholarship medical"],
   },
@@ -49,7 +49,7 @@ const categories = [
     badge: "May Require Review",
     badgeColor: "badge-review",
     color: "from-amber-500 to-amber-600",
-    // African truck driver — commercial transport fitness
+    // African transport professional — commercial transport fitness
     img: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500&q=75&auto=format&fit=crop",
     desc: "Fitness assessments for drivers and transport workers.",
     examples: ["Commercial vehicle drivers", "Public transport operators", "Taxi / motorcycle riders"],
@@ -62,8 +62,8 @@ const categories = [
     badge: "Physical Exam Required",
     badgeColor: "badge-notfit",
     color: "from-rose-500 to-rose-600",
-    // Black construction worker with hard hat — high-risk occupation
-    img: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=500&q=75&auto=format&fit=crop",
+    // African civil engineer & safety officer — high-risk infrastructure occupation
+    img: "/category-construction.jpg",
     desc: "For roles involving heights, heavy machinery, or hazardous environments.",
     examples: ["Work at heights", "Heavy machinery operators", "Mining & construction"],
   },
@@ -88,8 +88,8 @@ const categories = [
     badge: "Physical Exam Required",
     badgeColor: "badge-notfit",
     color: "from-red-500 to-red-600",
-    // Aircraft cockpit — aviation fitness context
-    img: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=500&q=75&auto=format&fit=crop",
+    // African commercial airline pilot — aviation fitness clearance
+    img: "/category-aviation.jpg",
     desc: "Aviation medical certificates and specialist high-risk occupational health assessments.",
     examples: ["Aviation / pilots", "Diving & marine roles", "Armed / security forces"],
   },

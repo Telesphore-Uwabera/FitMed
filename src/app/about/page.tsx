@@ -140,10 +140,10 @@ export default async function AboutPage() {
         {/* Full-bleed background image with layered overlays */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1800&q=85&auto=format&fit=crop"
-            alt="Medical team providing digital fitness assessments in Rwanda"
+            src="/about-consultation.png"
+            alt="FitMed African medical team providing digital fitness assessments in Rwanda"
             fill
-            className="object-cover object-center opacity-40 dark:opacity-55"
+            className="object-cover object-center opacity-30 dark:opacity-45"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/75 to-white/50 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/25" />

@@ -133,10 +133,10 @@ export default function EmployerPortal() {
             {/* HR team photo */}
             <div className="relative rounded-3xl overflow-hidden aspect-video shadow-xl flex-shrink-0">
               <Image
-                src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80&auto=format&fit=crop"
-                alt="HR team reviewing employee medical fitness certificates on the FitMed employer portal"
+                src="/employer-portal.jpg"
+                alt="African HR management team reviewing employee medical fitness clearance on FitMed in Kigali"
                 fill
-                className="object-cover"
+                className="object-cover object-center"
                 sizes="(max-width:1024px) 100vw, 50vw"
                 loading="lazy"
               />

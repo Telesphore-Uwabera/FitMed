@@ -14,25 +14,24 @@ import Link from "next/link";
 ──────────────────────────────────────────────────────────────── */
 const SLIDES = [
   {
-    type: "photo" as const,
     // African woman doctor on video call with patient — telemedicine
     url: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=1800&q=85&auto=format&fit=crop",
     alt: "African woman doctor conducting a secure video consultation with a patient",
     caption: "Request your verified medical fitness certificate",
   },
   {
-    type: "photo" as const,
     // Black woman running — fitness assessment context
     url: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1800&q=85&auto=format&fit=crop",
     alt: "Black woman running as part of a fitness health assessment",
     caption: "Medical fitness certified — stay active with confidence",
   },
   {
-    type: "cert" as const,
+    // Doctor reviewing medical assessment & issuing certificate
+    url: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1800&q=85&auto=format&fit=crop",
+    alt: "Doctor reviewing clinical fitness clearance on a digital tablet",
     caption: "Digitally signed certificates issued in hours",
   },
   {
-    type: "photo" as const,
     // Black man working out / gym — occupational fitness context
     url: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=1800&q=85&auto=format&fit=crop",
     alt: "Black man exercising — medical fitness assessment for physical roles",
@@ -45,7 +44,7 @@ const SLIDE_DURATION = 6000; // ms
 const stats = [
   { icon: TrendingUp, value: "10,000+", label: "Certificates Issued", color: "text-[#12B8B0]"  },
   { icon: Star,        value: "4.9 / 5",  label: "Doctor Rating",      color: "text-amber-300" },
-              { icon: Clock,       value: "< 2 hrs",  label: "Avg. Turnaround",    color: "text-[#0B2D5C] dark:text-white"  },
+  { icon: Clock,       value: "< 2 hrs",  label: "Avg. Turnaround",    color: "text-[#0B2D5C] dark:text-white"  },
 ];
 
 const trustBadges = [
@@ -102,7 +101,7 @@ export default function Hero() {
   }, [current, next]);
 
   return (
-    <section className="relative min-h-screen w-full flex flex-col overflow-hidden">
+    <section className="relative min-h-screen w-full flex flex-col overflow-hidden bg-[#f4f7fb] dark:bg-[#0B2D5C]">
 
       {/* ── Full-bleed image slider ────────────────────────────── */}
       <div className="absolute inset-0 z-0">
@@ -117,111 +116,27 @@ export default function Hero() {
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 1.3, ease: "easeInOut" }}
               >
-                {slide.type === "cert" ? (
-                  /* ── Certificate slide — branded mockup ── */
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#0B2D5C] via-[#071d3d] to-[#0B2D5C] flex items-center justify-center overflow-hidden">
-                    {/* Background teal glow */}
-                    <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#12B8B0]/15 rounded-full blur-[120px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#12B8B0]/10 rounded-full blur-[100px] pointer-events-none" />
-
-                    {/* Certificate card mockup */}
-                    <div className="relative z-10 w-full max-w-2xl mx-auto px-6 flex items-center justify-center">
-                      <div className="bg-white rounded-3xl shadow-2xl border-4 border-[#12B8B0]/40 overflow-hidden w-full">
-                        {/* Header band */}
-                        <div className="bg-[#0B2D5C] px-8 py-5 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#12B8B0]/20 border border-[#12B8B0]/40 flex items-center justify-center">
-                              <Shield className="w-5 h-5 text-[#12B8B0]" />
-                            </div>
-                            <div>
-                              <div className="text-white text-sm font-extrabold tracking-wide">FITMED RWANDA</div>
-                              <div className="text-[#12B8B0] text-[11px] font-semibold">Medical Fitness Certificate</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                            <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-wider">Verified · FIT</span>
-                          </div>
-                        </div>
-
-                        {/* Body */}
-                        <div className="px-8 py-6 flex gap-6 items-start">
-                          {/* Left — candidate info */}
-                          <div className="flex-1 space-y-3">
-                            <div>
-                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Official Document No.</div>
-                              <div className="text-[#0B2D5C] font-black font-mono text-lg tracking-wider">FM-2026-00001</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 text-xs">
-                              {[
-                                ["Candidate", "Jean Pierre Habimana"],
-                                ["Purpose", "General Employment Fitness"],
-                                ["Decision", "FIT — Requirements met"],
-                                ["Valid until", "28 Feb 2027"],
-                              ].map(([label, value]) => (
-                                <div key={label}>
-                                  <div className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">{label}</div>
-                                  <div className="text-[#0B2D5C] font-semibold mt-0.5">{value}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Right — QR + seal */}
-                          <div className="flex flex-col items-center gap-3 flex-shrink-0">
-                            {/* QR placeholder */}
-                            <div className="w-20 h-20 rounded-xl border-2 border-[#12B8B0]/40 bg-[#edf6f6] flex items-center justify-center p-1.5">
-                              <svg viewBox="0 0 21 21" className="w-full h-full text-[#0B2D5C]" fill="currentColor">
-                                <rect x="0" y="0" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-                                <rect x="1.5" y="1.5" width="6" height="6"/>
-                                <rect x="12" y="0" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-                                <rect x="13.5" y="1.5" width="6" height="6"/>
-                                <rect x="0" y="12" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-                                <rect x="1.5" y="13.5" width="6" height="6"/>
-                                <rect x="12" y="12" width="3" height="3"/><rect x="12" y="16" width="3" height="3"/>
-                                <rect x="16" y="12" width="3" height="3"/><rect x="18" y="16" width="3" height="3"/>
-                                <rect x="16" y="18" width="3" height="3"/>
-                              </svg>
-                            </div>
-                            <div className="text-[9px] text-slate-400 font-bold text-center">Scan to verify</div>
-                          </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-8 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                          <div className="text-[10px] text-slate-400">Digitally signed · SHA-256 secured · QR verifiable</div>
-                          <div className="flex items-center gap-1 text-[#12B8B0]">
-                            <CheckCircle className="w-3 h-3" />
-                            <span className="text-[10px] font-bold">fitnessmed.rw</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <Image
-                    src={slide.url}
-                    alt={slide.alt}
-                    fill
-                    className="object-cover object-center"
-                    priority={i === 0}
-                    loading={i === 0 ? "eager" : "lazy"}
-                    sizes="100vw"
-                  />
-                )}
+                <Image
+                  src={slide.url}
+                  alt={slide.alt}
+                  fill
+                  className="object-cover object-center opacity-30 dark:opacity-40 transition-opacity duration-700"
+                  priority={i === 0}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  sizes="100vw"
+                />
               </motion.div>
             )}
           </AnimatePresence>
         ))}
 
-        {/* Layered overlays — light wash in light mode, brand navy in dark — hidden on cert slide */}
-        {SLIDES[current].type !== "cert" && (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/78 to-white/45 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/10" />
-            <div className="absolute inset-0 bg-gradient-to-t from-white/88 via-transparent to-white/35 dark:from-[#0B2D5C]/60 dark:via-transparent dark:to-[#0B2D5C]/10" />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#edf6f6]/50 to-transparent dark:from-[#071d3d]/15 dark:to-transparent" />
-          </>
-        )}
+        {/* Full-bleed layered overlays — matches other website pages */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#f4f7fb] via-[#f4f7fb]/95 to-[#f4f7fb]/50 dark:from-[#0B2D5C] dark:via-[#0B2D5C]/95 dark:to-[#0B2D5C]/50 transition-colors duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f7fb] via-transparent to-[#f4f7fb]/80 dark:from-[#0B2D5C] dark:via-transparent dark:to-[#0B2D5C]/80 transition-colors duration-500" />
+        <div className="absolute inset-0 bg-white/30 dark:bg-[#071d3d]/30 transition-colors duration-500" />
+
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[#12B8B0]/15 rounded-full blur-[160px] pointer-events-none" />
+        <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-sky-600/15 rounded-full blur-[140px] pointer-events-none" />
       </div>
 
       {/* ── Hero content ─────────────────────────────────────── */}
@@ -257,7 +172,7 @@ export default function Hero() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
                 transition={{ duration: 0.45 }}
-                className="text-[#12B8B0] text-sm font-bold mb-2 md:mb-4 tracking-wide uppercase"
+                className="text-[#0d9690] dark:text-[#1dd9d0] text-sm font-extrabold mb-2 md:mb-4 tracking-wider uppercase"
               >
                 {SLIDES[current].caption}
               </motion.p>
@@ -268,10 +183,10 @@ export default function Hero() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="text-lg text-slate-600 dark:text-slate-300 max-w-xl mx-auto lg:mx-0 mb-5 md:mb-7 leading-relaxed"
+              className="text-lg md:text-xl text-[#0B2D5C] dark:text-slate-100 font-medium max-w-xl mx-auto lg:mx-0 mb-5 md:mb-7 leading-relaxed"
             >
               A secure digital medical fitness assessment conducted by a{" "}
-              <span className="text-[#0B2D5C] dark:text-white font-semibold">licensed doctor</span> — verified,
+              <span className="text-[#0d9690] dark:text-[#1dd9d0] font-bold">licensed doctor</span> — verified,
               digitally signed, and instantly shareable.
             </motion.p>
 
@@ -333,9 +248,9 @@ export default function Hero() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.82 + i * 0.07 }}
-                  className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400"
+                  className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#0B2D5C] dark:text-slate-100"
                 >
-                  <CheckCircle className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[#12B8B0] flex-shrink-0" />
                   <span>{item}</span>
                 </motion.div>
               ))}
@@ -355,7 +270,7 @@ export default function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.05 + i * 0.1 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="min-w-0 glass-light rounded-2xl px-2 py-3 md:px-4 md:py-4 flex flex-col items-center justify-center text-center gap-1.5 h-full cursor-default hover:border-[#12B8B0]/50 dark:hover:border-sky-400/35 transition-colors"
+                  className="min-w-0 glass-light dark:bg-[#071d3d]/80 rounded-2xl px-2 py-3 md:px-4 md:py-4 flex flex-col items-center justify-center text-center gap-1.5 h-full cursor-default border border-slate-200/80 dark:border-white/10 hover:border-[#12B8B0]/50 dark:hover:border-sky-400/35 transition-colors"
                 >
                   <s.icon className={`w-5 h-5 ${s.color} flex-shrink-0`} />
                   <div
@@ -364,7 +279,7 @@ export default function Hero() {
                   >
                     {s.value}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{s.label}</div>
+                  <div className="text-[10px] sm:text-[11px] text-[#0B2D5C] dark:text-slate-200 font-semibold leading-snug">{s.label}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -396,16 +311,16 @@ export default function Hero() {
       <button
         onClick={back}
         aria-label="Previous slide"
-        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all cursor-pointer"
+        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full items-center justify-center cursor-pointer transition-all duration-300 shadow-lg bg-white/95 hover:bg-[#12B8B0] text-[#0B2D5C] hover:text-[#0B2D5C] border border-slate-200 hover:border-[#12B8B0] hover:scale-110 active:scale-95 hover:shadow-xl hover:shadow-teal-500/30 dark:bg-[#071d3d]/90 dark:text-white dark:border-white/15 dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] group"
       >
-        <ChevronLeft className="w-5 h-5" />
+        <ChevronLeft className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform duration-200" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all cursor-pointer"
+        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full items-center justify-center cursor-pointer transition-all duration-300 shadow-lg bg-white/95 hover:bg-[#12B8B0] text-[#0B2D5C] hover:text-[#0B2D5C] border border-slate-200 hover:border-[#12B8B0] hover:scale-110 active:scale-95 hover:shadow-xl hover:shadow-teal-500/30 dark:bg-[#071d3d]/90 dark:text-white dark:border-white/15 dark:hover:bg-[#12B8B0] dark:hover:text-[#0B2D5C] group"
       >
-        <ChevronRight className="w-5 h-5" />
+        <ChevronRight className="w-6 h-6 group-hover:translate-x-0.5 transition-transform duration-200" />
       </button>
 
       {/* ── Slide progress bar ──────────────────────────────────── */}

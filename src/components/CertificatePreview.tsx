@@ -98,10 +98,10 @@ export default function CertificatePreview() {
             {/* Bottom: photo strip — pinned to the same level as certificate bottom */}
             <div className="relative rounded-2xl overflow-hidden h-36 flex-shrink-0">
               <Image
-                src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=800&q=70&auto=format&fit=crop"
-                alt="Employer scanning a FitMed medical fitness certificate QR code for instant verification"
+                src="/qr-verification.jpg"
+                alt="African professional scanning a FitMed QR medical fitness certificate with a smartphone in Kigali"
                 fill
-                className="object-cover"
+                className="object-cover object-center"
                 sizes="(max-width:1024px) 100vw, 50vw"
                 loading="lazy"
               />

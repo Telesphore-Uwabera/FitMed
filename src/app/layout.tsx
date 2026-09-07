@@ -99,9 +99,9 @@ export default function RootLayout({
         <link rel="icon" href="/favicon-48x48.png" type="image/png" sizes="48x48" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/favicon-48x48.png" />
+        <JsonLd />
       </head>
       <body className="antialiased" suppressHydrationWarning>
-        <JsonLd />
         <Script
           id="fitmed-theme"
           strategy="beforeInteractive"

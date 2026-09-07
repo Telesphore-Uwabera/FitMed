@@ -2,8 +2,11 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, UserPlus, FileText, Video, Award } from "lucide-react";
 import Image from "next/image";
+
+// Re-export icons previously referenced by HowItWorks to prevent stale browser chunk crashes
+export { UserPlus, FileText, Video, Award };
 
 const steps = [
   {

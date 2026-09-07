@@ -1,3 +1,4 @@
+import Script from "next/script";
 import { SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION, absoluteUrl } from "@/lib/seo";
 
 export default function JsonLd() {
@@ -44,8 +45,10 @@ export default function JsonLd() {
   };
 
   return (
-    <script
+    <Script
+      id="jsonld-schema"
       type="application/ld+json"
+      strategy="beforeInteractive"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
     />
   );
