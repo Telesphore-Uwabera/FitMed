@@ -2,15 +2,17 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { UserPlus, FileText, Video, Award, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
+import Image from "next/image";
 
 const steps = [
   {
-    icon: UserPlus,
     title: "Request",
     description:
       "Create your account, choose your certificate purpose, and provide your identity details. We make it simple to get started.",
-    color: "from-sky-500 to-sky-600",
+    // African woman smiling, using smartphone — Unsplash (free licence)
+    image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=800&q=80&auto=format&fit=crop",
+    imageAlt: "African woman creating her FitMed account on a smartphone",
     accent: "sky",
     details: [
       "Account creation & phone / email verification",
@@ -19,11 +21,12 @@ const steps = [
     ],
   },
   {
-    icon: FileText,
     title: "Complete Assessment",
     description:
       "Fill out a smart adaptive health questionnaire personalised to your specific certificate need — takes under 10 minutes.",
-    color: "from-teal-500 to-teal-600",
+    // Black woman filling digital health form on laptop
+    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80&auto=format&fit=crop",
+    imageAlt: "African woman completing a health assessment on a laptop",
     accent: "teal",
     details: [
       "Adaptive medical history questionnaire",
@@ -32,11 +35,12 @@ const steps = [
     ],
   },
   {
-    icon: Video,
     title: "Consult a Doctor",
     description:
       "Meet a licensed doctor face-to-face through a secure, end-to-end encrypted video call — from wherever you are.",
-    color: "from-violet-500 to-violet-600",
+    // Black man on video call consultation
+    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=800&q=80&auto=format&fit=crop",
+    imageAlt: "African man in a video consultation with a licensed doctor",
     accent: "violet",
     details: [
       "Secure live video consultation",
@@ -45,11 +49,12 @@ const steps = [
     ],
   },
   {
-    icon: Award,
     title: "Get Certified",
     description:
       "Receive a digitally signed certificate with a unique QR code — valid anywhere, shareable instantly.",
-    color: "from-emerald-500 to-emerald-600",
+    // Black professional celebrating achievement / success
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80&auto=format&fit=crop&facepad=3",
+    imageAlt: "African professional receiving and celebrating their medical fitness certificate",
     accent: "emerald",
     details: [
       "Digitally signed certificate",
@@ -89,13 +94,7 @@ export default function HowItWorks() {
           </p>
         </motion.div>
 
-        {/* ── Cards grid ──────────────────────────────────────
-          Layout:
-            mobile  → 1 column (full width)
-            lg      → 2 columns (big, spacious cards)
-
-          Cards are intentionally large: generous icon panel + content area.
-        ───────────────────────────────────────────────────── */}
+        {/* ── Cards grid ─────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-20">
           {steps.map((s, i) => (
             <motion.div
@@ -106,14 +105,24 @@ export default function HowItWorks() {
               whileHover={{ y: -8, transition: { duration: 0.25 } }}
               className="group card-white rounded-3xl overflow-hidden transition-all duration-300 flex flex-col"
             >
-              {/* ── Large visual icon panel ── */}
-              <div className="relative h-48 lg:h-56 overflow-hidden flex-shrink-0 bg-[#edf6f6] dark:bg-[#0B2D5C] flex items-center justify-center">
-                <span className="absolute top-5 left-6 text-3xl font-black tracking-wider text-[#0B2D5C] dark:text-white/90" aria-label={`Step ${i + 1}`}>
-                  {i + 1}<sup className="ml-0.5 text-sm align-super tracking-normal">{i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}</sup>
-                </span>
-                <div className="absolute top-0 right-0 w-56 h-56 bg-[#12B8B0]/15 dark:bg-[#12B8B0]/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="relative w-28 h-28 rounded-[2rem] bg-white dark:bg-white/15 border border-[#12B8B0]/25 dark:border-white/30 flex items-center justify-center shadow-xl backdrop-blur-sm">
-                  <s.icon className="w-16 h-16 text-[#0B2D5C] dark:text-white" strokeWidth={1.35} />
+              {/* ── Photo panel ── */}
+              <div className="relative h-56 lg:h-64 overflow-hidden flex-shrink-0">
+                <Image
+                  src={s.image}
+                  alt={s.imageAlt}
+                  fill
+                  className="object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  loading={i < 2 ? "eager" : "lazy"}
+                />
+                {/* Dark gradient overlay — makes step badge readable */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B2D5C]/70 via-[#0B2D5C]/10 to-transparent" />
+                {/* Step label at bottom-left */}
+                <div className="absolute bottom-4 left-5 flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full bg-[#12B8B0] flex items-center justify-center text-[#0B2D5C] text-xs font-black shadow-md">
+                    {i + 1}
+                  </span>
+                  <span className="text-white text-sm font-extrabold drop-shadow-md">{s.title}</span>
                 </div>
               </div>
 
@@ -162,3 +171,4 @@ export default function HowItWorks() {
     </section>
   );
 }
+
