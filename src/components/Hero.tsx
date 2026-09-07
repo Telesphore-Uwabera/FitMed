@@ -14,9 +14,9 @@ import Link from "next/link";
 ──────────────────────────────────────────────────────────────── */
 const SLIDES = [
   {
-    // African doctor with applicant — telemedicine consultation
-    url: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1800&q=85&auto=format&fit=crop",
-    alt: "African doctor conducting a telemedicine consultation with an applicant",
+    // African woman doctor on video call with patient — telemedicine
+    url: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=1800&q=85&auto=format&fit=crop",
+    alt: "African woman doctor conducting a secure video consultation with a patient",
     caption: "Request your verified medical fitness certificate",
   },
   {
@@ -26,7 +26,7 @@ const SLIDES = [
     caption: "Medical fitness certified — stay active with confidence",
   },
   {
-    // African nurse/healthcare worker with tablet — digital health records
+    // African nurse with tablet — digital health records
     url: "https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=1800&q=85&auto=format&fit=crop",
     alt: "African healthcare worker reviewing digital health records on a tablet",
     caption: "Digitally signed certificates issued in hours",
@@ -308,14 +308,14 @@ export default function Hero() {
       <button
         onClick={back}
         aria-label="Previous slide"
-        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all"
+        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all cursor-pointer"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
         onClick={next}
         aria-label="Next slide"
-        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all"
+        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass-light items-center justify-center text-[#0B2D5C]/70 dark:text-white/60 hover:text-[#0B2D5C] dark:hover:text-white hover:bg-white dark:hover:bg-white/12 transition-all cursor-pointer"
       >
         <ChevronRight className="w-5 h-5" />
       </button>
