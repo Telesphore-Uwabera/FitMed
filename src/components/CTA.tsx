@@ -19,8 +19,8 @@ export default function CTA() {
       {/* Background photo — subtle */}
       <div className="absolute inset-0">
         <Image
-          src="https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1600&q=60&auto=format&fit=crop"
-          alt="Medical professional background"
+          src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1600&q=60&auto=format&fit=crop"
+          alt="African medical team in a healthcare setting"
           fill className="object-cover opacity-10"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-slate-900/75 to-slate-800/70" />

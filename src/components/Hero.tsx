@@ -26,10 +26,9 @@ const SLIDES = [
     caption: "Medical fitness certified — stay active with confidence",
   },
   {
-    // African medical professional reviewing records on tablet
-    // photo-1666214276372 was broken — replaced with reliable alternative
-    url: "https://images.unsplash.com/photo-1638202993928-7267aad84c31?w=1800&q=85&auto=format&fit=crop",
-    alt: "African medical professional reviewing applicant digital health records on a tablet",
+    // African nurse/healthcare worker with tablet — digital health records
+    url: "https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=1800&q=85&auto=format&fit=crop",
+    alt: "African healthcare worker reviewing digital health records on a tablet",
     caption: "Digitally signed certificates issued in hours",
   },
   {
