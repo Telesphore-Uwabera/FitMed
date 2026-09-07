@@ -23,9 +23,9 @@ const categories = [
     badge: "Telemedicine Eligible",
     badgeColor: "badge-fit",
     color: "from-sky-500 to-sky-600",
-    // African businessman at modern office — employment fitness context
-    img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=900&q=85&auto=format&fit=crop",
-    position: "object-center",
+    // Black African woman professional at office — employment fitness context
+    img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=900&q=85&auto=format&fit=crop",
+    position: "object-top",
     desc: "General medical fitness for office roles and standard workplace positions.",
     examples: ["Office & admin roles", "Customer service", "Professional services"],
   },
