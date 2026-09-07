@@ -10,6 +10,7 @@
 
 import Link from "next/link";
 import { Phone, Mail } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 /* ── Contact / social items ─────────────────────────────────────────────── */
 const items = [
@@ -106,6 +107,14 @@ function Item({ href, icon, label }: { href: string; icon: React.ReactNode; labe
 
 /* ── Main bar ─────────────────────────────────────────────────────────── */
 export default function TopContactBar() {
+  const pathname = usePathname();
+
+  // Visible ONLY on landing page ("/"), about us ("/about"), and contact us ("/contact")
+  // Hidden on signin, signup, dashboards, doctor/applicant portals, etc.
+  if (pathname !== "/" && pathname !== "/about" && pathname !== "/contact") {
+    return null;
+  }
+
   return (
     <div
       className="fixed top-0 left-0 right-0 z-[60] h-8 bg-[#0B2D5C] dark:bg-[#060e1a] border-b border-white/10 overflow-hidden flex items-center"
