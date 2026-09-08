@@ -72,7 +72,11 @@ export default function DoctorDashboard({ doctors: initialDoctors }: { doctors?:
   }, [doctors.length]);
 
   const doctor = doctors[currentDoctor] || doctors[0];
-  const photo = doctor?.image && !doctor.image.includes("images.unsplash.com") ? doctor.image : "";
+  const photo =
+    doctor?.image &&
+    doctor.image !== "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop"
+      ? doctor.image
+      : "";
 
   return (
     <section className="relative py-28 section-light dark:bg-[#060e1a] overflow-hidden">

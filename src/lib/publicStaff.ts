@@ -12,7 +12,7 @@ function publicPhoto(...urls: Array<string | undefined>) {
   for (const url of urls) {
     const value = String(url || "").trim();
     if (!value) continue;
-    if (value.includes("images.unsplash.com")) continue;
+    if (value === "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop") continue;
     return value;
   }
   return PLACEHOLDER;
@@ -73,6 +73,33 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         specialty,
       };
     });
+
+  // Also include any User with role "doctor" who may not have a Doctor collection doc yet
+  const docEmailSet = new Set(doctorDocs.map((d) => String(d.email || "").toLowerCase()));
+  const extraDoctorUsers = users.filter(
+    (u) => String(u.role || "").toLowerCase() === "doctor" && !docEmailSet.has(String(u.email || "").toLowerCase())
+  );
+
+  for (const docUser of extraDoctorUsers) {
+    if (!isActiveStatus(String(docUser.status || "active"))) continue;
+    const name = displayName(docUser.fullName || docUser.name, "FitMed doctor");
+    const specialty = String(docUser.jobTitle || "Occupational Medicine & Telehealth");
+    const bio =
+      String(docUser.bio || "").trim() ||
+      `${name} is a licensed FitMed physician providing telehealth fitness assessments.`;
+    doctors.push({
+      id: String(docUser._id),
+      name,
+      role: specialty,
+      qualifications: "Licensed physician",
+      bio,
+      image: publicPhoto(docUser.avatarUrl),
+      badge: "Licensed Physician",
+      kind: "doctor" as const,
+      license: "",
+      specialty,
+    });
+  }
 
   const leadership: PublicTeamMember[] = users
     .filter((user) => isActiveStatus(String(user.status || "active")))

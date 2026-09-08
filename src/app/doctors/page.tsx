@@ -3,6 +3,10 @@ import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { Stethoscope, Video, Brain, FileSignature, CheckCircle, ArrowRight } from "lucide-react";
 import { getPublicStaff } from "@/lib/publicStaff";
+import DoctorsDirectory from "@/components/DoctorsDirectory";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = pageMeta({
   title: "Our Doctors",
@@ -17,11 +21,11 @@ export default async function DoctorsPage() {
     <PageLayout
       title="Our Doctors"
       subtitle="Licensed medical professionals powering every FitMed assessment"
+      maxWidth="max-w-7xl"
     >
-      <div className="space-y-10">
-
-        <div className="bg-teal-50 border border-teal-100 rounded-2xl p-7">
-          <p className="text-slate-700 leading-relaxed">
+      <div className="space-y-12">
+        <div className="bg-teal-50/80 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/40 rounded-2xl p-6 sm:p-7">
+          <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm sm:text-base">
             Every FitMed certificate is issued by an appropriately licensed doctor. Our doctors
             use a purpose-built clinical dashboard to review applicant history, conduct live video
             consultations, and digitally sign certificates — all within a single secure platform.
@@ -29,21 +33,21 @@ export default async function DoctorsPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-extrabold text-slate-900 mb-6" style={{ fontFamily: "var(--font-primary)" }}>Licensed doctors on FitMed</h2>
-          {doctors.length === 0 ? (
-            <p className="text-sm text-slate-500">Doctors added in the admin staff directory will appear here.</p>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-5">
-              {doctors.map((doctor) => (
-                <div key={doctor.id} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                  <div className="text-xs font-extrabold uppercase tracking-widest text-[#12B8B0] mb-1">Licensed physician</div>
-                  <h3 className="text-lg font-extrabold text-[#0B2D5C]" style={{ fontFamily: "var(--font-primary)" }}>{doctor.name}</h3>
-                  <p className="text-sm text-slate-600 mt-1">{doctor.specialty || doctor.role}</p>
-                  {doctor.license ? <p className="text-xs text-slate-500 mt-2 font-mono">{doctor.license}</p> : null}
-                </div>
-              ))}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
+            <div>
+              <span className="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[0.16em] mb-2 badge-teal">
+                Verified Medical Staff
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B2D5C] dark:text-white" style={{ fontFamily: "var(--font-primary)" }}>
+                Licensed Doctors on FitMed
+              </h2>
             </div>
-          )}
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Active Rwanda Medical and Dental Council (RMDC) registered practitioners
+            </p>
+          </div>
+
+          <DoctorsDirectory initialDoctors={doctors} />
         </div>
 
         {/* Requirements */}

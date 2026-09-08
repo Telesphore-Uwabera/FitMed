@@ -16,8 +16,6 @@ const footerLinks = {
   Company: [
     { label: "About FitMed",  href: "/about",    ext: false },
     { label: "Our Doctors",   href: "/doctors",  ext: false },
-    { label: "Careers",       href: "/careers",  ext: false },
-    { label: "Press",         href: "/press",    ext: false },
   ],
   Legal: [
     { label: "Privacy Policy",   href: "/privacy",    ext: false },

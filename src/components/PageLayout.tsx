@@ -7,13 +7,14 @@ interface PageLayoutProps {
   subtitle?: string;
   lastUpdated?: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export default function PageLayout({ title, subtitle, lastUpdated, children }: PageLayoutProps) {
+export default function PageLayout({ title, subtitle, lastUpdated, children, maxWidth = "max-w-5xl" }: PageLayoutProps) {
   return (
     <div className="min-h-screen bg-white dark:bg-[#071422]">
       <header className="bg-[#f4f7fb] dark:bg-[#0B2D5C] py-14">
-        <div className="max-w-5xl mx-auto px-3 sm:px-6">
+        <div className={`${maxWidth} mx-auto px-3 sm:px-6`}>
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-slate-500 hover:text-[#0B2D5C] dark:text-slate-400 dark:hover:text-white transition-colors text-sm mb-10 group"
@@ -53,7 +54,7 @@ export default function PageLayout({ title, subtitle, lastUpdated, children }: P
       </header>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-8 sm:py-16">{children}</div>
+      <div className={`${maxWidth} mx-auto px-3 sm:px-6 py-8 sm:py-16`}>{children}</div>
     </div>
   );
 }
