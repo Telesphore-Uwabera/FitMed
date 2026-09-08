@@ -110,7 +110,7 @@ function StepCard({
         <div className="flex items-center gap-1.5">
           <button
             onClick={onZoom}
-            className="p-1 rounded-md text-slate-400 hover:text-[#12B8B0] hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-md text-[#12B8B0] hover:text-[#0B2D5C] dark:hover:text-white hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors"
             title="Click to zoom full image"
           >
             <ZoomIn className="w-3.5 h-3.5" />
@@ -177,12 +177,11 @@ function StepNode({
     >
       {/* Number badge pill on top */}
       <div
-        className={`absolute -top-3.5 z-30 px-3 py-0.5 rounded-full ${step.badgeBg} text-white text-xs font-black shadow-md tracking-wider flex items-center gap-1 transition-transform duration-300 ${
+        className={`absolute -top-3.5 z-30 px-3 py-0.5 rounded-full ${step.badgeBg} text-white text-xs font-black shadow-md tracking-wider flex items-center justify-center transition-transform duration-300 ${
           isHovered ? "scale-110 -translate-y-1" : ""
         }`}
       >
         <span>{step.num}</span>
-        <ZoomIn className="w-3 h-3 text-white animate-pulse" />
       </div>
 
       {/* Circular node container */}
@@ -200,29 +199,14 @@ function StepNode({
             sizes="256px"
             priority
           />
-          {/* Subtle hover overlay indicating click to zoom */}
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white">
-            <ZoomIn className="w-6 h-6 drop-shadow-lg" />
-            <span className="text-[9px] font-bold uppercase tracking-wider bg-black/60 px-2 py-0.5 rounded-full">
-              Click Zoom
-            </span>
+          {/* Subtle hover overlay with a single clean zoom icon in FitMed brand colors */}
+          <div className="absolute inset-0 bg-[#0B2D5C]/30 dark:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="w-11 h-11 rounded-full bg-[#0B2D5C] text-[#12B8B0] border-2 border-[#12B8B0] shadow-lg shadow-[#12B8B0]/40 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+              <ZoomIn className="w-5 h-5 text-[#12B8B0]" />
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Floating preview title & zoom pill */}
-      {isHovered && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onZoomClick();
-          }}
-          className="absolute -bottom-9 whitespace-nowrap bg-[#0B2D5C] hover:bg-[#12B8B0] hover:text-[#0B2D5C] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-xl border border-white/20 transition-colors animate-fade-in z-40 flex items-center gap-1"
-        >
-          <ZoomIn className="w-3 h-3" />
-          <span>Click to Zoom Full</span>
-        </button>
-      )}
     </div>
   );
 }
@@ -481,10 +465,9 @@ export default function HowItWorks() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   
-                  {/* Zoom badge button on mobile */}
-                  <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-black/60 hover:bg-[#12B8B0] text-white hover:text-[#0B2D5C] backdrop-blur-sm text-xs font-bold flex items-center gap-1 shadow transition-colors">
-                    <ZoomIn className="w-3.5 h-3.5" />
-                    <span>Zoom</span>
+                  {/* Zoom button on mobile in brand colors */}
+                  <div className="absolute top-3 right-3 z-10 p-2 rounded-full bg-[#0B2D5C]/90 hover:bg-[#12B8B0] text-[#12B8B0] hover:text-[#0B2D5C] border border-[#12B8B0]/40 backdrop-blur-sm shadow-md transition-colors" title="Zoom full image">
+                    <ZoomIn className="w-4 h-4" />
                   </div>
 
                   <div className="absolute bottom-3 left-4 flex items-center gap-2.5">
@@ -537,7 +520,7 @@ export default function HowItWorks() {
 
       </div>
 
-      {/* ── FULL-PAGE MODAL LIGHTBOX WITH HEAVY BACKGROUND BLUR ── */}
+      {/* ── FULL-PAGE MODAL LIGHTBOX WITH DUAL DARK/LIGHT THEME SUPPORT ── */}
       <AnimatePresence>
         {modalStep && (
           <motion.div
@@ -545,7 +528,7 @@ export default function HowItWorks() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 md:p-8 bg-black/85 backdrop-blur-2xl"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 md:p-8 bg-slate-900/60 dark:bg-black/85 backdrop-blur-xl transition-colors"
             onClick={() => setModalStep(null)}
           >
             {/* Modal Container */}
@@ -554,11 +537,11 @@ export default function HowItWorks() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 15 }}
               transition={{ type: "spring", damping: 26, stiffness: 320 }}
-              className="relative w-full max-w-6xl max-h-[92vh] flex flex-col bg-[#071422] border border-white/20 rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-6xl max-h-[92vh] flex flex-col bg-white dark:bg-[#071422] border border-slate-200 dark:border-white/15 rounded-3xl shadow-2xl overflow-hidden transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0B2D5C]/75 backdrop-blur-md">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0B2D5C]/85 backdrop-blur-md transition-colors">
                 <div className="flex items-center gap-3">
                   <span
                     className={`px-3 py-1 rounded-full ${modalStep.badgeBg} text-white text-xs font-black tracking-wider shadow`}
@@ -566,23 +549,26 @@ export default function HowItWorks() {
                     Step {modalStep.num}
                   </span>
                   <div>
-                    <h3 className="text-white font-extrabold text-base md:text-lg">
+                    <h3
+                      className="!text-[#0B2D5C] dark:!text-white font-extrabold text-base md:text-lg"
+                      style={{ fontFamily: "var(--font-primary)" }}
+                    >
                       {modalStep.title}
                     </h3>
-                    <p className="text-slate-300 text-xs hidden sm:block">
+                    <p className="text-slate-600 dark:text-slate-300 text-xs hidden sm:block">
                       {modalStep.description}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] text-slate-400 hidden md:inline">
+                  <span className="text-[11px] text-slate-400 dark:text-slate-400 hidden md:inline">
                     ESC to close
                   </span>
                   <button
                     onClick={() => setModalStep(null)}
                     aria-label="Close modal"
-                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    className="p-2 rounded-full bg-slate-200/80 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white hover:text-[#0B2D5C] dark:hover:text-[#12B8B0] transition-colors border border-slate-300/50 dark:border-white/10"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -590,7 +576,7 @@ export default function HowItWorks() {
               </div>
 
               {/* Full Image Display on Whole Width */}
-              <div className="relative flex-1 min-h-[50vh] max-h-[72vh] w-full bg-black/50 flex items-center justify-center p-2 sm:p-4 overflow-auto">
+              <div className="relative flex-1 min-h-[50vh] max-h-[72vh] w-full bg-slate-100/70 dark:bg-black/50 flex items-center justify-center p-2 sm:p-4 overflow-auto transition-colors">
                 <div className="relative w-full h-full min-h-[440px] max-h-[70vh]">
                   <Image
                     src={modalStep.image}
@@ -604,11 +590,11 @@ export default function HowItWorks() {
               </div>
 
               {/* Modal Footer with Step Checklist & Navigation */}
-              <div className="px-6 py-3.5 bg-[#0B2D5C]/80 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-200">
+              <div className="px-6 py-3.5 bg-slate-50 dark:bg-[#0B2D5C]/85 border-t border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-4 transition-colors">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-700 dark:text-slate-200 font-medium">
                   {modalStep.details.map((d) => (
                     <div key={d} className="flex items-center gap-1.5">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <CheckCircle className="w-3.5 h-3.5 text-[#12B8B0] dark:text-emerald-400 shrink-0" />
                       <span>{d}</span>
                     </div>
                   ))}
@@ -620,7 +606,7 @@ export default function HowItWorks() {
                       const prevIdx = (curIdx - 1 + steps.length) % steps.length;
                       setModalStep(steps[prevIdx]);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors"
+                    className="px-3.5 py-1.5 rounded-lg bg-slate-200/80 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white text-xs font-semibold border border-slate-300/60 dark:border-white/10 transition-colors"
                   >
                     Previous Step
                   </button>
@@ -630,7 +616,7 @@ export default function HowItWorks() {
                       const nextIdx = (curIdx + 1) % steps.length;
                       setModalStep(steps[nextIdx]);
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] text-xs font-bold transition-colors"
+                    className="px-4 py-1.5 rounded-lg bg-[#12B8B0] hover:bg-[#0fa39c] text-white dark:text-[#0B2D5C] text-xs font-bold shadow-md shadow-teal-500/20 transition-colors"
                   >
                     Next Step
                   </button>

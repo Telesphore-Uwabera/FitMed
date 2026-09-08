@@ -120,7 +120,7 @@ export default function Hero() {
                   src={slide.url}
                   alt={slide.alt}
                   fill
-                  className="object-cover object-center opacity-75 dark:opacity-70 transition-opacity duration-700"
+                  className="object-cover object-center opacity-90 dark:opacity-85 transition-opacity duration-700"
                   priority={i === 0}
                   loading={i === 0 ? "eager" : "lazy"}
                   sizes="100vw"
@@ -130,10 +130,10 @@ export default function Hero() {
           </AnimatePresence>
         ))}
 
-        {/* Full-bleed color overlay with 45% opacity */}
-        <div className="absolute inset-0 bg-[#f4f7fb]/45 dark:bg-[#0B2D5C]/45 transition-colors duration-500" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#f4f7fb]/55 via-[#f4f7fb]/45 to-[#f4f7fb]/30 dark:from-[#0B2D5C]/55 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/30 transition-colors duration-500" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f7fb]/45 via-transparent to-[#f4f7fb]/35 dark:from-[#0B2D5C]/45 dark:via-transparent dark:to-[#0B2D5C]/35 transition-colors duration-500" />
+        {/* Reduced color overlays for clearer, more vibrant hero images */}
+        <div className="absolute inset-0 bg-[#f4f7fb]/20 dark:bg-[#0B2D5C]/25 transition-colors duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#f4f7fb]/45 via-[#f4f7fb]/20 to-transparent dark:from-[#0B2D5C]/50 dark:via-[#0B2D5C]/25 dark:to-transparent transition-colors duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f7fb]/35 via-transparent to-[#f4f7fb]/15 dark:from-[#0B2D5C]/40 dark:via-transparent dark:to-[#0B2D5C]/15 transition-colors duration-500" />
 
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[#12B8B0]/15 rounded-full blur-[160px] pointer-events-none" />
         <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-sky-600/15 rounded-full blur-[140px] pointer-events-none" />

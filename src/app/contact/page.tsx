@@ -163,11 +163,11 @@ export default function ContactPage() {
             src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1800&q=85&auto=format&fit=crop"
             alt="FitMed care team ready to help applicants, doctors, and employers"
             fill
-            className="object-cover object-center opacity-40 dark:opacity-55"
+            className="object-cover object-center opacity-60 dark:opacity-75"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/75 to-white/50 dark:from-[#0B2D5C]/70 dark:via-[#0B2D5C]/45 dark:to-[#0B2D5C]/25" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white/85 via-transparent to-white/40 dark:from-[#0B2D5C]/75 dark:via-transparent dark:to-[#0B2D5C]/35" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/45 to-transparent dark:from-[#0B2D5C]/55 dark:via-[#0B2D5C]/35 dark:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/65 via-transparent to-white/15 dark:from-[#0B2D5C]/60 dark:via-transparent dark:to-[#0B2D5C]/15" />
         </div>
         <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#12B8B0]/15 rounded-full blur-[150px] pointer-events-none" />
 
