@@ -24,7 +24,6 @@ function getSecret() {
   return (
     process.env.SESSION_SECRET ||
     process.env.JWT_SECRET ||
-    process.env.MONGODB_URI ||
     "fitmed-dev-session-secret"
   );
 }

@@ -14,13 +14,8 @@ import mongoose from "mongoose";
  *  - cached.conn reset to null in catch block      (so the next request retries clean)
  */
 
-export const ATLAS_FALLBACK_URI =
-  "mongodb+srv://fitmed:91073%40Tecy@cluster0.sybcb.mongodb.net/FitMed?retryWrites=true&w=majority&appName=Cluster0";
-
 export function getMongoUri(): string {
-  const uri = (process.env.MONGODB_URI || "").trim();
-  if (uri) return uri;
-  return ATLAS_FALLBACK_URI;
+  return (process.env.MONGODB_URI || "mongodb://localhost:27017/FitMed").trim();
 }
 
 export function getMongoDbName(): string {
