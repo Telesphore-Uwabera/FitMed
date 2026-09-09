@@ -18,27 +18,28 @@ services:
       - key: FITMED_APP_URL
         value: https://fitnessmed.rw
       - key: NEXT_PUBLIC_SOCKET_URL
-        value: https://fitmed-l2uv.onrender.com
+        value: https://fitmed-gncf.onrender.com
       - key: SOCKET_CORS_ORIGINS
-        value: https://fitnessmed.netlify.app,https://fitnessmed.rw
+        value: https://fitnessmed.netlify.app,https://fitnessmed.rw,https://fitmed-gncf.onrender.com
       - key: MONGODB_URI
         sync: false
       - key: MONGODB_DB_NAME
         value: FitMed
       - key: CLOUDINARY_CLOUD_NAME
+        value: dnlatyl5z
         sync: false
       - key: CLOUDINARY_API_KEY
+        value: "531793435626149"
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: BREVO_API_KEY
-        value: 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
         sync: false
       - key: BREVO_SENDER_EMAIL
-        value: fitmedrwanda@gmail.com
+        value: info.teletech.rw@gmail.com
       - key: BREVO_SENDER_NAME
         value: FitMed Rwanda
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
       - key: SESSION_SECRET
-        sync: false
+        generateValue: true

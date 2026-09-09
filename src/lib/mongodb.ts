@@ -14,9 +14,18 @@ import mongoose from "mongoose";
  *  - cached.conn reset to null in catch block      (so the next request retries clean)
  */
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/FitMed";
-const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || "FitMed";
-const isAtlas = MONGODB_URI.startsWith("mongodb+srv://");
+export const ATLAS_FALLBACK_URI =
+  "mongodb+srv://fitmed:91073%40Tecy@cluster0.sybcb.mongodb.net/FitMed?retryWrites=true&w=majority&appName=Cluster0";
+
+export function getMongoUri(): string {
+  const uri = (process.env.MONGODB_URI || "").trim();
+  if (uri) return uri;
+  return ATLAS_FALLBACK_URI;
+}
+
+export function getMongoDbName(): string {
+  return (process.env.MONGODB_DB_NAME || "FitMed").trim();
+}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -41,13 +50,17 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   }
 
   if (!cached.promise) {
+    const uri = getMongoUri();
+    const dbName = getMongoDbName();
+    const isAtlas = uri.startsWith("mongodb+srv://");
+
     const opts: mongoose.ConnectOptions = {
-      dbName: MONGODB_DB_NAME,
+      dbName,
       bufferCommands: false,
       // How long to wait for a healthy primary before giving up
-      serverSelectionTimeoutMS: isAtlas ? 8000 : 2000,
+      serverSelectionTimeoutMS: isAtlas ? 8000 : 3000,
       // TCP + TLS handshake budget (shorter than serverSelection so DNS errors surface fast)
-      connectTimeoutMS: isAtlas ? 6000 : 2000,
+      connectTimeoutMS: isAtlas ? 6000 : 3000,
       // Per-operation socket idle timeout — 20 s covers even slow Atlas M0 queries
       socketTimeoutMS: 20000,
       // Keep pool small: 5 is plenty for serverless; Atlas M0 allows 500 total
@@ -57,8 +70,8 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
       heartbeatFrequencyMS: 30000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {
-      console.log("Connected to MongoDB");
+    cached.promise = mongoose.connect(uri, opts).then((m) => {
+      console.log(`Connected to MongoDB (${isAtlas ? "Atlas" : "Custom/Local"})`);
       return m;
     });
   }

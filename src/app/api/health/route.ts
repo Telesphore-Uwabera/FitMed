@@ -5,8 +5,9 @@ import { FITMED_COLLECTIONS, seedFitMedAccounts } from "@/lib/seedAccounts";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const hasExplicitMongoUri = Boolean((process.env.MONGODB_URI || "").trim());
   const configured = {
-    mongodb: Boolean(process.env.MONGODB_URI),
+    mongodb: hasExplicitMongoUri,
     cloudinary: Boolean(
       process.env.CLOUDINARY_CLOUD_NAME &&
         process.env.CLOUDINARY_API_KEY &&
@@ -19,21 +20,21 @@ export async function GET() {
   const collections: Record<string, number> = {};
   let dbName = "";
 
-  if (configured.mongodb) {
-    try {
-      const mongoose = await connectToDatabase();
-      dbName = mongoose.connection.name;
-      await seedFitMedAccounts();
-      const db = mongoose.connection.db;
-      if (db) {
-        for (const name of FITMED_COLLECTIONS) {
-          collections[name] = await db.collection(name).countDocuments();
-        }
+  try {
+    const mongoose = await connectToDatabase();
+    dbName = mongoose.connection.name;
+    await seedFitMedAccounts();
+    const db = mongoose.connection.db;
+    if (db) {
+      for (const name of FITMED_COLLECTIONS) {
+        collections[name] = await db.collection(name).countDocuments();
       }
-      mongodb = "connected";
-    } catch {
-      mongodb = "error";
     }
+    mongodb = "connected";
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[Health check] MongoDB connection error:", errMsg);
+    mongodb = "error";
   }
 
   return NextResponse.json(

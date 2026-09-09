@@ -29,7 +29,7 @@ export async function GET() {
       .lean();
     await ensureDoctorIds();
     const doctors = await Doctor.find({})
-      .select("fullName email licenseNumber doctorId specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued")
+      .select("fullName email licenseNumber doctorId specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued nationalIdUrl licenseCertificateUrl diplomaUrl")
       .sort({ createdAt: 1 })
       .lean();
     const userByEmail = new Map(users.map((u) => [String(u.email || "").toLowerCase(), u]));
@@ -50,6 +50,9 @@ export async function GET() {
           role: d.specialty,
           specialty: d.specialty,
           avatarUrl: d.avatarUrl || "",
+          nationalIdUrl: d.nationalIdUrl || "",
+          licenseCertificateUrl: d.licenseCertificateUrl || "",
+          diplomaUrl: d.diplomaUrl || "",
           presence: d.status,
           weeklySchedule: d.weeklySchedule || [],
           totalCertificatesIssued: d.totalCertificatesIssued || 0,
@@ -76,6 +79,9 @@ export async function POST(request: NextRequest) {
     const license = String(body.license || body.licenseNumber || "").trim();
     const specialty = String(body.specialty || "Occupational Medicine & Telehealth").trim();
     const avatarUrl = String(body.avatarUrl || "").trim();
+    const nationalIdUrl = String(body.nationalIdUrl || "").trim();
+    const licenseCertificateUrl = String(body.licenseCertificateUrl || "").trim();
+    const diplomaUrl = String(body.diplomaUrl || "").trim();
     const jobTitle = String(body.jobTitle || body.title || "").trim();
     const bio = String(body.bio || "").trim();
     const newTitle = String(body.newTitle || "").trim();
@@ -112,6 +118,7 @@ export async function POST(request: NextRequest) {
       role,
       status: "active",
       avatarUrl: avatarUrl || undefined,
+      nationalIdImageUrl: nationalIdUrl || undefined,
       jobTitle: resolvedTitle || (role === "admin" ? "Platform Administrator" : specialty),
       bio,
       showOnAbout: true,
@@ -135,6 +142,9 @@ export async function POST(request: NextRequest) {
         doctorId: await nextDoctorId(),
         specialty,
         avatarUrl: avatarUrl || undefined,
+        nationalIdUrl: nationalIdUrl || undefined,
+        licenseCertificateUrl: licenseCertificateUrl || undefined,
+        diplomaUrl: diplomaUrl || undefined,
         isVerified: true,
         status: "ONLINE",
       });

@@ -128,7 +128,11 @@ export async function uploadToCloudinary(
     if (typeof fileOrDataUrl === "string") {
       formData.append("file", fileOrDataUrl);
     } else {
-      formData.append("file", fileOrDataUrl, "profile.webp");
+      const fileName =
+        fileOrDataUrl instanceof File && fileOrDataUrl.name
+          ? fileOrDataUrl.name
+          : "profile.webp";
+      formData.append("file", fileOrDataUrl, fileName);
     }
     formData.append("folder", folder);
 

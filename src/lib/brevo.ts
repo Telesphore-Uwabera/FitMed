@@ -6,7 +6,7 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "fitmedrwanda@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "FitMed Rwanda";
 export const FITMED_APP_URL = (
-  process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com"
+  process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-gncf.onrender.com"
 ).replace(/\/$/, "");
 export const FITMED_ADMIN_EMAIL = (
   process.env.FITMED_ADMIN_EMAIL ||

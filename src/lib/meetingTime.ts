@@ -59,7 +59,7 @@ export function isInMeetingWindow(apt: {
 }
 
 export function publicMeetUrl(roomId: string) {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-l2uv.onrender.com").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_APP_URL || "https://fitmed-gncf.onrender.com").replace(/\/$/, "");
   return `${base}/meet/${encodeURIComponent(roomId)}`;
 }
 

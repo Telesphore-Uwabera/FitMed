@@ -289,11 +289,11 @@ export default function AdminDashboardPage() {
 
   // Pending Doctor Approvals
   const [pendingDoctors, setPendingDoctors] = useState<
-    { id: string; doctorId?: string; name: string; specialty?: string; license?: string; applied?: string; status: string }[]
+    { id: string; doctorId?: string; name: string; specialty?: string; license?: string; applied?: string; status: string; nationalIdUrl?: string; licenseCertificateUrl?: string; diplomaUrl?: string }[]
   >([]);
 
   const [verifiedDoctors, setVerifiedDoctors] = useState<
-    { id: string; doctorId?: string; name: string; role?: string; license?: string; status: string }[]
+    { id: string; doctorId?: string; name: string; role?: string; license?: string; status: string; nationalIdUrl?: string; licenseCertificateUrl?: string; diplomaUrl?: string }[]
   >([]);
 
   const [showAddClinic, setShowAddClinic] = useState(false);
@@ -530,6 +530,10 @@ export default function AdminDashboardPage() {
   const [teamDirectory, setTeamDirectory] = useState<{ name: string; email: string; jobTitle?: string }[]>([]);
   const [doctorWebpResult, setDoctorWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingDoctorImg, setIsConvertingDoctorImg] = useState(false);
+  // Doctor credential documents
+  const [doctorNationalIdFile, setDoctorNationalIdFile] = useState<File | null>(null);
+  const [doctorLicenseFile, setDoctorLicenseFile] = useState<File | null>(null);
+  const [doctorDiplomaFile, setDoctorDiplomaFile] = useState<File | null>(null);
   const [showAddDoctor, setShowAddDoctor] = useState(false);
   const [creatingStaff, setCreatingStaff] = useState(false);
   const [adminAccounts, setAdminAccounts] = useState<{ name: string; email: string; role: string; status?: string }[]>([]);
@@ -637,6 +641,13 @@ export default function AdminDashboardPage() {
     } finally {
       setIsConvertingDoctorImg(false);
     }
+  };
+
+  const handleDoctorDocSelect = (
+    setter: React.Dispatch<React.SetStateAction<File | null>>
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setter(file);
   };
 
   const filteredApplicants = applicants.filter(
@@ -903,11 +914,25 @@ export default function AdminDashboardPage() {
         const staffData = await staffRes.json();
         if (staffData.success) {
           const doctors = Array.isArray(staffData.doctors) ? staffData.doctors : [];
-          setVerifiedDoctors(doctors.filter((d: { status?: string }) => d.status !== "Pending"));
+          setVerifiedDoctors(
+            doctors
+              .filter((d: { status?: string }) => d.status !== "Pending")
+              .map((d: any) => ({
+                id: d.id,
+                doctorId: d.doctorId,
+                name: d.name,
+                role: d.role,
+                license: d.license,
+                status: d.status,
+                nationalIdUrl: d.nationalIdUrl || "",
+                licenseCertificateUrl: d.licenseCertificateUrl || "",
+                diplomaUrl: d.diplomaUrl || "",
+              }))
+          );
           setPendingDoctors(
             doctors
               .filter((d: { status?: string }) => d.status === "Pending")
-              .map((d: { id: string; doctorId?: string; name: string; role?: string; license?: string; status: string }) => ({
+              .map((d: any) => ({
                 id: d.id,
                 doctorId: d.doctorId,
                 name: d.name,
@@ -915,6 +940,9 @@ export default function AdminDashboardPage() {
                 license: d.license,
                 applied: "—",
                 status: "Pending License Verification",
+                nationalIdUrl: d.nationalIdUrl || "",
+                licenseCertificateUrl: d.licenseCertificateUrl || "",
+                diplomaUrl: d.diplomaUrl || "",
               }))
           );
           setAdminAccounts(
@@ -2414,6 +2442,27 @@ export default function AdminDashboardPage() {
                         const upload = await uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors");
                         if (upload.url) finalAvatar = upload.url;
                       }
+                      // Upload credential documents to Cloudinary
+                      let finalNationalIdUrl = "";
+                      let finalLicenseCertUrl = "";
+                      let finalDiplomaUrl = "";
+                      if (addDoctorForm.role === "doctor") {
+                        if (doctorNationalIdFile) {
+                          const up = await uploadToCloudinary(doctorNationalIdFile, "fitmed/doctor-documents");
+                          if (!up.url) throw new Error("Failed to upload National ID. Please try again.");
+                          finalNationalIdUrl = up.url;
+                        }
+                        if (doctorLicenseFile) {
+                          const up = await uploadToCloudinary(doctorLicenseFile, "fitmed/doctor-documents");
+                          if (!up.url) throw new Error("Failed to upload License Certificate. Please try again.");
+                          finalLicenseCertUrl = up.url;
+                        }
+                        if (doctorDiplomaFile) {
+                          const up = await uploadToCloudinary(doctorDiplomaFile, "fitmed/doctor-documents");
+                          if (!up.url) throw new Error("Failed to upload Diploma. Please try again.");
+                          finalDiplomaUrl = up.url;
+                        }
+                      }
                       const res = await fetch("/api/admin/staff", {
                         credentials: "include",
                         method: "POST",
@@ -2427,6 +2476,9 @@ export default function AdminDashboardPage() {
                           phone: addDoctorForm.phone,
                           password: addDoctorForm.password || undefined,
                           avatarUrl: finalAvatar,
+                          nationalIdUrl: finalNationalIdUrl || undefined,
+                          licenseCertificateUrl: finalLicenseCertUrl || undefined,
+                          diplomaUrl: finalDiplomaUrl || undefined,
                           jobTitle: addDoctorForm.jobTitle === "__new__" ? "" : addDoctorForm.jobTitle,
                           newTitle: addDoctorForm.newTitle,
                           bio: addDoctorForm.bio,
@@ -2491,8 +2543,11 @@ export default function AdminDashboardPage() {
                         avatarUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
                       });
                       setDoctorWebpResult(null);
-                    } catch {
-                      error("Account not created", "Could not reach the server.");
+                      setDoctorNationalIdFile(null);
+                      setDoctorLicenseFile(null);
+                      setDoctorDiplomaFile(null);
+                    } catch (err: any) {
+                      error("Account not created", err?.message || "Could not reach the server.");
                     } finally {
                       setCreatingStaff(false);
                     }
@@ -2647,6 +2702,65 @@ export default function AdminDashboardPage() {
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
+
+                    {/* ── Credential Document Uploads ── */}
+                    <div className="sm:col-span-2 pt-2">
+                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#12B8B0] mb-3">Credential Documents</div>
+                      <div className="grid sm:grid-cols-3 gap-3">
+
+                        {/* National ID */}
+                        <label className="cursor-pointer group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-[#12B8B0] transition-colors bg-white/5 hover:bg-white/10 text-center">
+                          <div className="text-2xl">🪪</div>
+                          <div className="text-[11px] font-bold text-white">National ID</div>
+                          {doctorNationalIdFile ? (
+                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2">{doctorNationalIdFile.name}</div>
+                          ) : (
+                            <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={handleDoctorDocSelect(setDoctorNationalIdFile)}
+                          />
+                        </label>
+
+                        {/* RMDC License Certificate */}
+                        <label className="cursor-pointer group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-[#12B8B0] transition-colors bg-white/5 hover:bg-white/10 text-center">
+                          <div className="text-2xl">📜</div>
+                          <div className="text-[11px] font-bold text-white">License Certificate</div>
+                          {doctorLicenseFile ? (
+                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2">{doctorLicenseFile.name}</div>
+                          ) : (
+                            <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={handleDoctorDocSelect(setDoctorLicenseFile)}
+                          />
+                        </label>
+
+                        {/* Diploma */}
+                        <label className="cursor-pointer group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-[#12B8B0] transition-colors bg-white/5 hover:bg-white/10 text-center">
+                          <div className="text-2xl">🎓</div>
+                          <div className="text-[11px] font-bold text-white">Medical Diploma</div>
+                          {doctorDiplomaFile ? (
+                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2">{doctorDiplomaFile.name}</div>
+                          ) : (
+                            <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={handleDoctorDocSelect(setDoctorDiplomaFile)}
+                          />
+                        </label>
+
+                      </div>
+                    </div>
                       </>
                     )}
                   </div>
@@ -2691,6 +2805,26 @@ export default function AdminDashboardPage() {
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-[#0B2D5C]">{doc.name} ({doc.doctorId || doc.id})</h4>
                     <div className="text-xs text-slate-600">Specialty: {doc.specialty} · License: {doc.license}</div>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {doc.nationalIdUrl && (
+                        <a href={doc.nationalIdUrl} target="_blank" rel="noreferrer"
+                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
+                          🪪 National ID
+                        </a>
+                      )}
+                      {doc.licenseCertificateUrl && (
+                        <a href={doc.licenseCertificateUrl} target="_blank" rel="noreferrer"
+                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
+                          📜 License Certificate
+                        </a>
+                      )}
+                      {doc.diplomaUrl && (
+                        <a href={doc.diplomaUrl} target="_blank" rel="noreferrer"
+                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
+                          🎓 Diploma
+                        </a>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => approveDoctor(doc.id, doc.name)}
@@ -2714,6 +2848,26 @@ export default function AdminDashboardPage() {
                         <span className="text-xs text-slate-500">· {d.license}</span>
                       </div>
                       <div className="text-slate-400 text-[11px] mt-0.5">{d.role}</div>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {d.nationalIdUrl && (
+                          <a href={d.nationalIdUrl} target="_blank" rel="noreferrer"
+                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
+                            🪪 National ID
+                          </a>
+                        )}
+                        {d.licenseCertificateUrl && (
+                          <a href={d.licenseCertificateUrl} target="_blank" rel="noreferrer"
+                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
+                            📜 License Certificate
+                          </a>
+                        )}
+                        {d.diplomaUrl && (
+                          <a href={d.diplomaUrl} target="_blank" rel="noreferrer"
+                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
+                            🎓 Diploma
+                          </a>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">

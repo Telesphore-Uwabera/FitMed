@@ -20,6 +20,9 @@ export interface IDoctor extends Document {
   phone?: string;
   avatarUrl: string;
   avatarPublicId?: string;
+  nationalIdUrl?: string;
+  licenseCertificateUrl?: string;
+  diplomaUrl?: string;
   isVerified: boolean;
   status: "ONLINE" | "BUSY" | "OFF";
   weeklySchedule: IDoctorSchedule[];
@@ -54,6 +57,9 @@ const DoctorSchema = new Schema<IDoctor>(
       default: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
     },
     avatarPublicId: { type: String },
+    nationalIdUrl: { type: String },
+    licenseCertificateUrl: { type: String },
+    diplomaUrl: { type: String },
     isVerified: { type: Boolean, default: true },
     status: { type: String, enum: ["ONLINE", "BUSY", "OFF"], default: "ONLINE" },
     weeklySchedule: {
