@@ -124,6 +124,12 @@ export async function seedFitMedAccounts(): Promise<void> {
   }
   if (global.fitmedAccountsSeeded) return;
 
+  const userCount = await User.countDocuments();
+  if (userCount > 0) {
+    global.fitmedAccountsSeeded = true;
+    return;
+  }
+
   const passwordHash = hashPassword(SEED_PASSWORD);
 
   for (const account of SEED_USERS) {

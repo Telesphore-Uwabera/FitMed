@@ -60,8 +60,23 @@ export function useSession(requiredRole?: FitMedSession["role"]) {
     };
 
     verify();
+
+    const onFocus = () => {
+      const stored = localStorage.getItem("fitmed_session");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+            verify();
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("focus", onFocus);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", onFocus);
     };
   }, [router, requiredRole]);
 

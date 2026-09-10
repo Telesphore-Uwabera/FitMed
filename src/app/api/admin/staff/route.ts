@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import { seedFitMedAccounts } from "@/lib/seedAccounts";
 import { generateTempPassword, hashPassword } from "@/lib/password";
 import User from "@/models/User";
 import Doctor from "@/models/Doctor";
+import Schedule from "@/models/Schedule";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
 import { ensureDoctorIds, nextDoctorId } from "@/lib/sequentialIds";
 import StaffTitle, { DEFAULT_STAFF_TITLES } from "@/models/StaffTitle";
 import { checkAndNotifyExpiringLicenses } from "@/lib/licenseExpiry";
+import { COOKIE_NAME, verifySession } from "@/lib/authCookie";
 
 async function listStaffTitles() {
   await StaffTitle.bulkWrite(
@@ -431,29 +434,86 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ success: false, error: "Staff id is required." }, { status: 400 });
+    const rawId = (searchParams.get("id") || "").trim();
+    const rawEmail = (searchParams.get("email") || "").trim().toLowerCase();
+
+    if (!rawId && !rawEmail) {
+      return NextResponse.json({ success: false, error: "Staff member ID or email is required." }, { status: 400 });
     }
+
+    const session = await verifySession(request.cookies.get(COOKIE_NAME)?.value);
+
     await connectToDatabase();
 
-    const doctor = await Doctor.findById(id);
+    const isValidId = mongoose.isValidObjectId(rawId);
+
+    // 1. Check if Doctor exists by _id, doctorId, or email
+    let doctor: any = null;
+    if (isValidId) {
+      doctor = await Doctor.findById(rawId);
+    }
+    if (!doctor && rawId) {
+      doctor = await Doctor.findOne({
+        $or: [
+          { doctorId: rawId.toUpperCase() },
+          { email: rawId.toLowerCase() },
+          { licenseNumber: rawId },
+        ],
+      });
+    }
+    if (!doctor && rawEmail) {
+      doctor = await Doctor.findOne({ email: rawEmail });
+    }
+
+    // 2. Check if User exists by _id or email
+    let user: any = null;
+    if (isValidId) {
+      user = await User.findById(rawId);
+    }
+    if (!user && rawEmail) {
+      user = await User.findOne({ email: rawEmail });
+    }
+    if (!user && doctor?.email) {
+      user = await User.findOne({ email: doctor.email.toLowerCase() });
+    }
+    if (!doctor && user?.email) {
+      doctor = await Doctor.findOne({ email: user.email.toLowerCase() });
+    }
+
+    if (!doctor && !user) {
+      return NextResponse.json({ success: false, error: "Staff member not found." }, { status: 404 });
+    }
+
+    // Safety check: Prevent deleting currently active administrator account
+    const targetEmail = (doctor?.email || user?.email || "").toLowerCase();
+    if (session?.email && targetEmail === session.email.toLowerCase()) {
+      return NextResponse.json(
+        { success: false, error: "You cannot delete your own active administrator account while signed in." },
+        { status: 400 }
+      );
+    }
+
+    // Clean up Doctor
     if (doctor) {
-      await User.deleteOne({ email: doctor.email });
-      await Doctor.findByIdAndDelete(id);
-      return NextResponse.json({ success: true });
+      await Doctor.findByIdAndDelete(doctor._id);
     }
 
-    const user = await User.findById(id);
+    // Clean up User
     if (user) {
-      await Doctor.deleteOne({ email: user.email });
-      await User.findByIdAndDelete(id);
-      return NextResponse.json({ success: true });
+      await User.findByIdAndDelete(user._id);
+    }
+    if (targetEmail) {
+      const escaped = targetEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const emailRegex = new RegExp(`^${escaped}$`, "i");
+      await User.deleteMany({ email: emailRegex });
+      await Doctor.deleteMany({ email: emailRegex });
+      await Schedule.deleteMany({ doctorEmail: emailRegex }).catch(() => null);
     }
 
-    return NextResponse.json({ success: false, error: "Staff member not found." }, { status: 404 });
+    return NextResponse.json({ success: true, message: "Staff account deleted successfully." });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Could not delete staff member.";
+    console.error("Delete staff error:", error);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

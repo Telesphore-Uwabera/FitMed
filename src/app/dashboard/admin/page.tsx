@@ -509,11 +509,22 @@ export default function AdminDashboardPage() {
     if (!ok) return;
     try {
       const res = await fetch(`/api/admin/staff?id=${encodeURIComponent(id)}`, { credentials: "include", method: "DELETE" });
+      if (res.status === 401) {
+        error("Session expired", "Your session has expired. Please sign in again.");
+        setTimeout(() => {
+          window.location.href = `/signin?expired=1&next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }, 1200);
+        return;
+      }
       const data = await res.json();
       if (!data.success) {
         error("Account not deleted", data.error || "Please try again.");
         return;
       }
+      setVerifiedDoctors((prev) => prev.filter((d) => d.id !== id));
+      setPendingDoctors((prev) => prev.filter((d) => d.id !== id));
+      setAdminAccounts((prev) => prev.filter((a) => a.id !== id));
+      setTeamDirectory((prev) => prev.filter((m) => m.id !== id));
       success("Account removed", `${name} has been removed.`);
       setAdminRefresh((n) => n + 1);
     } catch {
@@ -603,12 +614,20 @@ export default function AdminDashboardPage() {
       const params = new URLSearchParams({ id });
       if (email) params.set("email", email);
       const res = await fetch(`/api/admin/applicants?${params.toString()}`, { credentials: "include", method: "DELETE" });
+      if (res.status === 401) {
+        error("Session expired", "Your session has expired. Please sign in again.");
+        setTimeout(() => {
+          window.location.href = `/signin?expired=1&next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }, 1200);
+        return;
+      }
       const data = await res.json();
       if (!data.success) {
         error("Account not deleted", data.error || "Please try again.");
         return;
       }
       setApplicants((prev) => prev.filter((p) => p.id !== id && p.email !== email));
+      setPendingApplicants((prev) => prev.filter((p) => p.id !== id && p.email !== email));
       success("Applicant deleted", `${name}'s account has been removed.`);
       setSelectedApplicant(null);
       setAdminRefresh((n) => n + 1);
@@ -1027,6 +1046,11 @@ export default function AdminDashboardPage() {
     const loadAdminData = async () => {
       try {
         const staffRes = await fetch("/api/admin/staff", { credentials: "include" });
+        if (staffRes.status === 401) {
+          error("Session expired", "Please sign in again to access the admin portal.");
+          window.location.href = `/signin?expired=1&next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+          return;
+        }
         const staffData = await staffRes.json();
         if (staffData.success) {
           const doctors = Array.isArray(staffData.doctors) ? staffData.doctors : [];
@@ -2920,12 +2944,12 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
                         License Expiration Date <span className="text-[#12B8B0]">*</span>
                       </label>
-                      <input
-                        required
-                        type="date"
+                      <BrandDatePicker
                         value={addDoctorForm.licenseExpiryDate}
-                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, licenseExpiryDate: e.target.value })}
-                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-[#12B8B0] [color-scheme:dark]"
+                        onChange={(date) => setAddDoctorForm({ ...addDoctorForm, licenseExpiryDate: date })}
+                        placeholder="Select license expiration date"
+                        preset="future"
+                        variant="dark"
                       />
                       <p className="text-[10px] text-slate-400 mt-1">Admin will receive an automated email alert 30 days before expiration.</p>
                     </div>
@@ -4731,11 +4755,12 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                         License Expiration Date
                       </label>
-                      <input
-                        type="date"
+                      <BrandDatePicker
                         value={editingStaff.licenseExpiryDate || ""}
-                        onChange={(e) => setEditingStaff({ ...editingStaff, licenseExpiryDate: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0]"
+                        onChange={(date) => setEditingStaff({ ...editingStaff, licenseExpiryDate: date })}
+                        placeholder="Select license expiration date"
+                        preset="future"
+                        variant="light"
                       />
                       {editingStaff.licenseExpiryDate && (
                         <div className="mt-2">

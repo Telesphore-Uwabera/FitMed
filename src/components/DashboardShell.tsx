@@ -172,8 +172,15 @@ export default function DashboardShell({
   useEffect(() => {
     let cancelled = false;
     const loadNotifications = () => {
+      if (cancelled) return;
       fetch("/api/notifications", { credentials: "include", cache: "no-store" })
-        .then((res) => res.json())
+        .then((res) => {
+          if (res.status === 401) {
+            cancelled = true;
+            return { success: false };
+          }
+          return res.json();
+        })
         .then((data) => {
           if (!cancelled && data.success) setEmailNotifications(data.notifications || []);
         })
