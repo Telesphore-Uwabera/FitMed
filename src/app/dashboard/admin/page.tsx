@@ -2667,13 +2667,13 @@ export default function AdminDashboardPage() {
                       // Upload avatar & credential documents concurrently to Cloudinary
                       const [avatarUpload, nationalIdUpload, licenseUpload, diplomaUpload] = await Promise.all([
                         doctorWebpResult ? uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors") : null,
-                        addDoctorForm.role === "doctor" && doctorNationalIdFile
+                        doctorNationalIdFile
                           ? uploadToCloudinary(doctorNationalIdFile, "fitmed/doctor-documents")
                           : null,
                         addDoctorForm.role === "doctor" && doctorLicenseFile
                           ? uploadToCloudinary(doctorLicenseFile, "fitmed/doctor-documents")
                           : null,
-                        addDoctorForm.role === "doctor" && doctorDiplomaFile
+                        doctorDiplomaFile
                           ? uploadToCloudinary(doctorDiplomaFile, "fitmed/doctor-documents")
                           : null,
                       ]);
@@ -2889,19 +2889,24 @@ export default function AdminDashboardPage() {
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
-                    <div className="sm:col-span-2">
-                      <BrandSelect
-                        variant="dark"
-                        label="Public title (About Us)"
-                        value={addDoctorForm.jobTitle}
-                        onChange={(v) => setAddDoctorForm({ ...addDoctorForm, jobTitle: v, newTitle: v === "__new__" ? addDoctorForm.newTitle : "" })}
-                        options={[
-                          ...staffTitles.map((title) => ({ value: title, label: title })),
-                          { value: "__new__", label: "Add a new title…" },
-                        ]}
-                      />
-                    </div>
-                    {addDoctorForm.jobTitle === "__new__" && (
+                    {/* Public identity: specialty for doctors, job title for staff/admin */}
+                    {addDoctorForm.role !== "doctor" && (
+                      <div className="sm:col-span-2">
+                        <BrandSelect
+                          variant="dark"
+                          label="Public Title (About Us)"
+                          value={addDoctorForm.jobTitle}
+                          onChange={(v) => setAddDoctorForm({ ...addDoctorForm, jobTitle: v, newTitle: v === "__new__" ? addDoctorForm.newTitle : "" })}
+                          options={[
+                            ...staffTitles
+                              .filter((t) => t !== "Licensed Physician")
+                              .map((title) => ({ value: title, label: title })),
+                            { value: "__new__", label: "Add a new title…" },
+                          ]}
+                        />
+                      </div>
+                    )}
+                    {addDoctorForm.role !== "doctor" && addDoctorForm.jobTitle === "__new__" && (
                       <div className="sm:col-span-2">
                         <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">New title</label>
                         <input
@@ -2914,19 +2919,21 @@ export default function AdminDashboardPage() {
                         />
                       </div>
                     )}
-                    <div className="sm:col-span-2">
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
-                        Bio for About Us {addDoctorForm.role === "staff" ? "" : "(optional)"}
-                      </label>
-                      <textarea
-                        required={addDoctorForm.role === "staff"}
-                        rows={3}
-                        placeholder="Short biography shown on the public About Us team section."
-                        value={addDoctorForm.bio}
-                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, bio: e.target.value })}
-                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
-                      />
-                    </div>
+                    {addDoctorForm.role !== "doctor" && (
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
+                          Bio for About Us {addDoctorForm.role === "staff" ? "" : "(optional)"}
+                        </label>
+                        <textarea
+                          required={addDoctorForm.role === "staff"}
+                          rows={3}
+                          placeholder="Short biography shown on the public About Us team section."
+                          value={addDoctorForm.bio}
+                          onChange={(e) => setAddDoctorForm({ ...addDoctorForm, bio: e.target.value })}
+                          className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
+                        />
+                      </div>
+                    )}
                     {addDoctorForm.role === "doctor" && (
                       <>
                     <div>
@@ -2974,13 +2981,18 @@ export default function AdminDashboardPage() {
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
+                      </>
+                    )}
 
-                    {/* ── Credential Document Uploads ── */}
+
+                    {/* ── Credential Document Uploads (all roles) ── */}
+                    {/* Doctors: National ID + License Certificate + Medical Diploma */}
+                    {/* Staff / Admin: National ID + Diploma only */}
                     <div className="sm:col-span-2 pt-2">
                       <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#12B8B0] mb-3">Credential Documents</div>
-                      <div className="grid sm:grid-cols-3 gap-3">
+                      <div className={`grid gap-3 ${addDoctorForm.role === "doctor" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
 
-                        {/* National ID */}
+                        {/* National ID — all roles */}
                         <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
                           doctorNationalIdFile
                             ? "border-[#12B8B0] bg-[#12B8B0]/10"
@@ -3010,37 +3022,39 @@ export default function AdminDashboardPage() {
                           />
                         </label>
 
-                        {/* RMDC License Certificate */}
-                        <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
-                          doctorLicenseFile
-                            ? "border-[#12B8B0] bg-[#12B8B0]/10"
-                            : "border-white/20 hover:border-[#12B8B0] bg-white/5 hover:bg-white/10"
-                        }`}>
-                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                        {/* RMDC License Certificate — doctors only */}
+                        {addDoctorForm.role === "doctor" && (
+                          <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
                             doctorLicenseFile
-                              ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40"
-                              : "bg-white/10 text-amber-400 border border-white/10 group-hover:bg-[#12B8B0]/20 group-hover:text-[#12B8B0]"
+                              ? "border-[#12B8B0] bg-[#12B8B0]/10"
+                              : "border-white/20 hover:border-[#12B8B0] bg-white/5 hover:bg-white/10"
                           }`}>
-                            <FileBadge className="w-5 h-5" />
-                          </div>
-                          <div className="text-[11px] font-bold text-white">License Certificate</div>
-                          {doctorLicenseFile ? (
-                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2 flex items-center justify-center gap-1">
-                              <Check className="w-3 h-3 shrink-0" />
-                              <span>{doctorLicenseFile.name}</span>
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                              doctorLicenseFile
+                                ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40"
+                                : "bg-white/10 text-amber-400 border border-white/10 group-hover:bg-[#12B8B0]/20 group-hover:text-[#12B8B0]"
+                            }`}>
+                              <FileBadge className="w-5 h-5" />
                             </div>
-                          ) : (
-                            <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            className="hidden"
-                            onChange={handleDoctorDocSelect(setDoctorLicenseFile)}
-                          />
-                        </label>
+                            <div className="text-[11px] font-bold text-white">License Certificate</div>
+                            {doctorLicenseFile ? (
+                              <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2 flex items-center justify-center gap-1">
+                                <Check className="w-3 h-3 shrink-0" />
+                                <span>{doctorLicenseFile.name}</span>
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              className="hidden"
+                              onChange={handleDoctorDocSelect(setDoctorLicenseFile)}
+                            />
+                          </label>
+                        )}
 
-                        {/* Diploma */}
+                        {/* Diploma — all roles */}
                         <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
                           doctorDiplomaFile
                             ? "border-[#12B8B0] bg-[#12B8B0]/10"
@@ -3053,7 +3067,7 @@ export default function AdminDashboardPage() {
                           }`}>
                             <GraduationCap className="w-5 h-5" />
                           </div>
-                          <div className="text-[11px] font-bold text-white">Medical Diploma</div>
+                          <div className="text-[11px] font-bold text-white">{addDoctorForm.role === "doctor" ? "Medical Diploma" : "Diploma / Certificate"}</div>
                           {doctorDiplomaFile ? (
                             <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2 flex items-center justify-center gap-1">
                               <Check className="w-3 h-3 shrink-0" />
@@ -3072,8 +3086,6 @@ export default function AdminDashboardPage() {
 
                       </div>
                     </div>
-                      </>
-                    )}
                   </div>
                   <div className="flex justify-end pt-2">
                     <button
@@ -4631,7 +4643,13 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <div className="font-bold text-slate-800 text-sm">{editingStaff.name}</div>
-                    <div className="text-[11px] text-slate-500 capitalize">{editingStaff.role} Account</div>
+                    <div className="text-[11px] text-slate-500">
+                      {editingStaff.role === "doctor"
+                        ? (editingStaff.specialty || "Physician")
+                        : editingStaff.role === "staff"
+                          ? (editingStaff.jobTitle || "Team Member")
+                          : "Administrator"}
+                    </div>
                     <label className="cursor-pointer inline-flex items-center gap-1.5 text-[11px] font-bold text-[#12B8B0] hover:text-[#0fa19a] mt-1">
                       <Camera className="w-3.5 h-3.5" />
                       <span>Change profile photo</span>
@@ -4879,7 +4897,7 @@ export default function AdminDashboardPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Job Title
+                      Public Title
                     </label>
                     <input
                       type="text"
@@ -4901,6 +4919,60 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setEditingStaff({ ...editingStaff, bio: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0]"
                     />
+                  </div>
+
+                  {/* Staff/Admin document uploads: National ID + Diploma only */}
+                  <div className="pt-2">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-2">
+                      Identity &amp; Qualification Documents
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {/* National ID */}
+                      <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-[11px]">National ID</span>
+                          {editingStaff.nationalIdUrl && (
+                            <a href={editingStaff.nationalIdUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
+                              View
+                            </a>
+                          )}
+                        </div>
+                        <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
+                          <span>{editNationalIdFile ? editNationalIdFile.name : "Replace document"}</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setEditNationalIdFile(e.target.files[0]);
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Diploma */}
+                      <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-[11px]">Diploma / Certificate</span>
+                          {editingStaff.diplomaUrl && (
+                            <a href={editingStaff.diplomaUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
+                              View
+                            </a>
+                          )}
+                        </div>
+                        <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
+                          <span>{editDiplomaFile ? editDiplomaFile.name : "Replace document"}</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setEditDiplomaFile(e.target.files[0]);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
