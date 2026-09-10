@@ -54,6 +54,8 @@ import {
   CalendarDays,
   Check,
   FileSpreadsheet,
+  FileBadge,
+  GraduationCap,
 } from "lucide-react";
 import { convertToWebP, uploadToCloudinary, WebPConversionResult } from "@/lib/imageUtils";
 import { useToast } from "@/components/ToastProvider";
@@ -186,7 +188,7 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: profileToSave.name,
-          email: session.email,
+          email: session?.email || "",
           avatarUrl: profileToSave.avatarUrl,
         }),
       });
@@ -287,14 +289,60 @@ export default function AdminDashboardPage() {
   const [adminRefresh, setAdminRefresh] = useState(0);
   const [auditLogs, setAuditLogs] = useState<{ id: string; action: string; detail: string; actor?: string; time: string }[]>([]);
 
-  // Pending Doctor Approvals
+  // Doctor and Staff state
   const [pendingDoctors, setPendingDoctors] = useState<
-    { id: string; doctorId?: string; name: string; specialty?: string; license?: string; applied?: string; status: string; nationalIdUrl?: string; licenseCertificateUrl?: string; diplomaUrl?: string }[]
+    {
+      id: string;
+      doctorId?: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      specialty?: string;
+      license?: string;
+      licenseExpiryDate?: string;
+      applied?: string;
+      status: string;
+      avatarUrl?: string;
+      nationalIdUrl?: string;
+      licenseCertificateUrl?: string;
+      diplomaUrl?: string;
+    }[]
   >([]);
 
   const [verifiedDoctors, setVerifiedDoctors] = useState<
-    { id: string; doctorId?: string; name: string; role?: string; license?: string; status: string; nationalIdUrl?: string; licenseCertificateUrl?: string; diplomaUrl?: string }[]
+    {
+      id: string;
+      doctorId?: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      role?: string;
+      specialty?: string;
+      license?: string;
+      licenseExpiryDate?: string;
+      status: string;
+      avatarUrl?: string;
+      nationalIdUrl?: string;
+      licenseCertificateUrl?: string;
+      diplomaUrl?: string;
+    }[]
   >([]);
+
+  const [adminAccounts, setAdminAccounts] = useState<
+    { id: string; name: string; email: string; phone?: string; role: string; status?: string; avatarUrl?: string }[]
+  >([]);
+
+  const [teamDirectory, setTeamDirectory] = useState<
+    { id: string; name: string; email: string; phone?: string; jobTitle?: string; bio?: string; role?: string; status?: string; avatarUrl?: string }[]
+  >([]);
+
+  // Edit Staff Modal State
+  const [editingStaff, setEditingStaff] = useState<any | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editNationalIdFile, setEditNationalIdFile] = useState<File | null>(null);
+  const [editLicenseFile, setEditLicenseFile] = useState<File | null>(null);
+  const [editDiplomaFile, setEditDiplomaFile] = useState<File | null>(null);
 
   const [showAddClinic, setShowAddClinic] = useState(false);
   const [editingClinicId, setEditingClinicId] = useState<string | null>(null);
@@ -450,9 +498,9 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const deleteDoctor = async (id: string, name: string) => {
+  const deleteStaffMember = async (id: string, name: string, role = "staff") => {
     const ok = await confirm({
-      title: "Delete doctor account",
+      title: `Delete ${role} account`,
       message: `Remove ${name} from FitMed? This cannot be undone.`,
       confirmLabel: "Delete account",
       cancelLabel: "Keep account",
@@ -470,6 +518,75 @@ export default function AdminDashboardPage() {
       setAdminRefresh((n) => n + 1);
     } catch {
       error("Account not deleted", "Could not reach the server.");
+    }
+  };
+
+  const deleteDoctor = async (id: string, name: string) => {
+    return deleteStaffMember(id, name, "doctor");
+  };
+
+  const handleSaveStaffEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStaff) return;
+    setSavingEdit(true);
+    try {
+      let finalAvatar = editingStaff.avatarUrl;
+      let finalNationalId = editingStaff.nationalIdUrl;
+      let finalLicenseCert = editingStaff.licenseCertificateUrl;
+      let finalDiploma = editingStaff.diplomaUrl;
+
+      // Upload new files concurrently
+      const [avatarUp, natUp, licUp, dipUp] = await Promise.all([
+        editAvatarFile ? uploadToCloudinary(editAvatarFile, "fitmed/doctors") : null,
+        editNationalIdFile ? uploadToCloudinary(editNationalIdFile, "fitmed/doctor-documents") : null,
+        editLicenseFile ? uploadToCloudinary(editLicenseFile, "fitmed/doctor-documents") : null,
+        editDiplomaFile ? uploadToCloudinary(editDiplomaFile, "fitmed/doctor-documents") : null,
+      ]);
+
+      if (avatarUp?.url) finalAvatar = avatarUp.url;
+      if (natUp?.url) finalNationalId = natUp.url;
+      if (licUp?.url) finalLicenseCert = licUp.url;
+      if (dipUp?.url) finalDiploma = dipUp.url;
+
+      const res = await fetch("/api/admin/staff", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingStaff.id,
+          name: editingStaff.name,
+          email: editingStaff.email,
+          phone: editingStaff.phone,
+          role: editingStaff.role,
+          status: editingStaff.status,
+          license: editingStaff.license,
+          licenseExpiryDate: editingStaff.licenseExpiryDate || null,
+          specialty: editingStaff.specialty,
+          jobTitle: editingStaff.jobTitle,
+          bio: editingStaff.bio,
+          avatarUrl: finalAvatar,
+          nationalIdUrl: finalNationalId,
+          licenseCertificateUrl: finalLicenseCert,
+          diplomaUrl: finalDiploma,
+          password: editingStaff.password || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        error("Update failed", data.error || "Could not update staff member.");
+        return;
+      }
+      success("Staff updated", `${editingStaff.name}'s account details have been saved.`);
+      setEditingStaff(null);
+      setEditAvatarFile(null);
+      setEditNationalIdFile(null);
+      setEditLicenseFile(null);
+      setEditDiplomaFile(null);
+      setAdminRefresh((n) => n + 1);
+    } catch (err: any) {
+      error("Update failed", err?.message || "Could not reach the server.");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -510,6 +627,7 @@ export default function AdminDashboardPage() {
     name: "",
     email: "",
     license: "",
+    licenseExpiryDate: "",
     specialty: "",
     phone: "",
     password: "",
@@ -527,7 +645,6 @@ export default function AdminDashboardPage() {
     "Platform Administrator",
     "Licensed Physician",
   ]);
-  const [teamDirectory, setTeamDirectory] = useState<{ name: string; email: string; jobTitle?: string }[]>([]);
   const [doctorWebpResult, setDoctorWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingDoctorImg, setIsConvertingDoctorImg] = useState(false);
   // Doctor credential documents
@@ -536,7 +653,6 @@ export default function AdminDashboardPage() {
   const [doctorDiplomaFile, setDoctorDiplomaFile] = useState<File | null>(null);
   const [showAddDoctor, setShowAddDoctor] = useState(false);
   const [creatingStaff, setCreatingStaff] = useState(false);
-  const [adminAccounts, setAdminAccounts] = useState<{ name: string; email: string; role: string; status?: string }[]>([]);
 
   // Payment Transactions State, Filters & Sorting
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<"ALL" | "PAID" | "WAITING" | "EXPIRED">("ALL");
@@ -921,9 +1037,14 @@ export default function AdminDashboardPage() {
                 id: d.id,
                 doctorId: d.doctorId,
                 name: d.name,
+                email: d.email,
+                phone: d.phone || "",
                 role: d.role,
+                specialty: d.specialty || d.role,
                 license: d.license,
+                licenseExpiryDate: d.licenseExpiryDate || "",
                 status: d.status,
+                avatarUrl: d.avatarUrl || "",
                 nationalIdUrl: d.nationalIdUrl || "",
                 licenseCertificateUrl: d.licenseCertificateUrl || "",
                 diplomaUrl: d.diplomaUrl || "",
@@ -936,28 +1057,41 @@ export default function AdminDashboardPage() {
                 id: d.id,
                 doctorId: d.doctorId,
                 name: d.name,
-                specialty: d.role,
+                email: d.email,
+                phone: d.phone || "",
+                specialty: d.specialty || d.role,
                 license: d.license,
+                licenseExpiryDate: d.licenseExpiryDate || "",
                 applied: "—",
                 status: "Pending License Verification",
+                avatarUrl: d.avatarUrl || "",
                 nationalIdUrl: d.nationalIdUrl || "",
                 licenseCertificateUrl: d.licenseCertificateUrl || "",
                 diplomaUrl: d.diplomaUrl || "",
               }))
           );
           setAdminAccounts(
-            (staffData.admins || []).map((a: { fullName?: string; name?: string; email: string; role: string; status?: string }) => ({
+            (staffData.admins || []).map((a: any) => ({
+              id: String(a._id || a.id || ""),
               name: a.fullName || a.name || "Admin",
               email: a.email,
-              role: a.role,
-              status: a.status,
+              phone: a.phone || "",
+              role: a.role || "admin",
+              status: a.status || "active",
+              avatarUrl: a.avatarUrl || "",
             }))
           );
           setTeamDirectory(
-            (staffData.teamMembers || []).map((a: { fullName?: string; name?: string; email: string; jobTitle?: string }) => ({
+            (staffData.teamMembers || []).map((a: any) => ({
+              id: String(a._id || a.id || ""),
               name: a.fullName || a.name || "Team member",
               email: a.email,
-              jobTitle: a.jobTitle,
+              phone: a.phone || "",
+              jobTitle: a.jobTitle || "",
+              bio: a.bio || "",
+              role: a.role || "staff",
+              status: a.status || "active",
+              avatarUrl: a.avatarUrl || "",
             }))
           );
           if (Array.isArray(staffData.titles) && staffData.titles.length) {
@@ -1181,7 +1315,7 @@ export default function AdminDashboardPage() {
 
   const filteredReportRows = useMemo(() => {
     const q = reportSearch.trim().toLowerCase();
-    const matches = (values: string[]) => !q || values.some((v) => String(v || "").toLowerCase().includes(q));
+    const matches = (values: (string | undefined | null)[]) => !q || values.some((v) => String(v || "").toLowerCase().includes(q));
     const statusOk = (status: string) =>
       reportStatus === "ALL" || String(status || "").toLowerCase() === reportStatus.toLowerCase();
 
@@ -2412,9 +2546,40 @@ export default function AdminDashboardPage() {
                 <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#12B8B0]">Administrators ({adminAccounts.length})</div>
                   {adminAccounts.map((admin) => (
-                    <div key={admin.email} className="flex items-center justify-between text-xs gap-3">
-                      <span className="font-bold text-white">{admin.name}</span>
-                      <span className="text-slate-300 truncate">{admin.email}</span>
+                    <div key={admin.email} className="flex items-center justify-between text-xs gap-3 py-1.5 border-b border-white/5 last:border-0">
+                      <div>
+                        <span className="font-bold text-white">{admin.name}</span>
+                        <span className="text-slate-300 ml-2 text-[11px] truncate">{admin.email}</span>
+                        {admin.phone && <span className="text-slate-400 ml-2 text-[10px]">· {admin.phone}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingStaff({
+                              id: admin.id,
+                              name: admin.name,
+                              email: admin.email,
+                              phone: admin.phone || "",
+                              role: "admin",
+                              status: admin.status || "active",
+                              avatarUrl: admin.avatarUrl || "",
+                            })
+                          }
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+                          title="Edit Administrator"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-[#12B8B0]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteStaffMember(admin.id, admin.name, "Administrator")}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+                          title="Delete Administrator"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2423,9 +2588,42 @@ export default function AdminDashboardPage() {
                 <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2">
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#12B8B0]">About Us team ({teamDirectory.length})</div>
                   {teamDirectory.map((member) => (
-                    <div key={member.email} className="flex items-center justify-between text-xs gap-3">
-                      <span className="font-bold text-white">{member.name}</span>
-                      <span className="text-slate-300 truncate">{member.jobTitle || member.email}</span>
+                    <div key={member.email} className="flex items-center justify-between text-xs gap-3 py-1.5 border-b border-white/5 last:border-0">
+                      <div>
+                        <span className="font-bold text-white">{member.name}</span>
+                        <span className="text-slate-300 ml-2 text-[11px] truncate">{member.jobTitle || member.email}</span>
+                        {member.phone && <span className="text-slate-400 ml-2 text-[10px]">· {member.phone}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingStaff({
+                              id: member.id,
+                              name: member.name,
+                              email: member.email,
+                              phone: member.phone || "",
+                              role: "staff",
+                              jobTitle: member.jobTitle || "",
+                              bio: member.bio || "",
+                              status: member.status || "active",
+                              avatarUrl: member.avatarUrl || "",
+                            })
+                          }
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+                          title="Edit Team Member"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-[#12B8B0]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteStaffMember(member.id, member.name, "Team Member")}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors"
+                          title="Delete Team Member"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2438,30 +2636,39 @@ export default function AdminDashboardPage() {
                     setCreatingStaff(true);
                     try {
                       let finalAvatar = addDoctorForm.avatarUrl;
-                      if (doctorWebpResult) {
-                        const upload = await uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors");
-                        if (upload.url) finalAvatar = upload.url;
-                      }
-                      // Upload credential documents to Cloudinary
                       let finalNationalIdUrl = "";
                       let finalLicenseCertUrl = "";
                       let finalDiplomaUrl = "";
-                      if (addDoctorForm.role === "doctor") {
-                        if (doctorNationalIdFile) {
-                          const up = await uploadToCloudinary(doctorNationalIdFile, "fitmed/doctor-documents");
-                          if (!up.url) throw new Error("Failed to upload National ID. Please try again.");
-                          finalNationalIdUrl = up.url;
-                        }
-                        if (doctorLicenseFile) {
-                          const up = await uploadToCloudinary(doctorLicenseFile, "fitmed/doctor-documents");
-                          if (!up.url) throw new Error("Failed to upload License Certificate. Please try again.");
-                          finalLicenseCertUrl = up.url;
-                        }
-                        if (doctorDiplomaFile) {
-                          const up = await uploadToCloudinary(doctorDiplomaFile, "fitmed/doctor-documents");
-                          if (!up.url) throw new Error("Failed to upload Diploma. Please try again.");
-                          finalDiplomaUrl = up.url;
-                        }
+
+                      // Upload avatar & credential documents concurrently to Cloudinary
+                      const [avatarUpload, nationalIdUpload, licenseUpload, diplomaUpload] = await Promise.all([
+                        doctorWebpResult ? uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors") : null,
+                        addDoctorForm.role === "doctor" && doctorNationalIdFile
+                          ? uploadToCloudinary(doctorNationalIdFile, "fitmed/doctor-documents")
+                          : null,
+                        addDoctorForm.role === "doctor" && doctorLicenseFile
+                          ? uploadToCloudinary(doctorLicenseFile, "fitmed/doctor-documents")
+                          : null,
+                        addDoctorForm.role === "doctor" && doctorDiplomaFile
+                          ? uploadToCloudinary(doctorDiplomaFile, "fitmed/doctor-documents")
+                          : null,
+                      ]);
+
+                      if (avatarUpload) {
+                        if (!avatarUpload.url) throw new Error(avatarUpload.error || "Failed to upload profile photo.");
+                        finalAvatar = avatarUpload.url;
+                      }
+                      if (nationalIdUpload) {
+                        if (!nationalIdUpload.url) throw new Error(nationalIdUpload.error || "Failed to upload National ID.");
+                        finalNationalIdUrl = nationalIdUpload.url;
+                      }
+                      if (licenseUpload) {
+                        if (!licenseUpload.url) throw new Error(licenseUpload.error || "Failed to upload License Certificate.");
+                        finalLicenseCertUrl = licenseUpload.url;
+                      }
+                      if (diplomaUpload) {
+                        if (!diplomaUpload.url) throw new Error(diplomaUpload.error || "Failed to upload Medical Diploma.");
+                        finalDiplomaUrl = diplomaUpload.url;
                       }
                       const res = await fetch("/api/admin/staff", {
                         credentials: "include",
@@ -2472,6 +2679,7 @@ export default function AdminDashboardPage() {
                           name: addDoctorForm.name,
                           email: addDoctorForm.email,
                           license: addDoctorForm.license,
+                          licenseExpiryDate: addDoctorForm.licenseExpiryDate || undefined,
                           specialty: addDoctorForm.specialty,
                           phone: addDoctorForm.phone,
                           password: addDoctorForm.password || undefined,
@@ -2495,8 +2703,12 @@ export default function AdminDashboardPage() {
                           {
                             id: data.user.id,
                             name: addDoctorForm.name,
+                            email: addDoctorForm.email,
+                            phone: addDoctorForm.phone,
                             role: addDoctorForm.specialty || "Clinical Evaluator",
+                            specialty: addDoctorForm.specialty || "Clinical Evaluator",
                             license: addDoctorForm.license,
+                            licenseExpiryDate: addDoctorForm.licenseExpiryDate,
                             status: "Active",
                           },
                         ]);
@@ -2504,14 +2716,26 @@ export default function AdminDashboardPage() {
                         setTeamDirectory((prev) => [
                           ...prev,
                           {
+                            id: data.user.id,
                             name: addDoctorForm.name,
                             email: addDoctorForm.email.toLowerCase(),
+                            phone: addDoctorForm.phone,
                             jobTitle: addDoctorForm.newTitle || addDoctorForm.jobTitle,
+                            bio: addDoctorForm.bio,
+                            role: "staff",
+                            status: "active",
                           },
                         ]);
                       } else {
                         setAdminAccounts((prev) => [
-                          { name: addDoctorForm.name, email: addDoctorForm.email.toLowerCase(), role: "admin", status: "active" },
+                          {
+                            id: data.user.id,
+                            name: addDoctorForm.name,
+                            email: addDoctorForm.email.toLowerCase(),
+                            phone: addDoctorForm.phone,
+                            role: "admin",
+                            status: "active",
+                          },
                           ...prev,
                         ]);
                       }
@@ -2534,6 +2758,7 @@ export default function AdminDashboardPage() {
                         name: "",
                         email: "",
                         license: "",
+                        licenseExpiryDate: "",
                         specialty: "",
                         phone: "",
                         password: "",
@@ -2681,7 +2906,7 @@ export default function AdminDashboardPage() {
                     {addDoctorForm.role === "doctor" && (
                       <>
                     <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">RMDC License Number</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">RMDC License Number *</label>
                       <input
                         required
                         type="text"
@@ -2692,13 +2917,36 @@ export default function AdminDashboardPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Specialty</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
+                        License Expiration Date <span className="text-[#12B8B0]">*</span>
+                      </label>
+                      <input
+                        required
+                        type="date"
+                        value={addDoctorForm.licenseExpiryDate}
+                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, licenseExpiryDate: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs focus:outline-none focus:border-[#12B8B0] [color-scheme:dark]"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Admin will receive an automated email alert 30 days before expiration.</p>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Specialty *</label>
                       <input
                         required
                         type="text"
                         placeholder="e.g. Occupational Medicine"
                         value={addDoctorForm.specialty}
                         onChange={(e) => setAddDoctorForm({ ...addDoctorForm, specialty: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">Phone Number</label>
+                      <input
+                        type="tel"
+                        placeholder="+250 7XX XXX XXX"
+                        value={addDoctorForm.phone}
+                        onChange={(e) => setAddDoctorForm({ ...addDoctorForm, phone: e.target.value })}
                         className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#12B8B0]"
                       />
                     </div>
@@ -2709,11 +2957,24 @@ export default function AdminDashboardPage() {
                       <div className="grid sm:grid-cols-3 gap-3">
 
                         {/* National ID */}
-                        <label className="cursor-pointer group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-[#12B8B0] transition-colors bg-white/5 hover:bg-white/10 text-center">
-                          <div className="text-2xl">🪪</div>
+                        <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
+                          doctorNationalIdFile
+                            ? "border-[#12B8B0] bg-[#12B8B0]/10"
+                            : "border-white/20 hover:border-[#12B8B0] bg-white/5 hover:bg-white/10"
+                        }`}>
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                            doctorNationalIdFile
+                              ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40"
+                              : "bg-white/10 text-cyan-400 border border-white/10 group-hover:bg-[#12B8B0]/20 group-hover:text-[#12B8B0]"
+                          }`}>
+                            <IdCard className="w-5 h-5" />
+                          </div>
                           <div className="text-[11px] font-bold text-white">National ID</div>
                           {doctorNationalIdFile ? (
-                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2">{doctorNationalIdFile.name}</div>
+                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2 flex items-center justify-center gap-1">
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>{doctorNationalIdFile.name}</span>
+                            </div>
                           ) : (
                             <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
                           )}
@@ -2726,11 +2987,24 @@ export default function AdminDashboardPage() {
                         </label>
 
                         {/* RMDC License Certificate */}
-                        <label className="cursor-pointer group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-[#12B8B0] transition-colors bg-white/5 hover:bg-white/10 text-center">
-                          <div className="text-2xl">📜</div>
+                        <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
+                          doctorLicenseFile
+                            ? "border-[#12B8B0] bg-[#12B8B0]/10"
+                            : "border-white/20 hover:border-[#12B8B0] bg-white/5 hover:bg-white/10"
+                        }`}>
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                            doctorLicenseFile
+                              ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40"
+                              : "bg-white/10 text-amber-400 border border-white/10 group-hover:bg-[#12B8B0]/20 group-hover:text-[#12B8B0]"
+                          }`}>
+                            <FileBadge className="w-5 h-5" />
+                          </div>
                           <div className="text-[11px] font-bold text-white">License Certificate</div>
                           {doctorLicenseFile ? (
-                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2">{doctorLicenseFile.name}</div>
+                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2 flex items-center justify-center gap-1">
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>{doctorLicenseFile.name}</span>
+                            </div>
                           ) : (
                             <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
                           )}
@@ -2743,11 +3017,24 @@ export default function AdminDashboardPage() {
                         </label>
 
                         {/* Diploma */}
-                        <label className="cursor-pointer group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/20 hover:border-[#12B8B0] transition-colors bg-white/5 hover:bg-white/10 text-center">
-                          <div className="text-2xl">🎓</div>
+                        <label className={`cursor-pointer group flex flex-col items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-dashed transition-all text-center ${
+                          doctorDiplomaFile
+                            ? "border-[#12B8B0] bg-[#12B8B0]/10"
+                            : "border-white/20 hover:border-[#12B8B0] bg-white/5 hover:bg-white/10"
+                        }`}>
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                            doctorDiplomaFile
+                              ? "bg-[#12B8B0]/20 text-[#12B8B0] border border-[#12B8B0]/40"
+                              : "bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-[#12B8B0]/20 group-hover:text-[#12B8B0]"
+                          }`}>
+                            <GraduationCap className="w-5 h-5" />
+                          </div>
                           <div className="text-[11px] font-bold text-white">Medical Diploma</div>
                           {doctorDiplomaFile ? (
-                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2">{doctorDiplomaFile.name}</div>
+                            <div className="text-[10px] text-[#12B8B0] font-bold break-all line-clamp-2 flex items-center justify-center gap-1">
+                              <Check className="w-3 h-3 shrink-0" />
+                              <span>{doctorDiplomaFile.name}</span>
+                            </div>
                           ) : (
                             <div className="text-[10px] text-slate-400">JPG, PNG or PDF</div>
                           )}
@@ -2797,118 +3084,261 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="space-y-4">
-              {pendingDoctors.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-[#0B2D5C]">{doc.name} ({doc.doctorId || doc.id})</h4>
-                    <div className="text-xs text-slate-600">Specialty: {doc.specialty} · License: {doc.license}</div>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {doc.nationalIdUrl && (
-                        <a href={doc.nationalIdUrl} target="_blank" rel="noreferrer"
-                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
-                          🪪 National ID
-                        </a>
-                      )}
-                      {doc.licenseCertificateUrl && (
-                        <a href={doc.licenseCertificateUrl} target="_blank" rel="noreferrer"
-                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
-                          📜 License Certificate
-                        </a>
-                      )}
-                      {doc.diplomaUrl && (
-                        <a href={doc.diplomaUrl} target="_blank" rel="noreferrer"
-                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
-                          🎓 Diploma
-                        </a>
-                      )}
+              {pendingDoctors.length === 0 && (
+                <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-slate-500 text-xs">
+                  No doctor applications awaiting verification.
+                </div>
+              )}
+              {pendingDoctors.map((doc) => {
+                const expiry = doc.licenseExpiryDate ? new Date(doc.licenseExpiryDate) : null;
+                const daysLeft = expiry ? Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="p-5 rounded-2xl bg-amber-50/60 border border-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-bold text-[#0B2D5C]">{doc.name} ({doc.doctorId || doc.id})</h4>
+                        {doc.licenseExpiryDate && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                              daysLeft !== null && daysLeft <= 0
+                                ? "bg-rose-100 text-rose-800 border-rose-300"
+                                : daysLeft !== null && daysLeft <= 30
+                                ? "bg-amber-200/80 text-amber-900 border-amber-400"
+                                : "bg-teal-100 text-teal-800 border-teal-300"
+                            }`}
+                          >
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            <span>
+                              {daysLeft !== null && daysLeft <= 0
+                                ? `License Expired (${expiry?.toLocaleDateString()})`
+                                : daysLeft !== null && daysLeft <= 30
+                                ? `Expiring Soon: ${daysLeft}d left (${expiry?.toLocaleDateString()})`
+                                : `License Expiry: ${expiry?.toLocaleDateString()}`}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-600">Specialty: {doc.specialty} · License: {doc.license}</div>
+                      {doc.phone && <div className="text-[11px] text-slate-500">Phone: {doc.phone}</div>}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {doc.nationalIdUrl && (
+                          <a href={doc.nationalIdUrl} target="_blank" rel="noreferrer"
+                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
+                            <IdCard className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                            <span>National ID</span>
+                          </a>
+                        )}
+                        {doc.licenseCertificateUrl && (
+                          <a href={doc.licenseCertificateUrl} target="_blank" rel="noreferrer"
+                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
+                            <FileBadge className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                            <span>License Certificate</span>
+                          </a>
+                        )}
+                        {doc.diplomaUrl && (
+                          <a href={doc.diplomaUrl} target="_blank" rel="noreferrer"
+                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
+                            <GraduationCap className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                            <span>Diploma</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingStaff({
+                            id: doc.id,
+                            role: "doctor",
+                            name: doc.name,
+                            email: doc.email || "",
+                            phone: doc.phone || "",
+                            license: doc.license || "",
+                            licenseExpiryDate: doc.licenseExpiryDate ? new Date(doc.licenseExpiryDate).toISOString().split("T")[0] : "",
+                            specialty: doc.specialty || "",
+                            jobTitle: "",
+                            bio: "",
+                            status: "Pending",
+                            avatarUrl: doc.avatarUrl || "",
+                            nationalIdUrl: doc.nationalIdUrl || "",
+                            licenseCertificateUrl: doc.licenseCertificateUrl || "",
+                            diplomaUrl: doc.diplomaUrl || "",
+                            password: "",
+                          })
+                        }
+                        className="p-2 rounded-xl border border-amber-300 hover:bg-amber-100 text-amber-800 transition-colors"
+                        title="Edit Doctor Details & License Expiry"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteDoctor(doc.id, doc.name)}
+                        className="p-2 rounded-xl border border-amber-300 hover:bg-rose-50 text-amber-800 hover:text-rose-600 transition-colors"
+                        title="Delete Doctor"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => approveDoctor(doc.id, doc.name)}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Verify & Activate</span>
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => approveDoctor(doc.id, doc.name)}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs"
-                  >
-                    Verify & Activate Doctor
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="pt-4">
               <h4 className="text-sm font-bold text-[#0B2D5C] mb-3">Active Practicing Physicians ({verifiedDoctors.length})</h4>
               <div className="divide-y divide-slate-100 text-xs">
-                {verifiedDoctors.map((d) => (
-                  <div key={d.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <div className="font-bold text-[#0B2D5C] flex items-center gap-2">
-                        <span>{d.name}</span>
-                        <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: {d.doctorId || d.id}</span>
-                        <span className="text-xs text-slate-500">· {d.license}</span>
+                {verifiedDoctors.map((d) => {
+                  const expiry = d.licenseExpiryDate ? new Date(d.licenseExpiryDate) : null;
+                  const daysLeft = expiry ? Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+
+                  return (
+                    <div key={d.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="font-bold text-[#0B2D5C] flex items-center gap-2 flex-wrap">
+                          <span>{d.name}</span>
+                          <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: {d.doctorId || d.id}</span>
+                          <span className="text-xs text-slate-500">· {d.license}</span>
+                          {d.licenseExpiryDate ? (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                daysLeft !== null && daysLeft <= 0
+                                  ? "bg-rose-100 text-rose-800 border-rose-300"
+                                  : daysLeft !== null && daysLeft <= 30
+                                  ? "bg-amber-100 text-amber-900 border-amber-300"
+                                  : "bg-slate-100 text-slate-700 border-slate-200"
+                              }`}
+                            >
+                              {daysLeft !== null && daysLeft <= 0 ? (
+                                <>
+                                  <AlertCircle className="w-3 h-3 text-rose-600 animate-pulse" />
+                                  <span>Expired: {expiry?.toLocaleDateString()}</span>
+                                </>
+                              ) : daysLeft !== null && daysLeft <= 30 ? (
+                                <>
+                                  <AlertCircle className="w-3 h-3 text-amber-600 animate-pulse" />
+                                  <span>Expires in {daysLeft}d ({expiry?.toLocaleDateString()})</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3 text-slate-500" />
+                                  <span>Exp: {expiry?.toLocaleDateString()}</span>
+                                </>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-slate-400 bg-slate-50 border border-slate-200">
+                              <Clock className="w-3 h-3" />
+                              <span>No Expiry Set</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-slate-400 text-[11px] mt-0.5">{d.role} {d.phone ? `· ${d.phone}` : ""}</div>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {d.nationalIdUrl && (
+                            <a href={d.nationalIdUrl} target="_blank" rel="noreferrer"
+                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
+                              <IdCard className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                              <span>National ID</span>
+                            </a>
+                          )}
+                          {d.licenseCertificateUrl && (
+                            <a href={d.licenseCertificateUrl} target="_blank" rel="noreferrer"
+                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
+                              <FileBadge className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                              <span>License Certificate</span>
+                            </a>
+                          )}
+                          {d.diplomaUrl && (
+                            <a href={d.diplomaUrl} target="_blank" rel="noreferrer"
+                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                              <span>Diploma</span>
+                            </a>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-slate-400 text-[11px] mt-0.5">{d.role}</div>
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {d.nationalIdUrl && (
-                          <a href={d.nationalIdUrl} target="_blank" rel="noreferrer"
-                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
-                            🪪 National ID
-                          </a>
-                        )}
-                        {d.licenseCertificateUrl && (
-                          <a href={d.licenseCertificateUrl} target="_blank" rel="noreferrer"
-                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
-                            📜 License Certificate
-                          </a>
-                        )}
-                        {d.diplomaUrl && (
-                          <a href={d.diplomaUrl} target="_blank" rel="noreferrer"
-                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
-                            🎓 Diploma
-                          </a>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${
-                        d.status === "Active"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-rose-100 text-rose-800 border border-rose-300"
-                      }`}>
-                        {d.status}
-                      </span>
-
-                      <button
-                        onClick={() => resetStaffPassword(d.id, d.name)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#12B8B0] transition-colors"
-                        title="Email a new sign-in password"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => toggleDoctorStatus(d.id, d.name, d.status)}
-                        className={`p-2 rounded-lg border transition-colors ${
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${
                           d.status === "Active"
-                            ? "border-rose-200 hover:bg-rose-50 text-rose-500"
-                            : "border-emerald-200 hover:bg-emerald-50 text-emerald-600"
-                        }`}
-                        title={d.status === "Active" ? "Suspend Doctor" : "Reactivate Doctor"}
-                      >
-                        {d.status === "Active" ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                      </button>
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            : "bg-rose-100 text-rose-800 border border-rose-300"
+                        }`}>
+                          {d.status}
+                        </span>
 
-                      <button
-                        onClick={() => deleteDoctor(d.id, d.name)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
-                        title="Delete Doctor"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingStaff({
+                              id: d.id,
+                              role: "doctor",
+                              name: d.name,
+                              email: d.email || "",
+                              phone: d.phone || "",
+                              license: d.license || "",
+                              licenseExpiryDate: d.licenseExpiryDate ? new Date(d.licenseExpiryDate).toISOString().split("T")[0] : "",
+                              specialty: d.specialty || "",
+                              jobTitle: "",
+                              bio: "",
+                              status: d.status || "Active",
+                              avatarUrl: d.avatarUrl || "",
+                              nationalIdUrl: d.nationalIdUrl || "",
+                              licenseCertificateUrl: d.licenseCertificateUrl || "",
+                              diplomaUrl: d.diplomaUrl || "",
+                              password: "",
+                            })
+                          }
+                          className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#12B8B0] transition-colors"
+                          title="Edit Doctor Details & License Expiry"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => resetStaffPassword(d.id, d.name)}
+                          className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-[#12B8B0] transition-colors"
+                          title="Email a new sign-in password"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => toggleDoctorStatus(d.id, d.name, d.status)}
+                          className={`p-2 rounded-lg border transition-colors ${
+                            d.status === "Active"
+                              ? "border-rose-200 hover:bg-rose-50 text-rose-500"
+                              : "border-emerald-200 hover:bg-emerald-50 text-emerald-600"
+                          }`}
+                          title={d.status === "Active" ? "Suspend Doctor" : "Reactivate Doctor"}
+                        >
+                          {d.status === "Active" ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        </button>
+
+                        <button
+                          onClick={() => deleteDoctor(d.id, d.name)}
+                          className="p-2 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                          title="Delete Doctor"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -4129,6 +4559,365 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Admin Edit Staff Member Modal ── */}
+      {portalReady && editingStaff && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 bg-[#0B2D5C] text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#12B8B0]/20 border border-[#12B8B0]/40 flex items-center justify-center text-[#12B8B0]">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">
+                    Edit {editingStaff.role === "doctor" ? "Doctor" : editingStaff.role === "admin" ? "Administrator" : "Team Member"} Details
+                  </h3>
+                  <p className="text-xs text-slate-300">{editingStaff.name} · {editingStaff.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStaff(null);
+                  setEditAvatarFile(null);
+                  setEditNationalIdFile(null);
+                  setEditLicenseFile(null);
+                  setEditDiplomaFile(null);
+                }}
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSaveStaffEdit} className="p-6 space-y-5 overflow-y-auto flex-1 text-xs">
+              {/* Photo & Role Banner */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#12B8B0] bg-slate-200 relative shrink-0">
+                    <img
+                      src={editAvatarFile ? URL.createObjectURL(editAvatarFile) : (editingStaff.avatarUrl || "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop")}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800 text-sm">{editingStaff.name}</div>
+                    <div className="text-[11px] text-slate-500 capitalize">{editingStaff.role} Account</div>
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 text-[11px] font-bold text-[#12B8B0] hover:text-[#0fa19a] mt-1">
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Change profile photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) setEditAvatarFile(e.target.files[0]);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-extrabold uppercase text-slate-500">Status:</label>
+                  <select
+                    value={editingStaff.status || "Active"}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, status: e.target.value })}
+                    className="px-3 py-1.5 rounded-xl border border-slate-300 font-bold text-xs bg-white text-slate-700 focus:outline-none focus:border-[#12B8B0]"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Standard Account Details */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={editingStaff.name || ""}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0] focus:ring-1 focus:ring-[#12B8B0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Email Address *
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    value={editingStaff.email || ""}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0] focus:ring-1 focus:ring-[#12B8B0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+250 7XX XXX XXX"
+                    value={editingStaff.phone || ""}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, phone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0] focus:ring-1 focus:ring-[#12B8B0]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Reset Password (optional)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Leave blank to keep current password"
+                    value={editingStaff.password || ""}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, password: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0] focus:ring-1 focus:ring-[#12B8B0]"
+                  />
+                </div>
+              </div>
+
+              {/* Doctor-Specific Fields */}
+              {editingStaff.role === "doctor" && (
+                <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-extrabold text-[#0B2D5C] uppercase tracking-wider">
+                    <Stethoscope className="w-4 h-4 text-[#12B8B0]" />
+                    <span>Physician Credentials & Licensing</span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Medical Specialty *
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={editingStaff.specialty || ""}
+                        onChange={(e) => setEditingStaff({ ...editingStaff, specialty: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        RMDC License Number *
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        value={editingStaff.license || ""}
+                        onChange={(e) => setEditingStaff({ ...editingStaff, license: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs font-mono focus:outline-none focus:border-[#12B8B0]"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        License Expiration Date
+                      </label>
+                      <input
+                        type="date"
+                        value={editingStaff.licenseExpiryDate || ""}
+                        onChange={(e) => setEditingStaff({ ...editingStaff, licenseExpiryDate: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0]"
+                      />
+                      {editingStaff.licenseExpiryDate && (
+                        <div className="mt-2">
+                          {(() => {
+                            const exp = new Date(editingStaff.licenseExpiryDate);
+                            const days = Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                            if (days <= 0) {
+                              return (
+                                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-100 border border-rose-300 text-rose-900 text-xs font-bold">
+                                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                  <span>License has expired ({exp.toLocaleDateString()}). Automated renewal notice is active.</span>
+                                </div>
+                              );
+                            }
+                            if (days <= 30) {
+                              return (
+                                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs font-bold">
+                                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <span>Expiring in {days} days ({exp.toLocaleDateString()}). Email alert will notify admin 30 days before expiration.</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex items-center gap-2 p-2 rounded-xl bg-teal-100/70 border border-teal-200 text-teal-900 text-xs font-medium">
+                                <Clock className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                                <span>Valid until {exp.toLocaleDateString()} ({days} days remaining).</span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Credential Documents Replacement */}
+                  <div className="pt-2">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-2">
+                      Doctor Credential Documents
+                    </div>
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      {/* National ID */}
+                      <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-[11px]">National ID</span>
+                          {editingStaff.nationalIdUrl && (
+                            <a href={editingStaff.nationalIdUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
+                              View
+                            </a>
+                          )}
+                        </div>
+                        <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
+                          <span>{editNationalIdFile ? editNationalIdFile.name : "Replace document"}</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setEditNationalIdFile(e.target.files[0]);
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {/* License Certificate */}
+                      <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-[11px]">License Cert</span>
+                          {editingStaff.licenseCertificateUrl && (
+                            <a href={editingStaff.licenseCertificateUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
+                              View
+                            </a>
+                          )}
+                        </div>
+                        <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
+                          <span>{editLicenseFile ? editLicenseFile.name : "Replace document"}</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setEditLicenseFile(e.target.files[0]);
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Diploma */}
+                      <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-[11px]">Diploma</span>
+                          {editingStaff.diplomaUrl && (
+                            <a href={editingStaff.diplomaUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
+                              View
+                            </a>
+                          )}
+                        </div>
+                        <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
+                          <span>{editDiplomaFile ? editDiplomaFile.name : "Replace document"}</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setEditDiplomaFile(e.target.files[0]);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Staff / Admin specific fields */}
+              {(editingStaff.role === "staff" || editingStaff.role === "admin") && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Job Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Managing Director & Clinical Director"
+                      value={editingStaff.jobTitle || ""}
+                      onChange={(e) => setEditingStaff({ ...editingStaff, jobTitle: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Bio / Summary
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Short professional bio shown on the About Us page..."
+                      value={editingStaff.bio || ""}
+                      onChange={(e) => setEditingStaff({ ...editingStaff, bio: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:outline-none focus:border-[#12B8B0]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Footer Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  disabled={savingEdit}
+                  onClick={() => {
+                    setEditingStaff(null);
+                    setEditAvatarFile(null);
+                    setEditNationalIdFile(null);
+                    setEditLicenseFile(null);
+                    setEditDiplomaFile(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-6 py-2.5 rounded-xl bg-[#12B8B0] hover:bg-[#10a59e] text-white font-extrabold text-xs transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
+                >
+                  {savingEdit ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Changes…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Admin Certificate Preview Modal ── */}

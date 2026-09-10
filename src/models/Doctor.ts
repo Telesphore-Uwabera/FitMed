@@ -15,6 +15,8 @@ export interface IDoctor extends Document {
   fullName: string;
   email: string;
   licenseNumber: string; // Rwanda Medical Council (RMDC)
+  licenseExpiryDate?: Date;
+  licenseExpiryNoticeSentAt?: Date;
   doctorId?: string;
   specialty: string;
   phone?: string;
@@ -49,6 +51,8 @@ const DoctorSchema = new Schema<IDoctor>(
     fullName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     licenseNumber: { type: String, required: true, unique: true },
+    licenseExpiryDate: { type: Date },
+    licenseExpiryNoticeSentAt: { type: Date },
     doctorId: { type: String, unique: true, sparse: true, uppercase: true, trim: true },
     specialty: { type: String, default: "Occupational Medicine & Telehealth" },
     phone: { type: String },

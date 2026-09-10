@@ -3062,11 +3062,7 @@ export default function DoctorDashboardPage() {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const formData = new FormData();
-                      formData.append("file", file);
-                      formData.append("folder", "fitmed/doctor-documents");
-                      const uploadRes = await fetch("/api/upload", { credentials: "include", method: "POST", body: formData });
-                      const uploadData = await uploadRes.json();
+                      const uploadData = await uploadToCloudinary(file, "fitmed/doctor-documents");
                       if (!uploadData.url) {
                         error("Document not saved", uploadData.error || "Upload failed.");
                         return;

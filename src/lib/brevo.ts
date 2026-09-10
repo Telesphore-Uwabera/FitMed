@@ -460,4 +460,42 @@ export const EmailTemplates = {
        <p>You can reply to this email, or write to <a href="mailto:fitmedrwanda@gmail.com" style="color:#12B8B0;">fitmedrwanda@gmail.com</a>.</p>`
     );
   },
+
+  doctorLicenseExpiringAlert: (
+    adminName: string,
+    doctorName: string,
+    licenseNumber: string,
+    expiryDateStr: string,
+    daysRemaining: number,
+    doctorEmail: string,
+    doctorPhone?: string
+  ) => {
+    const isExpired = daysRemaining <= 0;
+    const headline = isExpired
+      ? `License Expired: Dr. ${doctorName}`
+      : `License Expiring Soon: Dr. ${doctorName} (${daysRemaining} Days Left)`;
+    const alertColor = isExpired ? "#e11d48" : "#d97706";
+    const statusText = isExpired
+      ? `EXPIRED on ${expiryDateStr}`
+      : `EXPIRING in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"} (${expiryDateStr})`;
+
+    return brandedEmail(
+      headline,
+      `<p>Dear <strong>${adminName}</strong>,</p>
+       <div style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid ${alertColor};border-radius:12px;padding:16px;margin:16px 0;">
+         <p style="margin:0 0 6px;color:${alertColor};font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Action Required: Physician License Renewal</p>
+         <p style="margin:0;font-size:15px;font-weight:700;color:#0B2D5C;">Dr. ${doctorName}'s medical practice license is ${statusText}.</p>
+       </div>
+       <p>Please contact the physician promptly to request their renewed RMDC license certificate to maintain compliance and uninterrupted medical certification services.</p>
+       <table style="width:100%;font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;margin:16px 0;">
+         <tr><td style="padding:6px 0;color:#64748b;">Physician Name</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${doctorName}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">RMDC License No.</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${licenseNumber}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">License Expiry Date</td><td style="padding:6px 0;text-align:right;font-weight:700;color:${alertColor};">${expiryDateStr}</td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Doctor Email</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;"><a href="mailto:${doctorEmail}" style="color:#12B8B0;">${doctorEmail}</a></td></tr>
+         <tr><td style="padding:6px 0;color:#64748b;">Doctor Phone</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#0B2D5C;">${doctorPhone || "—"}</td></tr>
+       </table>
+       ${button(`${FITMED_APP_URL}/dashboard/admin?nav=doctors`, "Manage Doctor in Admin Console", true)}
+       <p style="margin-top:16px;font-size:12px;color:#64748b;">Once the doctor submits their renewed license certificate, you can update their license record directly in the Admin Console.</p>`
+    );
+  },
 };

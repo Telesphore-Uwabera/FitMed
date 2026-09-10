@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { processDueMeetingNotices } from "@/lib/meetingReminders";
+import { checkAndNotifyExpiringLicenses } from "@/lib/licenseExpiry";
 
 export async function GET() {
   try {
@@ -13,16 +14,21 @@ export async function GET() {
       ),
     ]);
 
-    // Run with a 20 s ceiling — enough to process a batch of reminders
-    // but safely inside Netlify's 26 s function timeout.
-    const sent = await Promise.race([
-      processDueMeetingNotices(),
-      new Promise<number>((resolve) =>
-        setTimeout(() => resolve(0), 20000)
-      ),
+    // Run reminders and license expiry checks
+    const [sent, licenseNotices] = await Promise.all([
+      Promise.race([
+        processDueMeetingNotices(),
+        new Promise<number>((resolve) =>
+          setTimeout(() => resolve(0), 20000)
+        ),
+      ]),
+      checkAndNotifyExpiringLicenses().catch((err) => {
+        console.warn("[meet/tick] license check error:", err);
+        return { checked: 0, sent: 0 };
+      }),
     ]);
 
-    return NextResponse.json({ success: true, sent });
+    return NextResponse.json({ success: true, sent, licenseNotices });
   } catch (error: unknown) {
     // Return 200 with the error detail — dashboards fire this every 60 s
     // and a 500 triggers console noise; the tick is non-critical.

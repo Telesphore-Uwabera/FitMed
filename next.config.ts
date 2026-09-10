@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "50mb",
+    },
+  },
   devIndicators: false,
   async headers() {
     return [

@@ -122,6 +122,53 @@ export async function uploadToCloudinary(
   fileOrDataUrl: File | Blob | string,
   folder = "fitmed/profiles"
 ): Promise<{ url: string; publicId: string; format: string; error?: string }> {
+  // 1. Direct signed Cloudinary upload (bypasses reverse proxy body size limits & 413 errors)
+  try {
+    const signRes = await fetch(`/api/upload/sign?folder=${encodeURIComponent(folder)}`, {
+      credentials: "include",
+    });
+    if (signRes.ok) {
+      const signData = await signRes.json();
+      if (signData.signature && signData.apiKey && signData.cloudName) {
+        const directForm = new FormData();
+        if (typeof fileOrDataUrl === "string") {
+          directForm.append("file", fileOrDataUrl);
+        } else {
+          const fileName =
+            fileOrDataUrl instanceof File && fileOrDataUrl.name
+              ? fileOrDataUrl.name
+              : "document";
+          directForm.append("file", fileOrDataUrl, fileName);
+        }
+        directForm.append("api_key", signData.apiKey);
+        directForm.append("timestamp", String(signData.timestamp));
+        directForm.append("signature", signData.signature);
+        directForm.append("folder", signData.folder || folder);
+
+        const uploadEndpoint = `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`;
+        const cRes = await fetch(uploadEndpoint, {
+          method: "POST",
+          body: directForm,
+        });
+        const cData = await cRes.json().catch(() => ({}));
+        const directUrl = String(cData.secure_url || cData.url || "");
+        if (cRes.ok && isCloudinaryUrl(directUrl)) {
+          return {
+            url: directUrl,
+            publicId: cData.public_id || "",
+            format: cData.format || "pdf",
+          };
+        }
+        if (cData?.error?.message) {
+          console.warn("Cloudinary direct upload message:", cData.error.message);
+        }
+      }
+    }
+  } catch (directErr) {
+    console.warn("Direct Cloudinary upload failed, attempting fallback to /api/upload:", directErr);
+  }
+
+  // 2. Fallback to /api/upload
   try {
     const formData = new FormData();
 
@@ -138,16 +185,21 @@ export async function uploadToCloudinary(
 
     const response = await fetch("/api/upload", {
       method: "POST",
+      credentials: "include",
       body: formData,
     });
     const data = await response.json().catch(() => ({}));
     const url = String(data.url || "");
     if (!response.ok || !isCloudinaryUrl(url)) {
+      const errorMsg =
+        response.status === 413
+          ? "File is too large for the server. Please compress or optimize the document."
+          : (data.error || "Cloudinary did not store this file. Try again.");
       return {
         url: "",
         publicId: "",
         format: "webp",
-        error: data.error || "Cloudinary did not store this photo. Try again.",
+        error: errorMsg,
       };
     }
     return {
@@ -155,13 +207,13 @@ export async function uploadToCloudinary(
       publicId: data.publicId || "",
       format: data.format || "webp",
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error("Upload error:", err);
     return {
       url: "",
       publicId: "",
       format: "webp",
-      error: "Could not reach Cloudinary. Check your connection and try again.",
+      error: err?.message || "Could not reach upload server. Check your connection and try again.",
     };
   }
 }

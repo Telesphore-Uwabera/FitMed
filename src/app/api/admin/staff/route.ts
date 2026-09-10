@@ -7,6 +7,7 @@ import Doctor from "@/models/Doctor";
 import { sendBrevoEmail, EmailTemplates } from "@/lib/brevo";
 import { ensureDoctorIds, nextDoctorId } from "@/lib/sequentialIds";
 import StaffTitle, { DEFAULT_STAFF_TITLES } from "@/models/StaffTitle";
+import { checkAndNotifyExpiringLicenses } from "@/lib/licenseExpiry";
 
 async function listStaffTitles() {
   await StaffTitle.bulkWrite(
@@ -23,13 +24,20 @@ export async function GET() {
   try {
     await connectToDatabase();
 
+    // Check expiring licenses in background
+    checkAndNotifyExpiringLicenses().catch((err) =>
+      console.warn("[staff/GET] background license check error:", err)
+    );
+
     const users = await User.find({ role: { $nin: ["user", "applicant"] } })
-      .select("fullName name email role status createdAt jobTitle bio avatarUrl")
+      .select("fullName name email phone role status createdAt jobTitle bio avatarUrl")
       .sort({ createdAt: -1 })
       .lean();
     await ensureDoctorIds();
     const doctors = await Doctor.find({})
-      .select("fullName email licenseNumber doctorId specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued nationalIdUrl licenseCertificateUrl diplomaUrl")
+      .select(
+        "fullName email phone licenseNumber licenseExpiryDate doctorId specialty status isVerified avatarUrl weeklySchedule totalCertificatesIssued nationalIdUrl licenseCertificateUrl diplomaUrl"
+      )
       .sort({ createdAt: 1 })
       .lean();
     const userByEmail = new Map(users.map((u) => [String(u.email || "").toLowerCase(), u]));
@@ -46,7 +54,9 @@ export async function GET() {
           doctorId: String(d.doctorId || ""),
           name: d.fullName,
           email: d.email,
+          phone: d.phone || linked?.phone || "",
           license: d.licenseNumber,
+          licenseExpiryDate: d.licenseExpiryDate ? new Date(d.licenseExpiryDate).toISOString() : "",
           role: d.specialty,
           specialty: d.specialty,
           avatarUrl: d.avatarUrl || "",
@@ -77,6 +87,9 @@ export async function POST(request: NextRequest) {
     const email = String(body.email || "").trim().toLowerCase();
     const phone = String(body.phone || "").trim();
     const license = String(body.license || body.licenseNumber || "").trim();
+    const rawLicenseExpiry = body.licenseExpiryDate ? new Date(body.licenseExpiryDate) : undefined;
+    const licenseExpiryDate =
+      rawLicenseExpiry && !isNaN(rawLicenseExpiry.getTime()) ? rawLicenseExpiry : undefined;
     const specialty = String(body.specialty || "Occupational Medicine & Telehealth").trim();
     const avatarUrl = String(body.avatarUrl || "").trim();
     const nationalIdUrl = String(body.nationalIdUrl || "").trim();
@@ -139,6 +152,7 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         licenseNumber: license,
+        licenseExpiryDate,
         doctorId: await nextDoctorId(),
         specialty,
         avatarUrl: avatarUrl || undefined,
@@ -169,6 +183,7 @@ export async function POST(request: NextRequest) {
         role,
         jobTitle: resolvedTitle,
         license,
+        licenseExpiryDate: licenseExpiryDate?.toISOString(),
         status: "Active",
       },
     });
@@ -179,26 +194,175 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * PUT: Full CRUD update for all staff (Doctor, Admin, Staff).
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const id = String(body.id || "").trim();
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Staff ID is required." }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    // 1. Locate Doctor and User records
+    let doctor = await Doctor.findById(id);
+    let user: any = null;
+
+    if (doctor) {
+      user = await User.findOne({ email: doctor.email });
+    } else {
+      user = await User.findById(id);
+      if (user) {
+        doctor = await Doctor.findOne({ email: user.email });
+      }
+    }
+
+    if (!doctor && !user) {
+      return NextResponse.json({ success: false, error: "Staff member not found." }, { status: 404 });
+    }
+
+    // 2. Extract update fields
+    const name = String(body.name || body.fullName || "").trim();
+    const phone = String(body.phone || "").trim();
+    const role = String(body.role || "").trim().toLowerCase();
+    const status = String(body.status || "").trim();
+    const jobTitle = String(body.jobTitle || "").trim();
+    const bio = String(body.bio || "").trim();
+    const avatarUrl = String(body.avatarUrl || "").trim();
+    const license = String(body.license || body.licenseNumber || "").trim();
+    const specialty = String(body.specialty || "").trim();
+    const nationalIdUrl = String(body.nationalIdUrl || "").trim();
+    const licenseCertificateUrl = String(body.licenseCertificateUrl || "").trim();
+    const diplomaUrl = String(body.diplomaUrl || "").trim();
+    const password = String(body.password || "").trim();
+
+    let licenseExpiryDate: Date | undefined | null = undefined;
+    if (body.licenseExpiryDate !== undefined) {
+      if (!body.licenseExpiryDate) {
+        licenseExpiryDate = null;
+      } else {
+        const parsed = new Date(body.licenseExpiryDate);
+        if (!isNaN(parsed.getTime())) licenseExpiryDate = parsed;
+      }
+    }
+
+    // 3. Update User
+    if (user) {
+      if (name) {
+        user.fullName = name;
+        user.name = name;
+      }
+      if (phone !== undefined) user.phone = phone;
+      if (role && ["admin", "doctor", "staff"].includes(role)) user.role = role;
+      if (status) user.status = status.toLowerCase() === "active" ? "active" : "Suspended";
+      if (jobTitle !== undefined) user.jobTitle = jobTitle;
+      if (bio !== undefined) user.bio = bio;
+      if (avatarUrl) user.avatarUrl = avatarUrl;
+      if (nationalIdUrl) user.nationalIdImageUrl = nationalIdUrl;
+      if (password) {
+        user.password = hashPassword(password);
+        user.requiresPasswordReset = false;
+      }
+      await user.save();
+    }
+
+    // 4. Update Doctor (if doctor record exists or role is doctor)
+    if (doctor) {
+      if (name) doctor.fullName = name;
+      if (phone !== undefined) doctor.phone = phone;
+      if (license) doctor.licenseNumber = license;
+      if (specialty) doctor.specialty = specialty;
+      if (licenseExpiryDate !== undefined) {
+        doctor.licenseExpiryDate = licenseExpiryDate || undefined;
+      }
+      if (avatarUrl) doctor.avatarUrl = avatarUrl;
+      if (nationalIdUrl) doctor.nationalIdUrl = nationalIdUrl;
+      if (licenseCertificateUrl) doctor.licenseCertificateUrl = licenseCertificateUrl;
+      if (diplomaUrl) doctor.diplomaUrl = diplomaUrl;
+
+      if (status) {
+        const isActive = status.toLowerCase() === "active";
+        doctor.isVerified = isActive;
+        doctor.status = isActive ? "ONLINE" : "OFF";
+      }
+      await doctor.save();
+    } else if (role === "doctor" && user) {
+      // If user was promoted to doctor and didn't have doctor model before
+      doctor = await Doctor.create({
+        user: user._id,
+        fullName: name || user.fullName || user.name,
+        email: user.email,
+        phone: phone || user.phone,
+        licenseNumber: license || "RMDC-PENDING",
+        licenseExpiryDate: licenseExpiryDate || undefined,
+        doctorId: await nextDoctorId(),
+        specialty: specialty || "General Practitioner",
+        avatarUrl: avatarUrl || user.avatarUrl,
+        nationalIdUrl: nationalIdUrl || user.nationalIdImageUrl,
+        licenseCertificateUrl: licenseCertificateUrl || undefined,
+        diplomaUrl: diplomaUrl || undefined,
+        isVerified: true,
+        status: "ONLINE",
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Staff details updated successfully.",
+      user: {
+        id: String(user?._id || doctor?._id),
+        name: name || user?.fullName || doctor?.fullName,
+        email: user?.email || doctor?.email,
+        role: user?.role || "doctor",
+        status: status || (user?.status === "active" ? "Active" : "Suspended"),
+        phone: phone || user?.phone || doctor?.phone,
+        license: doctor?.licenseNumber,
+        licenseExpiryDate: doctor?.licenseExpiryDate ? new Date(doctor.licenseExpiryDate).toISOString() : "",
+      },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Could not update staff member.";
+    console.error("PUT staff error:", error);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const id = String(body.id || "").trim();
     const action = String(body.action || "").trim();
+
+    // Route action === "update" to the full update handler
+    if (action === "update") {
+      return PUT(request);
+    }
+
     if (!id || !action) {
       return NextResponse.json({ success: false, error: "Staff member and action are required." }, { status: 400 });
     }
 
     await connectToDatabase();
-    const doctor = await Doctor.findById(id);
-    if (!doctor) {
-      return NextResponse.json({ success: false, error: "Doctor not found." }, { status: 404 });
+    let doctor = await Doctor.findById(id);
+    let user = doctor ? await User.findOne({ email: doctor.email }) : await User.findById(id);
+
+    if (!doctor && user) {
+      doctor = await Doctor.findOne({ email: user.email });
     }
-    const user = await User.findOne({ email: doctor.email });
+
+    if (!doctor && !user) {
+      return NextResponse.json({ success: false, error: "Staff account not found." }, { status: 404 });
+    }
 
     if (action === "approve") {
-      doctor.isVerified = true;
-      doctor.status = "ONLINE";
-      await doctor.save();
+      if (doctor) {
+        doctor.isVerified = true;
+        doctor.status = "ONLINE";
+        await doctor.save();
+      }
       if (user) {
         user.status = "active";
         await user.save();
@@ -211,15 +375,19 @@ export async function PATCH(request: NextRequest) {
         user.status = "Suspended";
         await user.save();
       }
-      doctor.status = "OFF";
-      await doctor.save();
+      if (doctor) {
+        doctor.status = "OFF";
+        await doctor.save();
+      }
       return NextResponse.json({ success: true, status: "Suspended" });
     }
 
     if (action === "activate") {
-      doctor.isVerified = true;
-      doctor.status = "ONLINE";
-      await doctor.save();
+      if (doctor) {
+        doctor.isVerified = true;
+        doctor.status = "ONLINE";
+        await doctor.save();
+      }
       if (user) {
         user.status = "active";
         await user.save();
@@ -231,10 +399,10 @@ export async function PATCH(request: NextRequest) {
       const oneTimePassword = generateTempPassword();
       const mail = await sendBrevoEmail({
         toEmail: user.email,
-        toName: user.fullName || user.name || doctor.fullName,
+        toName: user.fullName || user.name || doctor?.fullName || "Staff Member",
         subject: "Your FitMed account sign-in details",
         htmlContent: EmailTemplates.staffAccountCreated(
-          user.fullName || user.name || doctor.fullName,
+          user.fullName || user.name || doctor?.fullName || "Staff Member",
           user.email,
           user.role === "admin" ? "admin" : "doctor",
           oneTimePassword
@@ -242,7 +410,7 @@ export async function PATCH(request: NextRequest) {
       });
       if (!mail.success) {
         return NextResponse.json(
-          { success: false, error: "The sign-in email could not be sent, so the password was not changed. Check Brevo and try again." },
+          { success: false, error: "The sign-in email could not be sent. Check Brevo and try again." },
           { status: 502 }
         );
       }
@@ -265,18 +433,27 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) {
-      return NextResponse.json({ success: false, error: "Doctor id is required." }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Staff id is required." }, { status: 400 });
     }
     await connectToDatabase();
+
     const doctor = await Doctor.findById(id);
-    if (!doctor) {
-      return NextResponse.json({ success: false, error: "Doctor not found." }, { status: 404 });
+    if (doctor) {
+      await User.deleteOne({ email: doctor.email });
+      await Doctor.findByIdAndDelete(id);
+      return NextResponse.json({ success: true });
     }
-    await User.deleteOne({ email: doctor.email, role: "doctor" });
-    await Doctor.findByIdAndDelete(id);
-    return NextResponse.json({ success: true });
+
+    const user = await User.findById(id);
+    if (user) {
+      await Doctor.deleteOne({ email: user.email });
+      await User.findByIdAndDelete(id);
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ success: false, error: "Staff member not found." }, { status: 404 });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Could not delete doctor.";
+    const message = error instanceof Error ? error.message : "Could not delete staff member.";
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
