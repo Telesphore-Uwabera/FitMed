@@ -134,7 +134,7 @@ export default function TeamSlider({ members: initialMembers }: { members?: Team
                       ? "FitMed leadership team"
                       : "FitMed administration"}
                 </span>
-                <span>Role: {member.role}</span>
+                <span>{member.qualifications}</span>
               </div>
             </div>
           </motion.div>

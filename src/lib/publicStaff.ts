@@ -55,7 +55,8 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
     .map((doc) => {
       const linked = userByEmail.get(String(doc.email || "").toLowerCase());
       const name = displayName(doc.fullName || linked?.fullName || linked?.name, "FitMed doctor");
-      const specialty = String(linked?.jobTitle || doc.specialty || "Occupational Medicine & Telehealth");
+      // Always use the Doctor record's specialty — never the User's jobTitle (which is a public title, not a specialty)
+      const specialty = String(doc.specialty || "Occupational Medicine & Telehealth");
       const license = String(doc.licenseNumber || "");
       const bio =
         String(linked?.bio || "").trim() ||
@@ -64,7 +65,7 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         id: String(doc._id),
         name,
         role: specialty,
-        qualifications: license ? `RMDC ${license}` : "Licensed physician",
+        qualifications: license ? `RMDC Lic. ${license}` : "Licensed Physician",
         bio,
         image: publicPhoto(doc.avatarUrl, linked?.avatarUrl),
         badge: "Licensed Physician",
@@ -113,7 +114,7 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         id: String(user._id),
         name,
         role: title,
-        qualifications: title,
+        qualifications: kind === "admin" ? "FitMed Administration" : "FitMed Leadership",
         bio,
         image: publicPhoto(user.avatarUrl),
         badge: kind === "admin" ? "Leadership" : "Team",
