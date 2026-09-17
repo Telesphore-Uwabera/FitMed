@@ -339,6 +339,7 @@ export default function AdminDashboardPage() {
   // Edit Staff Modal State
   const [editingStaff, setEditingStaff] = useState<any | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [savingEditStep, setSavingEditStep] = useState("");
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editNationalIdFile, setEditNationalIdFile] = useState<File | null>(null);
   const [editLicenseFile, setEditLicenseFile] = useState<File | null>(null);
@@ -540,25 +541,40 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     if (!editingStaff) return;
     setSavingEdit(true);
+    setSavingEditStep("Preparing updates...");
     try {
       let finalAvatar = editingStaff.avatarUrl;
       let finalNationalId = editingStaff.nationalIdUrl;
       let finalLicenseCert = editingStaff.licenseCertificateUrl;
       let finalDiploma = editingStaff.diplomaUrl;
 
-      // Upload new files concurrently
-      const [avatarUp, natUp, licUp, dipUp] = await Promise.all([
-        editAvatarFile ? uploadToCloudinary(editAvatarFile, "fitmed/doctors") : null,
-        editNationalIdFile ? uploadToCloudinary(editNationalIdFile, "fitmed/doctor-documents") : null,
-        editLicenseFile ? uploadToCloudinary(editLicenseFile, "fitmed/doctor-documents") : null,
-        editDiplomaFile ? uploadToCloudinary(editDiplomaFile, "fitmed/doctor-documents") : null,
-      ]);
+      // Upload new files sequentially with short spacing to avoid Cloudinary concurrency rate limits (429)
+      if (editAvatarFile) {
+        setSavingEditStep("Uploading profile photo...");
+        const avatarUp = await uploadToCloudinary(editAvatarFile, "fitmed/doctors");
+        if (avatarUp.url) finalAvatar = avatarUp.url;
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      if (editNationalIdFile) {
+        setSavingEditStep("Uploading National ID...");
+        const natUp = await uploadToCloudinary(editNationalIdFile, "fitmed/doctor-documents");
+        if (natUp.url) finalNationalId = natUp.url;
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      if (editLicenseFile) {
+        setSavingEditStep("Uploading License Certificate...");
+        const licUp = await uploadToCloudinary(editLicenseFile, "fitmed/doctor-documents");
+        if (licUp.url) finalLicenseCert = licUp.url;
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      if (editDiplomaFile) {
+        setSavingEditStep("Uploading Diploma...");
+        const dipUp = await uploadToCloudinary(editDiplomaFile, "fitmed/doctor-documents");
+        if (dipUp.url) finalDiploma = dipUp.url;
+        await new Promise((r) => setTimeout(r, 200));
+      }
 
-      if (avatarUp?.url) finalAvatar = avatarUp.url;
-      if (natUp?.url) finalNationalId = natUp.url;
-      if (licUp?.url) finalLicenseCert = licUp.url;
-      if (dipUp?.url) finalDiploma = dipUp.url;
-
+      setSavingEditStep("Saving changes...");
       const res = await fetch("/api/admin/staff", {
         method: "PUT",
         credentials: "include",
@@ -598,6 +614,7 @@ export default function AdminDashboardPage() {
       error("Update failed", err?.message || "Could not reach the server.");
     } finally {
       setSavingEdit(false);
+      setSavingEditStep("");
     }
   };
 
@@ -672,6 +689,7 @@ export default function AdminDashboardPage() {
   const [doctorDiplomaFile, setDoctorDiplomaFile] = useState<File | null>(null);
   const [showAddDoctor, setShowAddDoctor] = useState(false);
   const [creatingStaff, setCreatingStaff] = useState(false);
+  const [creatingStaffStep, setCreatingStaffStep] = useState("");
 
   // Payment Transactions State, Filters & Sorting
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<"ALL" | "PAID" | "WAITING" | "EXPIRED">("ALL");
@@ -782,7 +800,12 @@ export default function AdminDashboardPage() {
     setter: React.Dispatch<React.SetStateAction<File | null>>
   ) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setter(file);
+    if (file) {
+      if (file.size > 15 * 1024 * 1024) {
+        warning("File is very large", "This document is over 15MB. Consider compressing it for faster uploads.");
+      }
+      setter(file);
+    }
   };
 
   const filteredApplicants = applicants.filter(
@@ -2658,42 +2681,47 @@ export default function AdminDashboardPage() {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setCreatingStaff(true);
+                    setCreatingStaffStep("Preparing documents...");
                     try {
                       let finalAvatar = addDoctorForm.avatarUrl;
                       let finalNationalIdUrl = "";
                       let finalLicenseCertUrl = "";
                       let finalDiplomaUrl = "";
 
-                      // Upload avatar & credential documents concurrently to Cloudinary
-                      const [avatarUpload, nationalIdUpload, licenseUpload, diplomaUpload] = await Promise.all([
-                        doctorWebpResult ? uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors") : null,
-                        doctorNationalIdFile
-                          ? uploadToCloudinary(doctorNationalIdFile, "fitmed/doctor-documents")
-                          : null,
-                        addDoctorForm.role === "doctor" && doctorLicenseFile
-                          ? uploadToCloudinary(doctorLicenseFile, "fitmed/doctor-documents")
-                          : null,
-                        doctorDiplomaFile
-                          ? uploadToCloudinary(doctorDiplomaFile, "fitmed/doctor-documents")
-                          : null,
-                      ]);
-
-                      if (avatarUpload) {
+                      // Upload avatar & credential documents sequentially to avoid Cloudinary rate limits (429)
+                      if (doctorWebpResult) {
+                        setCreatingStaffStep("Uploading profile photo...");
+                        const avatarUpload = await uploadToCloudinary(doctorWebpResult.file, "fitmed/doctors");
                         if (!avatarUpload.url) throw new Error(avatarUpload.error || "Failed to upload profile photo.");
                         finalAvatar = avatarUpload.url;
+                        await new Promise((r) => setTimeout(r, 200));
                       }
-                      if (nationalIdUpload) {
+
+                      if (doctorNationalIdFile) {
+                        setCreatingStaffStep("Uploading National ID...");
+                        const nationalIdUpload = await uploadToCloudinary(doctorNationalIdFile, "fitmed/doctor-documents");
                         if (!nationalIdUpload.url) throw new Error(nationalIdUpload.error || "Failed to upload National ID.");
                         finalNationalIdUrl = nationalIdUpload.url;
+                        await new Promise((r) => setTimeout(r, 200));
                       }
-                      if (licenseUpload) {
+
+                      if (addDoctorForm.role === "doctor" && doctorLicenseFile) {
+                        setCreatingStaffStep("Uploading License Certificate...");
+                        const licenseUpload = await uploadToCloudinary(doctorLicenseFile, "fitmed/doctor-documents");
                         if (!licenseUpload.url) throw new Error(licenseUpload.error || "Failed to upload License Certificate.");
                         finalLicenseCertUrl = licenseUpload.url;
+                        await new Promise((r) => setTimeout(r, 200));
                       }
-                      if (diplomaUpload) {
-                        if (!diplomaUpload.url) throw new Error(diplomaUpload.error || "Failed to upload Medical Diploma.");
+
+                      if (doctorDiplomaFile) {
+                        setCreatingStaffStep(addDoctorForm.role === "doctor" ? "Uploading Medical Diploma..." : "Uploading Diploma...");
+                        const diplomaUpload = await uploadToCloudinary(doctorDiplomaFile, "fitmed/doctor-documents");
+                        if (!diplomaUpload.url) throw new Error(diplomaUpload.error || "Failed to upload Diploma.");
                         finalDiplomaUrl = diplomaUpload.url;
+                        await new Promise((r) => setTimeout(r, 200));
                       }
+
+                      setCreatingStaffStep("Creating account...");
                       const res = await fetch("/api/admin/staff", {
                         credentials: "include",
                         method: "POST",
@@ -2799,6 +2827,7 @@ export default function AdminDashboardPage() {
                       error("Account not created", err?.message || "Could not reach the server.");
                     } finally {
                       setCreatingStaff(false);
+                      setCreatingStaffStep("");
                     }
                   }}
                   className="bg-white/10 rounded-2xl p-6 border border-white/10 space-y-4"
@@ -3095,7 +3124,7 @@ export default function AdminDashboardPage() {
                     >
                       <UserPlus className="w-4 h-4" />
                       {creatingStaff
-                        ? "Saving…"
+                        ? creatingStaffStep || "Saving…"
                         : addDoctorForm.role === "admin"
                           ? "Create Admin Account"
                           : addDoctorForm.role === "staff"
@@ -5001,7 +5030,7 @@ export default function AdminDashboardPage() {
                   {savingEdit ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving Changes…</span>
+                      <span>{savingEditStep || "Saving Changes…"}</span>
                     </>
                   ) : (
                     <>

@@ -118,6 +118,8 @@ export function isCloudinaryUrl(url?: string) {
   return /^https:\/\/res\.cloudinary\.com\//i.test(value);
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function uploadToCloudinary(
   fileOrDataUrl: File | Blob | string,
   folder = "fitmed/profiles"
@@ -130,35 +132,68 @@ export async function uploadToCloudinary(
     if (signRes.ok) {
       const signData = await signRes.json();
       if (signData.signature && signData.apiKey && signData.cloudName) {
-        const directForm = new FormData();
-        if (typeof fileOrDataUrl === "string") {
-          directForm.append("file", fileOrDataUrl);
-        } else {
-          const fileName =
-            fileOrDataUrl instanceof File && fileOrDataUrl.name
-              ? fileOrDataUrl.name
-              : "document";
-          directForm.append("file", fileOrDataUrl, fileName);
-        }
-        directForm.append("api_key", signData.apiKey);
-        directForm.append("timestamp", String(signData.timestamp));
-        directForm.append("signature", signData.signature);
-        directForm.append("folder", signData.folder || folder);
+        const createDirectForm = () => {
+          const directForm = new FormData();
+          if (typeof fileOrDataUrl === "string") {
+            directForm.append("file", fileOrDataUrl);
+          } else {
+            const fileName =
+              fileOrDataUrl instanceof File && fileOrDataUrl.name
+                ? fileOrDataUrl.name
+                : "document";
+            directForm.append("file", fileOrDataUrl, fileName);
+          }
+          directForm.append("api_key", signData.apiKey);
+          directForm.append("timestamp", String(signData.timestamp));
+          directForm.append("signature", signData.signature);
+          directForm.append("folder", signData.folder || folder);
+          return directForm;
+        };
 
         const uploadEndpoint = `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`;
-        const cRes = await fetch(uploadEndpoint, {
-          method: "POST",
-          body: directForm,
-        });
-        const cData = await cRes.json().catch(() => ({}));
-        const directUrl = String(cData.secure_url || cData.url || "");
-        if (cRes.ok && isCloudinaryUrl(directUrl)) {
-          return {
-            url: directUrl,
-            publicId: cData.public_id || "",
-            format: cData.format || "pdf",
-          };
+
+        // Direct upload with retry for 429 rate limits
+        let cRes: Response | null = null;
+        let cData: any = {};
+        const maxDirectRetries = 2;
+
+        for (let attempt = 0; attempt <= maxDirectRetries; attempt++) {
+          try {
+            cRes = await fetch(uploadEndpoint, {
+              method: "POST",
+              body: createDirectForm(),
+            });
+            cData = await cRes.json().catch(() => ({}));
+            const directUrl = String(cData.secure_url || cData.url || "");
+            if (cRes.ok && isCloudinaryUrl(directUrl)) {
+              return {
+                url: directUrl,
+                publicId: cData.public_id || "",
+                format: cData.format || "pdf",
+              };
+            }
+
+            const is429 =
+              cRes.status === 429 ||
+              String(cData?.error?.message || "").toLowerCase().includes("slow down") ||
+              String(cData?.error?.message || "").toLowerCase().includes("processing capacity");
+
+            if (is429 && attempt < maxDirectRetries) {
+              const backoff = (attempt + 1) * 1200;
+              console.warn(`[Cloudinary Direct] Rate limited (429), retrying in ${backoff}ms (attempt ${attempt + 1}/${maxDirectRetries})...`);
+              await sleep(backoff);
+              continue;
+            }
+            break;
+          } catch (netErr) {
+            if (attempt < maxDirectRetries) {
+              await sleep(1000);
+              continue;
+            }
+            throw netErr;
+          }
         }
+
         if (cData?.error?.message) {
           console.warn("Cloudinary direct upload message:", cData.error.message);
         }
@@ -168,44 +203,78 @@ export async function uploadToCloudinary(
     console.warn("Direct Cloudinary upload failed, attempting fallback to /api/upload:", directErr);
   }
 
-  // 2. Fallback to /api/upload
+  // Small delay before fallback if previous attempt was rate-limited
+  await sleep(600);
+
+  // 2. Fallback to /api/upload with retry
   try {
-    const formData = new FormData();
+    const createFallbackForm = () => {
+      const formData = new FormData();
+      if (typeof fileOrDataUrl === "string") {
+        formData.append("file", fileOrDataUrl);
+      } else {
+        const fileName =
+          fileOrDataUrl instanceof File && fileOrDataUrl.name
+            ? fileOrDataUrl.name
+            : "profile.webp";
+        formData.append("file", fileOrDataUrl, fileName);
+      }
+      formData.append("folder", folder);
+      return formData;
+    };
 
-    if (typeof fileOrDataUrl === "string") {
-      formData.append("file", fileOrDataUrl);
-    } else {
-      const fileName =
-        fileOrDataUrl instanceof File && fileOrDataUrl.name
-          ? fileOrDataUrl.name
-          : "profile.webp";
-      formData.append("file", fileOrDataUrl, fileName);
-    }
-    formData.append("folder", folder);
+    const maxFallbackRetries = 2;
+    let response: Response | null = null;
+    let data: any = {};
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      credentials: "include",
-      body: formData,
-    });
-    const data = await response.json().catch(() => ({}));
-    const url = String(data.url || "");
-    if (!response.ok || !isCloudinaryUrl(url)) {
-      const errorMsg =
-        response.status === 413
-          ? "File is too large for the server. Please compress or optimize the document."
-          : (data.error || "Cloudinary did not store this file. Try again.");
-      return {
-        url: "",
-        publicId: "",
-        format: "webp",
-        error: errorMsg,
-      };
+    for (let attempt = 0; attempt <= maxFallbackRetries; attempt++) {
+      response = await fetch("/api/upload", {
+        method: "POST",
+        credentials: "include",
+        body: createFallbackForm(),
+      });
+      data = await response.json().catch(() => ({}));
+      const url = String(data.url || "");
+
+      if (response.ok && isCloudinaryUrl(url)) {
+        return {
+          url,
+          publicId: data.publicId || "",
+          format: data.format || "webp",
+        };
+      }
+
+      const isRateLimited =
+        response.status === 429 ||
+        String(data?.error || "").includes("429") ||
+        String(data?.error || "").toLowerCase().includes("slow down") ||
+        String(data?.error || "").toLowerCase().includes("temporarily busy");
+
+      if (isRateLimited && attempt < maxFallbackRetries) {
+        const backoff = (attempt + 1) * 1500;
+        console.warn(`[/api/upload] Rate limited (429), retrying in ${backoff}ms (attempt ${attempt + 1}/${maxFallbackRetries})...`);
+        await sleep(backoff);
+        continue;
+      }
+      break;
     }
+
+    const is429Final =
+      response?.status === 429 ||
+      String(data?.error || "").includes("429") ||
+      String(data?.error || "").toLowerCase().includes("slow down");
+
+    const errorMsg = is429Final
+      ? "Upload service is temporarily busy. Please wait a few seconds and try again."
+      : response?.status === 413
+        ? "File is too large for the server. Please compress or optimize the document."
+        : (data.error || "Cloudinary did not store this file. Try again.");
+
     return {
-      url,
-      publicId: data.publicId || "",
-      format: data.format || "webp",
+      url: "",
+      publicId: "",
+      format: "webp",
+      error: errorMsg,
     };
   } catch (err: any) {
     console.error("Upload error:", err);

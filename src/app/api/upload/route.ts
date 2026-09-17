@@ -63,11 +63,6 @@ export async function POST(request: NextRequest) {
       process.env.CLOUDINARY_API_KEY &&
       process.env.CLOUDINARY_API_SECRET;
 
-    const isDocument = folder.includes("document") || folder.includes("clinical");
-    const uploadOptions = isDocument
-      ? { folder, resource_type: "auto" as const }
-      : { folder, format: "webp" as const, resource_type: "image" as const };
-
     if (!hasCloudinary) {
       return NextResponse.json(
         { error: "Cloudinary is not configured. Photos cannot be stored until CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set." },
@@ -75,36 +70,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isPdf =
+      (file instanceof Blob && (file.type === "application/pdf" || (file as File).name?.toLowerCase().endsWith(".pdf"))) ||
+      (typeof file === "string" && (file.startsWith("data:application/pdf") || (file.includes(";base64,") && file.toLowerCase().includes("pdf"))));
+    const isDocument = isPdf || folder.includes("document") || folder.includes("clinical") || folder.includes("id");
+    const uploadOptions = isDocument
+      ? { folder, resource_type: "auto" as const }
+      : { folder, format: "webp" as const, resource_type: "image" as const };
+
+    const maxRetries = 2;
     let uploadData: any;
 
-    if (typeof file === "string") {
-      uploadData = await cloudinary.uploader.upload(file, uploadOptions);
-    } else if (file instanceof Blob) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (typeof file === "string") {
+          uploadData = await cloudinary.uploader.upload(file, uploadOptions);
+        } else if (file instanceof Blob) {
+          const arrayBuffer = await file.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
 
-      uploadData = await new Promise((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(uploadOptions, (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          })
-          .end(buffer);
-      });
+          uploadData = await new Promise((resolve, reject) => {
+            cloudinary.uploader
+              .upload_stream(uploadOptions, (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              })
+              .end(buffer);
+          });
+        }
+        break;
+      } catch (err: any) {
+        const is429 =
+          err?.http_code === 429 ||
+          String(err?.message || "").includes("429") ||
+          String(err?.message || "").toLowerCase().includes("slow down") ||
+          String(err?.message || "").toLowerCase().includes("processing capacity");
+
+        if (is429 && attempt < maxRetries) {
+          const waitMs = (attempt + 1) * 1500;
+          console.warn(`[Cloudinary API] 429 rate limit encountered, retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+          await new Promise((r) => setTimeout(r, waitMs));
+          continue;
+        }
+        throw err;
+      }
     }
 
     return NextResponse.json({
       success: true,
       url: uploadData.secure_url || uploadData.url,
       publicId: uploadData.public_id,
-      format: uploadData.format || "webp",
+      format: uploadData.format || (isPdf ? "pdf" : "webp"),
       bytes: uploadData.bytes,
     });
   } catch (error: any) {
     console.error("Cloudinary upload failed:", error);
+    const is429 =
+      error?.http_code === 429 ||
+      String(error?.message || "").includes("429") ||
+      String(error?.message || "").toLowerCase().includes("slow down") ||
+      String(error?.message || "").toLowerCase().includes("processing capacity");
+
+    const status = is429 ? 429 : 500;
+    const userMessage = is429
+      ? "Cloudinary media service is temporarily busy. Please wait a moment and try again."
+      : error?.message || "Failed to upload image to Cloudinary";
+
     return NextResponse.json(
-      { error: error.message || "Failed to upload image to Cloudinary" },
-      { status: 500 }
+      { error: userMessage },
+      { status }
     );
   }
 }
