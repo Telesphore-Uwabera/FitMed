@@ -59,6 +59,7 @@ import { toOfficialCertificateData } from "@/lib/certificateDisplay";
 import StructuredDoctorAssessmentForm from "@/components/StructuredDoctorAssessmentForm";
 import ApplicantQuestionnaireViewer from "@/components/ApplicantQuestionnaireViewer";
 import CertificateActionPanel from "@/components/CertificateActionPanel";
+import DocumentPreviewModal, { DocumentPreviewItem } from "@/components/DocumentPreviewModal";
 import { useToast } from "@/components/ToastProvider";
 import { subscribeLiveRefresh, broadcastLiveRefresh } from "@/lib/liveRefresh";
 import { useDialog } from "@/components/DialogProvider";
@@ -203,6 +204,7 @@ export default function DoctorDashboardPage() {
   const [showDoctorNotesModal, setShowDoctorNotesModal] = useState(false);
   const [doctorNotes, setDoctorNotes] = useState("");
   const [doctorDocuments, setDoctorDocuments] = useState<Array<{ name: string; url: string; type: string }>>([]);
+  const [selectedDocPreview, setSelectedDocPreview] = useState<DocumentPreviewItem | null>(null);
 
   // Structured assessment form state
   const [showStructuredAssessmentModal, setShowStructuredAssessmentModal] = useState(false);
@@ -553,7 +555,45 @@ export default function DoctorDashboardPage() {
     } catch {
       error("Invite not sent", "Could not reach the server.");
     }
-  };  const [queue, setQueue] = useState<any[]>([]);
+  };
+
+  // ── Video consultation gate helpers ─────────────────────────────────────────
+  /**
+   * Returns true when at least one appointment linked to this certificate has
+   * been marked "completed" (i.e. the video call was carried out).
+   * Also returns true if the certificate status itself reflects completion.
+   */
+  function isVideoCompleted(cert: any, appointments: any[]): boolean {
+    const certId = String(cert?.certificateId || "");
+    const certStatus = String(cert?.status || "").toLowerCase();
+    // Status-based shortcut
+    if (certStatus === "video-completed" || certStatus === "approved" || certStatus === "valid" || certStatus === "issued") return true;
+    // Cross-reference appointments
+    return appointments.some((apt) => {
+      const aptStatus = String(apt?.status || "").toLowerCase();
+      const linkedCertId = String(apt?.certificateDraftId || "");
+      const linkedEmail = String(apt?.applicantEmail || "").toLowerCase();
+      const certEmail = String(cert?.applicantEmail || "").toLowerCase();
+      if (aptStatus !== "completed") return false;
+      // Match by certificateDraftId first, fall back to email match
+      if (certId && linkedCertId && linkedCertId === certId) return true;
+      if (certEmail && linkedEmail && linkedEmail === certEmail) return true;
+      return false;
+    });
+  }
+
+  /**
+   * Returns true when the doctor has submitted a structured assessment report
+   * for this certificate (structuredAssessment.decision must be non-empty).
+   */
+  function hasFilledAssessment(cert: any): boolean {
+    const sa = cert?.structuredAssessment;
+    if (!sa) return false;
+    return Boolean(sa.decision && String(sa.decision).trim().length > 0);
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
+  const [queue, setQueue] = useState<any[]>([]);
   const [allApplications, setAllApplications] = useState<any[]>([]);
   const pendingMeetingApplicants = useMemo(() => {
     const seen = new Set<string>();
@@ -1076,6 +1116,8 @@ export default function DoctorDashboardPage() {
                         doctorEmail={session?.email || doctorProfile.email || ""}
                         doctorName={doctorProfile.name || session?.name || "Physician"}
                         doctorSpecialty={doctorProfile.specialty || "Occupational Health & Telehealth Physician"}
+                        videoConsultationCompleted={isVideoCompleted(candidate.fullCertificate, doctorAppointments)}
+                        hasAssessmentReport={hasFilledAssessment(candidate.fullCertificate)}
                         onStatusChanged={(newStatus, newDecision) => {
                           setQueue((prev) =>
                             prev.map((c) =>
@@ -1903,6 +1945,7 @@ export default function DoctorDashboardPage() {
                 setWebRTCRoomId("");
                 setMeetingStatus("idle");
                 localStorage.removeItem(`fitmed_meeting:${meetingRoomId}`);
+                // Mark the appointment as completed in local state
                 setDoctorAppointments((prev) =>
                   prev.map((a) =>
                     a.appointmentId === meetingRoomId || a.roomId === meetingRoomId
@@ -1910,12 +1953,33 @@ export default function DoctorDashboardPage() {
                       : a
                   )
                 );
+                // Persist appointment completion to DB
                 void fetch("/api/appointments", {
                   credentials: "include",
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ appointmentId: meetingRoomId, status: "completed" }),
                 });
+                // Also update the linked certificate status to "video-completed"
+                // so the approval gate can detect completion via cert status too.
+                const linkedApt = doctorAppointments.find(
+                  (a) => a.appointmentId === meetingRoomId || a.roomId === meetingRoomId
+                );
+                const linkedCertId = linkedApt?.certificateDraftId || selectedCandidate?.id || "";
+                if (linkedCertId) {
+                  void fetch("/api/certificates", {
+                    credentials: "include",
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ certificateId: linkedCertId, status: "video-completed" }),
+                  });
+                  // Reflect the status change locally so the UI updates immediately
+                  setAllApplications((prev: any[]) =>
+                    prev.map((c) =>
+                      c.certificateId === linkedCertId ? { ...c, status: "video-completed" } : c
+                    )
+                  );
+                }
               }}
             />
           </div>
@@ -2886,8 +2950,44 @@ export default function DoctorDashboardPage() {
             )}
             {selectedApplication.nationalIdImageUrl && (
               <div className="space-y-2">
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">ID document</div>
-                <img src={selectedApplication.nationalIdImageUrl} alt="ID document" className="w-full max-h-64 object-contain rounded-2xl border border-slate-200 bg-slate-50" />
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">ID Document</div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedDocPreview({
+                        url: selectedApplication.nationalIdImageUrl,
+                        title: `${selectedApplication.candidateName} — ID Document`,
+                        subtitle: `Certificate: ${selectedApplication.certificateId} · National ID: ${selectedApplication.candidateIdNumber || "—"}`,
+                        badge: "Candidate ID",
+                        badgeColor: "blue",
+                      })
+                    }
+                    className="text-[11px] font-bold text-[#12B8B0] hover:text-[#0fa49c] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview in Dashboard</span>
+                  </button>
+                </div>
+                <div
+                  className="relative group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                  onClick={() =>
+                    setSelectedDocPreview({
+                      url: selectedApplication.nationalIdImageUrl,
+                      title: `${selectedApplication.candidateName} — ID Document`,
+                      subtitle: `Certificate: ${selectedApplication.certificateId} · National ID: ${selectedApplication.candidateIdNumber || "—"}`,
+                      badge: "Candidate ID",
+                      badgeColor: "blue",
+                    })
+                  }
+                  title="Click to preview within dashboard"
+                >
+                  <img src={selectedApplication.nationalIdImageUrl} alt="ID document" className="w-full max-h-64 object-contain transition-transform duration-200 group-hover:scale-[1.01]" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs backdrop-blur-[2px]">
+                    <Eye className="w-4 h-4 text-[#12B8B0]" />
+                    <span>Click to open full dashboard preview</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2905,6 +3005,8 @@ export default function DoctorDashboardPage() {
                 doctorEmail={session?.email || doctorProfile.email || ""}
                 doctorName={doctorProfile.name || session?.name || "Physician"}
                 doctorSpecialty={doctorProfile.specialty || "Occupational Health & Telehealth Physician"}
+                videoConsultationCompleted={isVideoCompleted(selectedApplication, doctorAppointments)}
+                hasAssessmentReport={hasFilledAssessment(selectedApplication)}
                 onStatusChanged={(newStatus, newDecision) => {
                   setSelectedApplication((prev: any) =>
                     prev ? { ...prev, status: newStatus, ...(newDecision ? { decision: newDecision } : {}) } : prev
@@ -3035,9 +3137,23 @@ export default function DoctorDashboardPage() {
                     <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
                       <div className="flex items-center gap-2">
                         <FileCheck className="w-4 h-4 text-[#12B8B0]" />
-                      <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-[#0B2D5C] hover:underline">
-                        {doc.name}
-                      </a>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedDocPreview({
+                              url: doc.url,
+                              title: doc.name,
+                              subtitle: `Clinical Assessment Attachment · ${doc.type || "Document"}`,
+                              badge: "Doctor Document",
+                              badgeColor: "teal",
+                            })
+                          }
+                          className="text-xs font-medium text-[#0B2D5C] hover:text-[#12B8B0] hover:underline text-left cursor-pointer flex items-center gap-1.5"
+                          title="Preview document in dashboard"
+                        >
+                          <span>{doc.name}</span>
+                          <Eye className="w-3 h-3 text-[#12B8B0] opacity-70 shrink-0" />
+                        </button>
                       </div>
                       <button
                         onClick={() => setDoctorDocuments(documents => documents.filter((_, i) => i !== idx))}
@@ -3561,6 +3677,13 @@ export default function DoctorDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ── In-Dashboard Document Preview Modal ── */}
+      <DocumentPreviewModal
+        isOpen={!!selectedDocPreview}
+        onClose={() => setSelectedDocPreview(null)}
+        document={selectedDocPreview}
+      />
     </DashboardShell>
   );
 }

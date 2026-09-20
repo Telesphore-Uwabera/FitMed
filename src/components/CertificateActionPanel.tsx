@@ -26,6 +26,8 @@ import {
   SearchIcon,
   ChevronDown,
   Loader2,
+  ClipboardList,
+  Lock,
 } from "lucide-react";
 import BrandDatePicker from "@/components/BrandDatePicker";
 import BrandTimePicker from "@/components/BrandTimePicker";
@@ -55,6 +57,16 @@ export interface CertificateActionPanelProps {
   className?: string;
   /** If true, render as compact icon-only bar suitable for the modal footer */
   compact?: boolean;
+  /**
+   * Whether the video consultation call has been completed for this certificate.
+   * Approval is blocked until this is true.
+   */
+  videoConsultationCompleted?: boolean;
+  /**
+   * Whether the doctor has submitted an assessment report (structuredAssessment)
+   * for this certificate. Approval is blocked until this is true.
+   */
+  hasAssessmentReport?: boolean;
 }
 
 // ── Status colour helpers ─────────────────────────────────────────────────────
@@ -90,7 +102,12 @@ export default function CertificateActionPanel({
   onAppointmentCreated,
   className = "",
   compact = false,
+  videoConsultationCompleted = false,
+  hasAssessmentReport = false,
 }: CertificateActionPanelProps) {
+  // Approval is only allowed after both the video consultation AND the
+  // assessment report are completed.
+  const isApproveBlocked = !videoConsultationCompleted || !hasAssessmentReport;
   // ── Local UI state ────────────────────────────────────────────────────────
   const [busy, setBusy] = useState<string | null>(null); // which action is in flight
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -236,6 +253,11 @@ export default function CertificateActionPanel({
     ["approved", "valid", "issued", "rejected"].includes(currentStatus.toLowerCase()) &&
     currentStatus.toLowerCase() !== "submitted";
 
+  // ── What's blocking approval (for the info banner) ──────────────────────
+  const blockingReasons: string[] = [];
+  if (!videoConsultationCompleted) blockingReasons.push("Video consultation not yet completed");
+  if (!hasAssessmentReport) blockingReasons.push("Assessment report not yet submitted");
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // Compact mode: just icon buttons with tooltips (for modal footer strip)
@@ -264,6 +286,47 @@ export default function CertificateActionPanel({
         )}
       </div>
 
+      {/* ── Approval Gate Banner ─────────────────────────────────────────── */}
+      {!isTerminal && isApproveBlocked && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <div className="p-1.5 rounded-lg bg-amber-100 border border-amber-200 shrink-0 mt-0.5">
+              <Lock className="w-3.5 h-3.5 text-amber-700" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-extrabold text-amber-900 leading-tight">
+                Certificate approval is locked
+              </p>
+              <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">
+                Both steps below must be completed before you can approve this certificate.
+              </p>
+            </div>
+          </div>
+          <ul className="space-y-1.5">
+            <li className="flex items-center gap-2 text-[10px] font-bold">
+              {videoConsultationCompleted ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              ) : (
+                <Video className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              )}
+              <span className={videoConsultationCompleted ? "text-emerald-700 line-through" : "text-amber-800"}>
+                Complete the video consultation
+              </span>
+            </li>
+            <li className="flex items-center gap-2 text-[10px] font-bold">
+              {hasAssessmentReport ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              ) : (
+                <ClipboardList className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              )}
+              <span className={hasAssessmentReport ? "text-emerald-700 line-through" : "text-amber-800"}>
+                Submit the assessment report
+              </span>
+            </li>
+          </ul>
+        </div>
+      )}
+
       {/* ── Primary action buttons ────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
 
@@ -271,14 +334,17 @@ export default function CertificateActionPanel({
         <div className="relative">
           <button
             type="button"
-            disabled={!!busy || isTerminal}
+            disabled={!!busy || isTerminal || isApproveBlocked}
             onClick={() => {
               setShowRejectForm(false);
               setShowVideoForm(false);
               setShowApproveOptions((o) => !o);
             }}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-[11px] transition-colors shadow-sm"
-          >
+            title={isApproveBlocked ? `Approval locked: ${blockingReasons.join(" · ")}` : "Approve certificate"}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-[11px] transition-colors shadow-sm">
+            {isApproveBlocked && !busy && (
+              <Lock className="w-3 h-3 opacity-80" />
+            )}
             {busy === "approve" ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (

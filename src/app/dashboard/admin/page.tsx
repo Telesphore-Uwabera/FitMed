@@ -63,6 +63,7 @@ import { subscribeLiveRefresh } from "@/lib/liveRefresh";
 import { useDialog } from "@/components/DialogProvider";
 import { useSession } from "@/lib/useSession";
 import { displayDoctorName } from "@/lib/certificateDisplay";
+import DocumentPreviewModal, { DocumentPreviewItem } from "@/components/DocumentPreviewModal";
 
 type ApplicantRecord = {
   id: string;
@@ -737,6 +738,7 @@ export default function AdminDashboardPage() {
   const [certEndDate, setCertEndDate] = useState("");
   const [certSearch, setCertSearch] = useState("");
   const [selectedCertPreview, setSelectedCertPreview] = useState<any | null>(null);
+  const [selectedDocPreview, setSelectedDocPreview] = useState<DocumentPreviewItem | null>(null);
 
   const [transactions, setTransactions] = useState<
     {
@@ -2448,8 +2450,30 @@ export default function AdminDashboardPage() {
                           <span>·</span>
                           <span>National ID: <strong className="font-mono text-[#0B2D5C]">{applicant.nationalId}</strong></span>
                         </div>
-                        <div className="text-[11px] text-amber-900 font-semibold">
-                          Submitted: {applicant.applied} · ID document attached
+                        <div className="text-[11px] text-amber-900 font-semibold flex items-center gap-2 flex-wrap pt-0.5">
+                          <span>Submitted: {applicant.applied}</span>
+                          {applicant.idDocUrl ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: applicant.idDocUrl!,
+                                  title: `${applicant.name} — National ID`,
+                                  subtitle: `Applicant ID: ${applicant.applicantId || applicant.id} · National ID: ${applicant.nationalId}`,
+                                  badge: "Pending Applicant ID",
+                                  badgeColor: "amber",
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors cursor-pointer"
+                              title="Preview National ID within Dashboard"
+                            >
+                              <IdCard className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                              <span>Preview ID</span>
+                              <Eye className="w-3 h-3 text-blue-600 shrink-0" />
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 italic">· No ID attached</span>
+                          )}
                         </div>
                       </div>
 
@@ -2512,6 +2536,35 @@ export default function AdminDashboardPage() {
                           <span className="flex items-center gap-1"><IdCard className="w-3 h-3" />{p.nationalId}</span>
                         </div>
                         <div className="text-slate-400 mt-0.5">Joined: {p.joined} · Certificates: <strong>{p.certs}</strong></div>
+                        <div className="flex flex-wrap gap-1.5 pt-1.5">
+                          {p.idDocUrl ? (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setSelectedDocPreview({
+                                  url: p.idDocUrl!,
+                                  title: `${p.name} — National ID`,
+                                  subtitle: `Applicant ID: ${p.applicantId || p.id} · National ID: ${p.nationalId}`,
+                                  badge: "Applicant National ID",
+                                  badgeColor: "blue",
+                                });
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors cursor-pointer"
+                              title="Preview National ID within Dashboard"
+                            >
+                              <IdCard className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+                              <span>National ID</span>
+                              <Eye className="w-3 h-3 text-blue-600 shrink-0" />
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium text-slate-400 bg-slate-50 border border-slate-200">
+                              <IdCard className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>No ID Uploaded</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -3191,25 +3244,64 @@ export default function AdminDashboardPage() {
                       {doc.phone && <div className="text-[11px] text-slate-500">Phone: {doc.phone}</div>}
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {doc.nationalIdUrl && (
-                          <a href={doc.nationalIdUrl} target="_blank" rel="noreferrer"
-                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedDocPreview({
+                                url: doc.nationalIdUrl!,
+                                title: `${doc.name} — National ID`,
+                                subtitle: `Specialty: ${doc.specialty} · License: ${doc.license}`,
+                                badge: "National ID",
+                                badgeColor: "blue",
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors cursor-pointer"
+                            title="Preview National ID within Dashboard"
+                          >
                             <IdCard className="w-3.5 h-3.5 text-blue-700 shrink-0" />
                             <span>National ID</span>
-                          </a>
+                            <Eye className="w-3 h-3 text-blue-600 shrink-0 opacity-80" />
+                          </button>
                         )}
                         {doc.licenseCertificateUrl && (
-                          <a href={doc.licenseCertificateUrl} target="_blank" rel="noreferrer"
-                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedDocPreview({
+                                url: doc.licenseCertificateUrl!,
+                                title: `${doc.name} — License Certificate`,
+                                subtitle: `License: ${doc.license} · Specialty: ${doc.specialty}`,
+                                badge: "License Certificate",
+                                badgeColor: "amber",
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors cursor-pointer"
+                            title="Preview License Certificate within Dashboard"
+                          >
                             <FileBadge className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                             <span>License Certificate</span>
-                          </a>
+                            <Eye className="w-3 h-3 text-amber-600 shrink-0 opacity-80" />
+                          </button>
                         )}
                         {doc.diplomaUrl && (
-                          <a href={doc.diplomaUrl} target="_blank" rel="noreferrer"
-                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedDocPreview({
+                                url: doc.diplomaUrl!,
+                                title: `${doc.name} — Medical Diploma`,
+                                subtitle: `Specialty: ${doc.specialty} · License: ${doc.license}`,
+                                badge: "Diploma / Degree",
+                                badgeColor: "emerald",
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors cursor-pointer"
+                            title="Preview Diploma within Dashboard"
+                          >
                             <GraduationCap className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                             <span>Diploma</span>
-                          </a>
+                            <Eye className="w-3 h-3 text-emerald-600 shrink-0 opacity-80" />
+                          </button>
                         )}
                       </div>
                     </div>
@@ -3313,25 +3405,64 @@ export default function AdminDashboardPage() {
                         <div className="text-slate-400 text-[11px] mt-0.5">{d.role} {d.phone ? `· ${d.phone}` : ""}</div>
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {d.nationalIdUrl && (
-                            <a href={d.nationalIdUrl} target="_blank" rel="noreferrer"
-                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: d.nationalIdUrl!,
+                                  title: `${d.name} — National ID`,
+                                  subtitle: `ID: ${d.doctorId || d.id} · Specialty: ${d.specialty} · License: ${d.license}`,
+                                  badge: "National ID",
+                                  badgeColor: "blue",
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors cursor-pointer"
+                              title="Preview National ID within Dashboard"
+                            >
                               <IdCard className="w-3.5 h-3.5 text-blue-700 shrink-0" />
                               <span>National ID</span>
-                            </a>
+                              <Eye className="w-3 h-3 text-blue-600 shrink-0 opacity-80" />
+                            </button>
                           )}
                           {d.licenseCertificateUrl && (
-                            <a href={d.licenseCertificateUrl} target="_blank" rel="noreferrer"
-                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: d.licenseCertificateUrl!,
+                                  title: `${d.name} — License Certificate`,
+                                  subtitle: `License: ${d.license} · Specialty: ${d.specialty}`,
+                                  badge: "License Certificate",
+                                  badgeColor: "amber",
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors cursor-pointer"
+                              title="Preview License Certificate within Dashboard"
+                            >
                               <FileBadge className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                               <span>License Certificate</span>
-                            </a>
+                              <Eye className="w-3 h-3 text-amber-600 shrink-0 opacity-80" />
+                            </button>
                           )}
                           {d.diplomaUrl && (
-                            <a href={d.diplomaUrl} target="_blank" rel="noreferrer"
-                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: d.diplomaUrl!,
+                                  title: `${d.name} — Medical Diploma`,
+                                  subtitle: `License: ${d.license} · Specialty: ${d.specialty}`,
+                                  badge: "Diploma / Degree",
+                                  badgeColor: "emerald",
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-colors cursor-pointer"
+                              title="Preview Diploma within Dashboard"
+                            >
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                               <span>Diploma</span>
-                            </a>
+                              <Eye className="w-3 h-3 text-emerald-600 shrink-0 opacity-80" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -4364,8 +4495,44 @@ export default function AdminDashboardPage() {
             </div>
             {selectedApplicant.idDocUrl ? (
               <div className="space-y-2">
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">National ID / passport photo</div>
-                <img src={selectedApplicant.idDocUrl} alt="National ID" className="w-full max-h-72 object-contain rounded-2xl border border-slate-200 bg-slate-50" />
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">National ID / passport photo</div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedDocPreview({
+                        url: selectedApplicant.idDocUrl!,
+                        title: `${selectedApplicant.name} — National ID`,
+                        subtitle: `Applicant ID: ${selectedApplicant.applicantId || selectedApplicant.id} · National ID: ${selectedApplicant.nationalId}`,
+                        badge: "National ID",
+                        badgeColor: "blue",
+                      })
+                    }
+                    className="text-[11px] font-bold text-[#12B8B0] hover:text-[#0fa49c] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Expand & Preview in Dashboard</span>
+                  </button>
+                </div>
+                <div
+                  className="relative group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                  onClick={() =>
+                    setSelectedDocPreview({
+                      url: selectedApplicant.idDocUrl!,
+                      title: `${selectedApplicant.name} — National ID`,
+                      subtitle: `Applicant ID: ${selectedApplicant.applicantId || selectedApplicant.id} · National ID: ${selectedApplicant.nationalId}`,
+                      badge: "National ID",
+                      badgeColor: "blue",
+                    })
+                  }
+                  title="Click to preview within dashboard"
+                >
+                  <img src={selectedApplicant.idDocUrl} alt="National ID" className="w-full max-h-72 object-contain transition-transform duration-200 group-hover:scale-[1.01]" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs backdrop-blur-[2px]">
+                    <Eye className="w-4 h-4 text-[#12B8B0]" />
+                    <span>Click to open full dashboard preview</span>
+                  </div>
+                </div>
               </div>
             ) : (
               <p className="text-xs text-slate-500">No ID document was uploaded.</p>
@@ -4853,9 +5020,22 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-slate-800 text-[11px]">National ID</span>
                           {editingStaff.nationalIdUrl && (
-                            <a href={editingStaff.nationalIdUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
-                              View
-                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: editingStaff.nationalIdUrl!,
+                                  title: `${editingStaff.name} — National ID`,
+                                  subtitle: `Role: ${editingStaff.role} · Specialty: ${editingStaff.specialty || "General"}`,
+                                  badge: "National ID",
+                                  badgeColor: "blue",
+                                })
+                              }
+                              className="text-[#12B8B0] hover:underline font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Preview</span>
+                            </button>
                           )}
                         </div>
                         <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
@@ -4876,9 +5056,22 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-slate-800 text-[11px]">License Cert</span>
                           {editingStaff.licenseCertificateUrl && (
-                            <a href={editingStaff.licenseCertificateUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
-                              View
-                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: editingStaff.licenseCertificateUrl!,
+                                  title: `${editingStaff.name} — License Certificate`,
+                                  subtitle: `Role: ${editingStaff.role} · License: ${editingStaff.license || "—"}`,
+                                  badge: "License Certificate",
+                                  badgeColor: "amber",
+                                })
+                              }
+                              className="text-[#12B8B0] hover:underline font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Preview</span>
+                            </button>
                           )}
                         </div>
                         <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
@@ -4899,9 +5092,22 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-slate-800 text-[11px]">Diploma</span>
                           {editingStaff.diplomaUrl && (
-                            <a href={editingStaff.diplomaUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
-                              View
-                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: editingStaff.diplomaUrl!,
+                                  title: `${editingStaff.name} — Medical Diploma`,
+                                  subtitle: `Role: ${editingStaff.role} · Specialty: ${editingStaff.specialty || "General"}`,
+                                  badge: "Diploma / Degree",
+                                  badgeColor: "emerald",
+                                })
+                              }
+                              className="text-[#12B8B0] hover:underline font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Preview</span>
+                            </button>
                           )}
                         </div>
                         <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
@@ -4961,9 +5167,22 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-slate-800 text-[11px]">National ID</span>
                           {editingStaff.nationalIdUrl && (
-                            <a href={editingStaff.nationalIdUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
-                              View
-                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: editingStaff.nationalIdUrl!,
+                                  title: `${editingStaff.name} — National ID`,
+                                  subtitle: `Role: ${editingStaff.role} · Staff Record`,
+                                  badge: "National ID",
+                                  badgeColor: "blue",
+                                })
+                              }
+                              className="text-[#12B8B0] hover:underline font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Preview</span>
+                            </button>
                           )}
                         </div>
                         <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
@@ -4984,9 +5203,22 @@ export default function AdminDashboardPage() {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-slate-800 text-[11px]">Diploma / Certificate</span>
                           {editingStaff.diplomaUrl && (
-                            <a href={editingStaff.diplomaUrl} target="_blank" rel="noreferrer" className="text-[#12B8B0] hover:underline font-bold text-[10px]">
-                              View
-                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedDocPreview({
+                                  url: editingStaff.diplomaUrl!,
+                                  title: `${editingStaff.name} — Diploma / Certificate`,
+                                  subtitle: `Role: ${editingStaff.role} · Staff Record`,
+                                  badge: "Diploma / Degree",
+                                  badgeColor: "emerald",
+                                })
+                              }
+                              className="text-[#12B8B0] hover:underline font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Preview</span>
+                            </button>
                           )}
                         </div>
                         <label className="cursor-pointer block text-center py-2 px-1 rounded-lg border border-dashed border-slate-300 hover:border-[#12B8B0] text-[10px] text-slate-500 hover:text-[#12B8B0] transition-colors">
@@ -5073,6 +5305,13 @@ export default function AdminDashboardPage() {
           onClose={() => setSelectedCertPreview(null)}
         />
       )}
+
+      {/* ── In-Dashboard Document Preview Modal (National ID, License, Diploma) ── */}
+      <DocumentPreviewModal
+        isOpen={!!selectedDocPreview}
+        onClose={() => setSelectedDocPreview(null)}
+        document={selectedDocPreview}
+      />
     </DashboardShell>
   );
 }
