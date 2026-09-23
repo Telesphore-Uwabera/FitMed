@@ -135,14 +135,14 @@ export default function BrandDatePicker({
         className={`w-full text-left flex items-center justify-between transition-all ${
           dark
             ? "px-3 py-2.5 rounded-xl text-xs font-semibold"
-            : "px-3.5 py-2.5 rounded-xl text-xs font-semibold shadow-sm"
+            : "p-3.5 rounded-2xl font-semibold text-sm shadow-sm"
         } ${
           dark
             ? isOpen
               ? "bg-[#0B2D5C] border-2 border-[#12B8B0] ring-2 ring-[#12B8B0]/30 text-white"
               : "bg-white/10 border border-white/15 text-white hover:border-[#12B8B0]"
             : isOpen
-              ? "bg-white border-2 border-[#12B8B0] ring-2 ring-[#12B8B0]/20 text-[#0B2D5C] shadow-md"
+              ? "bg-white border-[#12B8B0] ring-2 ring-[#12B8B0]/20 text-[#0B2D5C] shadow-md"
               : "bg-white border border-slate-200 hover:border-slate-300 text-slate-800"
         } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
