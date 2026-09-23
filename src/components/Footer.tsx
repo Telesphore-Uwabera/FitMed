@@ -152,11 +152,11 @@ export default function Footer() {
                 <span>fitmedrwanda@gmail.com</span>
               </a>
               <a
-                href="tel:+250782168650"
+                href="tel:+250781730410"
                 className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-500 hover:text-[#12B8B0] transition-colors group"
               >
                 <Phone className="w-3.5 h-3.5 text-[#12B8B0]/80 group-hover:text-[#12B8B0] flex-shrink-0 transition-colors" />
-                <span>+250 782 168 650</span>
+                <span>+250 781 730 410</span>
               </a>
               <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-500">
                 <MapPin className="w-3.5 h-3.5 text-[#12B8B0]/80 flex-shrink-0" />

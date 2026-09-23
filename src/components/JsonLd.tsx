@@ -25,7 +25,7 @@ export default function JsonLd() {
         name: SITE_NAME,
         url: SITE_URL,
         description: DEFAULT_DESCRIPTION,
-        telephone: "+250 782 168 650",
+        telephone: "+250 781 730 410",
         address: {
           "@type": "PostalAddress",
           addressLocality: "Kigali",

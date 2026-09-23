@@ -16,9 +16,9 @@ import { usePathname } from "next/navigation";
 const items = [
   {
     key: "phone",
-    href: "tel:+250782168650",
+    href: "tel:+250781730410",
     icon: <Phone className="w-3 h-3 shrink-0" />,
-    label: "+250 782 168 650",
+    label: "+250 781 730 410",
   },
   {
     key: "email",

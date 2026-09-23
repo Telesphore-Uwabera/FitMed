@@ -211,7 +211,7 @@ export default function ContactPage() {
               <div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Direct Hotline</div>
                 <div className="text-base font-extrabold text-[#0B2D5C] mt-0.5">
-                  <a href="tel:+250782168650" className="hover:text-[#12B8B0]">+250 782 168 650</a>
+                  <a href="tel:+250781730410" className="hover:text-[#12B8B0]">+250 781 730 410</a>
                 </div>
               </div>
             </div>
@@ -367,7 +367,7 @@ export default function ContactPage() {
                       <label className="block text-slate-500 dark:text-slate-400 mb-1">Phone Number (Optional)</label>
                       <input
                         type="tel"
-                        placeholder="+250 782 168 650"
+                        placeholder="+250 781 730 410"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0B2D5C] dark:text-white focus:outline-none focus:border-[#12B8B0]"
