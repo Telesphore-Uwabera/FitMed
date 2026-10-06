@@ -7,6 +7,7 @@ import { DialogProvider } from "@/components/DialogProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import JsonLd from "@/components/JsonLd";
 import TopContactBar from "@/components/TopContactBar";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL, SITE_TAGLINE } from "@/lib/seo";
 
 const manrope = Manrope({
@@ -114,6 +115,7 @@ export default function RootLayout({
           <ToastProvider>
             <DialogProvider>{children}</DialogProvider>
           </ToastProvider>
+          <WhatsAppFloat />
         </ThemeProvider>
       </body>
     </html>
