@@ -30,6 +30,8 @@ const contactDepartments = [
     title: "General Enquiries",
     email: "fitmedrwanda@gmail.com",
     desc: "General questions about the FitMed platform, certificate verification, or platform access.",
+    supportHref: "/help",
+    supportLabel: "Open the help centre",
   },
   {
     id: "doctors",
@@ -39,6 +41,8 @@ const contactDepartments = [
     title: "Doctor & Clinical Support",
     email: "fitmedrwanda@gmail.com",
     desc: "Support for licensed doctors using FitMed video consultations and applicant reviews.",
+    supportHref: "/support/doctors",
+    supportLabel: "Open doctor support",
   },
   {
     id: "employers",
@@ -48,6 +52,8 @@ const contactDepartments = [
     title: "Employer & Corporate Support",
     email: "fitmedrwanda@gmail.com",
     desc: "Help with company accounts, staff fitness certificates, and verification for HR teams.",
+    supportHref: "/support/employers",
+    supportLabel: "Open employer support",
   },
   {
     id: "report",
@@ -57,6 +63,8 @@ const contactDepartments = [
     title: "Report an Issue",
     email: "fitmedrwanda@gmail.com",
     desc: "Report platform technical issues, urgent certificate disputes, or clinical referral queries.",
+    supportHref: "/support/report",
+    supportLabel: "Open the issue form",
   },
   {
     id: "privacy",
@@ -267,7 +275,12 @@ export default function ContactPage() {
                   </p>
                 </div>
 
-                <div className="pt-6 mt-6 border-t border-slate-200">
+                <div className="pt-6 mt-6 border-t border-slate-200 space-y-3">
+                  {"supportHref" in dept && dept.supportHref ? (
+                    <Link href={dept.supportHref} className="block text-sm font-extrabold text-[#0B2D5C] hover:text-[#12B8B0]">
+                      {dept.supportLabel}
+                    </Link>
+                  ) : null}
                   <a
                     href={`mailto:${dept.email}`}
                     className="inline-flex items-center gap-2 text-sm font-bold text-[#12B8B0] hover:text-[#0d9690] transition-colors"

@@ -180,7 +180,7 @@ export default function EmployerPortal() {
 
             <div className="pt-1">
               <motion.a
-                href="/signin"
+                href="/support/employers"
                 whileHover={{ scale: 1.04, boxShadow: "0 12px 35px rgba(14,165,233,.3)" }}
                 whileTap={{ scale: 0.97 }}
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-[#0B2D5C] bg-[#12B8B0] hover:bg-[#1dd9d0] shadow-lg shadow-sky-500/20 group text-base transition-colors"

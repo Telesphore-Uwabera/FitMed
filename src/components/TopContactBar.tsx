@@ -120,29 +120,29 @@ export default function TopContactBar() {
       className="fixed top-0 left-0 right-0 z-[60] h-8 bg-[#0B2D5C] dark:bg-[#060e1a] border-b border-white/10 overflow-hidden flex items-center"
       aria-label="Contact information"
     >
-      {/* Marquee track — duplicated so the scroll is seamless */}
-      <div className="flex animate-marquee-contact whitespace-nowrap">
-        {/* First copy */}
+      {/* One row on tablet and desktop. A scrolling copy is only used on small screens. */}
+      <div className="hidden md:flex w-full items-center justify-center px-4">
         <div className="flex items-center">
           {items.map((item, i) => (
-            <span key={`a-${item.key}`} className="inline-flex items-center">
+            <span key={item.key} className="inline-flex items-center">
               <Item href={item.href} icon={item.icon} label={item.label} />
               {i < items.length - 1 && <Dot />}
             </span>
           ))}
-          {/* Gap before the loop repeats */}
-          <Dot />
         </div>
-        {/* Second copy (seamless loop) */}
-        <div className="flex items-center">
-          {items.map((item, i) => (
-            <span key={`b-${item.key}`} className="inline-flex items-center">
-              <Item href={item.href} icon={item.icon} label={item.label} />
-              {i < items.length - 1 && <Dot />}
-            </span>
-          ))}
-          <Dot />
-        </div>
+      </div>
+      <div className="flex md:hidden w-max shrink-0 animate-marquee-contact whitespace-nowrap">
+        {[0, 1].map((copy) => (
+          <div key={copy} className="flex items-center" aria-hidden={copy === 1 ? true : undefined}>
+            {items.map((item, i) => (
+              <span key={`${copy}-${item.key}`} className="inline-flex items-center">
+                <Item href={item.href} icon={item.icon} label={item.label} />
+                {i < items.length - 1 && <Dot />}
+              </span>
+            ))}
+            <Dot />
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import User from "@/models/User";
 import Doctor from "@/models/Doctor";
 import type { PublicTeamMember } from "@/lib/publicStaffTypes";
 import { isAdminRole } from "@/lib/roles";
+import { correctPublicSpelling, isPlaceholderDoctorRecord, leadershipDisplayName } from "@/lib/publicDoctorDisplay";
 
 export type { PublicTeamMember } from "@/lib/publicStaffTypes";
 
@@ -46,22 +47,39 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
 
   const userByEmail = new Map(users.map((user) => [String(user.email || "").toLowerCase(), user]));
 
+  const placeholderLeaders: PublicTeamMember[] = [];
+
   const doctors: PublicTeamMember[] = doctorDocs
     .filter((doc) => doc.isVerified !== false)
     .filter((doc) => {
       const linked = userByEmail.get(String(doc.email || "").toLowerCase());
       return !linked || isActiveStatus(String(linked.status || "active"));
     })
-    .map((doc) => {
+    .flatMap((doc) => {
       const linked = userByEmail.get(String(doc.email || "").toLowerCase());
+      if (isPlaceholderDoctorRecord({ email: doc.email, licenseNumber: doc.licenseNumber })) {
+        const name = leadershipDisplayName(doc.fullName || linked?.fullName || linked?.name) || "FitMed team";
+        placeholderLeaders.push({
+          id: String(doc._id),
+          name,
+          role: "Platform Administrator",
+          qualifications: "FitMed Administration",
+          bio: String(linked?.bio || "").trim() || `${name} is part of the FitMed leadership team.`,
+          image: publicPhoto(doc.avatarUrl, linked?.avatarUrl),
+          badge: "Leadership",
+          kind: "admin",
+        });
+        return [];
+      }
       const name = displayName(doc.fullName || linked?.fullName || linked?.name, "FitMed doctor");
       // Always use the Doctor record's specialty — never the User's jobTitle (which is a public title, not a specialty)
-      const specialty = String(doc.specialty || "Occupational Medicine & Telehealth");
-      const license = String(doc.licenseNumber || "");
+      const specialty = correctPublicSpelling(String(doc.specialty || "Occupational Medicine & Telehealth"));
+      const license = String(doc.licenseNumber || "").trim();
+      if (!license) return [];
       const bio =
         String(linked?.bio || "").trim() ||
         `${name} is a licensed FitMed physician providing telehealth fitness assessments.`;
-      return {
+      return [{
         id: String(doc._id),
         name,
         role: specialty,
@@ -72,35 +90,8 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
         kind: "doctor" as const,
         license,
         specialty,
-      };
+      }];
     });
-
-  // Also include any User with role "doctor" who may not have a Doctor collection doc yet
-  const docEmailSet = new Set(doctorDocs.map((d) => String(d.email || "").toLowerCase()));
-  const extraDoctorUsers = users.filter(
-    (u) => String(u.role || "").toLowerCase() === "doctor" && !docEmailSet.has(String(u.email || "").toLowerCase())
-  );
-
-  for (const docUser of extraDoctorUsers) {
-    if (!isActiveStatus(String(docUser.status || "active"))) continue;
-    const name = displayName(docUser.fullName || docUser.name, "FitMed doctor");
-    const specialty = String(docUser.jobTitle || "Occupational Medicine & Telehealth");
-    const bio =
-      String(docUser.bio || "").trim() ||
-      `${name} is a licensed FitMed physician providing telehealth fitness assessments.`;
-    doctors.push({
-      id: String(docUser._id),
-      name,
-      role: specialty,
-      qualifications: "Licensed physician",
-      bio,
-      image: publicPhoto(docUser.avatarUrl),
-      badge: "Licensed Physician",
-      kind: "doctor" as const,
-      license: "",
-      specialty,
-    });
-  }
 
   const leadership: PublicTeamMember[] = users
     .filter((user) => isActiveStatus(String(user.status || "active")))
@@ -122,5 +113,7 @@ export async function getPublicStaff(): Promise<{ team: PublicTeamMember[]; doct
       };
     });
 
-  return { team: [...leadership, ...doctors], doctors };
+  const leadershipIds = new Set(leadership.map((member) => member.id));
+  const extraLeadership = placeholderLeaders.filter((member) => !leadershipIds.has(member.id));
+  return { team: [...leadership, ...extraLeadership, ...doctors], doctors };
 }

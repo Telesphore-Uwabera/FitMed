@@ -18,7 +18,9 @@ function blockedStatus(status?: string) {
 export async function GET(request: NextRequest) {
   const session = await verifySession(request.cookies.get(COOKIE_NAME)?.value);
   if (!session) {
-    const res = NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
+    // Anonymous visitors check this on every public page. A 200 with no user
+    // is a signed-out session, not an error.
+    const res = NextResponse.json({ success: true, user: null });
     return applyNoStoreHeaders(res);
   }
 
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
     await connectToDatabase();
     const user = await User.findOne({ email: session.email });
     if (!user) {
-      const res = NextResponse.json({ success: false, error: "Please sign in." }, { status: 401 });
+      const res = NextResponse.json({ success: true, user: null });
       clearAuthCookies(res);
       return applyNoStoreHeaders(res);
     }

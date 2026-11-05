@@ -2,16 +2,31 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { Star, Quote } from "lucide-react";
-import Image from "next/image";
+import { ShieldCheck, BadgeCheck, QrCode, Clock } from "lucide-react";
+import { IREMBO_FEE_RWF } from "@/lib/iremboPay";
+import { CERTIFICATE_VALIDITY_MONTHS } from "@/lib/fitmedServices";
 
-const testimonials = [
-  { name: "Alphonse Rugira",        role: "Construction Site Manager",   company: "Kigali Build Co.",     text: "Our whole team got their certificates within 48 hours. The employer portal makes tracking renewals effortless. No more chasing paperwork.",          img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
-  { name: "Diane Uwimana",          role: "University Student",           company: "University of Rwanda",  text: "I needed a fitness certificate for enrolment and got it without leaving my dorm. The doctor was thorough and professional. Took about 2 hours total.", img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
-  { name: "Dr. Emmanuel N.",        role: "Occupational Health Physician",company: "Independent Practitioner",text: "The dashboard gives me everything I need before the consultation. The AI summary saves 15 minutes per applicant.",                                       img: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
-  { name: "Grace Mukashyaka",       role: "HR Director",                  company: "Telecom Rwanda",        text: "FitMed has cut our administrative workload in half. The QR verification means instant confirmation for our compliance records.",                     img: "/grace-mukashyaka.jpg", rating: 5 },
-  { name: "Patrick Ntirenganya",    role: "Long-Distance Truck Driver",   company: "East Africa Logistics", text: "I was sceptical but the doctor was as thorough as any clinic I've visited. My employer accepted the certificate immediately.",                        img: "https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
-  { name: "Solange Musabyimana",    role: "Head of Compliance",           company: "Rwanda Finance Group",  text: "Employees complete their own assessments and we only see validity status. Clean, compliant, and efficient.",                                          img: "https://images.unsplash.com/photo-1589156280159-27698a70f29e?w=120&q=80&auto=format&fit=crop&crop=face", rating: 5 },
+const points = [
+  {
+    icon: ShieldCheck,
+    title: "A doctor decides",
+    body: "Questionnaires can highlight answers for review. The fitness decision is made by a licensed doctor after the consultation.",
+  },
+  {
+    icon: BadgeCheck,
+    title: `${IREMBO_FEE_RWF.toLocaleString("en-US")} FRW service fee`,
+    body: "That is the published fee for an assessment. It is charged when a doctor approves a certificate that can be issued.",
+  },
+  {
+    icon: Clock,
+    title: `${CERTIFICATE_VALIDITY_MONTHS} months`,
+    body: "An issued certificate stays valid for six months. After the expiry date, public verification shows it as expired.",
+  },
+  {
+    icon: QrCode,
+    title: "Anyone can check the number",
+    body: "The QR code opens a public result: valid, expired, or not valid. Medical history stays off that page.",
+  },
 ];
 
 export default function Testimonials() {
@@ -26,41 +41,30 @@ export default function Testimonials() {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7 }}
-          className="text-center mb-20"
+          className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-5" style={{ fontFamily: "var(--font-primary)" }}>
-            What People <span className="gradient-text">Are Saying</span>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-5" style={{ fontFamily: "var(--font-primary)" }}>
+            What the certificate <span className="gradient-text">includes</span>
           </h2>
-          <p className="text-slate-500 text-lg max-w-xl mx-auto">
-            From applicants to doctors to HR teams — FitMed is transforming how medical fitness certification gets done.
+          <p className="text-slate-500 dark:text-slate-300 text-lg max-w-xl mx-auto">
+            These are product facts. FitMed does not publish a certificate count or an average rating until those figures come from the live records.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {testimonials.map((t, i) => (
-            <motion.div key={t.name}
-              initial={{ opacity: 0, y: 45 }}
+        <div className="grid md:grid-cols-2 gap-5">
+          {points.map((point, i) => (
+            <motion.div
+              key={point.title}
+              initial={{ opacity: 0, y: 24 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.65, delay: i * 0.09 }}
-              whileHover={{ y: -5, boxShadow: "0 16px 40px rgba(14,165,233,.1)", transition: { duration: 0.22 } }}
-              className="card-white rounded-3xl p-7 flex flex-col transition-all duration-300 group"
+              transition={{ duration: 0.55, delay: i * 0.08 }}
+              className="card-white rounded-3xl p-7"
             >
-              <Quote className="w-7 h-7 text-sky-100 mb-5 group-hover:text-sky-200 transition-colors" />
-              <div className="flex gap-1 mb-4">
-                {[...Array(t.rating)].map((_, j) => (
-                  <Star key={j} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                ))}
-              </div>
-              <p className="text-sm text-slate-600 leading-relaxed mb-6 flex-1 italic">&ldquo;{t.text}&rdquo;</p>
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                <div className="relative w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
-                  <Image src={t.img} alt={t.name} fill className="object-cover" sizes="40px" loading="lazy" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-slate-800" style={{ fontFamily: "var(--font-primary)" }}>{t.name}</div>
-                  <div className="text-xs text-slate-400">{t.role} · {t.company}</div>
-                </div>
-              </div>
+              <point.icon className="w-6 h-6 text-[#12B8B0] mb-4" />
+              <h3 className="text-lg font-extrabold text-[#0B2D5C] dark:text-white mb-2" style={{ fontFamily: "var(--font-primary)" }}>
+                {point.title}
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{point.body}</p>
             </motion.div>
           ))}
         </div>

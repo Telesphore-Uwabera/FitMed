@@ -41,10 +41,10 @@ const SEED_USERS = [
     status: "active" as const,
   },
   {
-    fullName: "Dr. Telesphore Uwabera",
-    name: "Dr. Telesphore Uwabera",
+    fullName: "Telesphore Uwabera",
+    name: "Telesphore Uwabera",
     email: "uwaberatelesphore@gmail.com",
-    role: "doctor" as const,
+    role: "admin" as const,
     status: "active" as const,
   },
   {
@@ -148,22 +148,6 @@ export async function seedFitMedAccounts(): Promise<void> {
       existing.name = existing.name || account.name;
       await existing.save();
     }
-  }
-
-  const doctorEmail = "uwaberatelesphore@gmail.com";
-  const doctorUser = await User.findOne({ email: doctorEmail });
-  const doctorExists = await Doctor.findOne({ email: doctorEmail });
-  if (!doctorExists && doctorUser) {
-    await Doctor.create({
-      user: doctorUser._id,
-      fullName: "Dr. Telesphore Uwabera, MD",
-      email: doctorEmail,
-      licenseNumber: "RW-RMDC-4091",
-      doctorId: "DOC-RW-0001",
-      specialty: "Occupational Medicine & Telehealth",
-      isVerified: true,
-      status: "ONLINE",
-    });
   }
 
   global.fitmedAccountsSeeded = true;

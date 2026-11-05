@@ -940,8 +940,18 @@ html.dark:not(:has(.dashboard-app)) .badge-teal {
   100% { transform: translateX(-50%); }
 }
 .animate-marquee-contact {
+  width: max-content;
+  flex-shrink: 0;
   animation: marquee-contact 28s linear infinite;
 }
 .animate-marquee-contact:hover {
   animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-contact {
+    animation: none;
+  }
+  .animate-marquee-contact > div:last-child {
+    display: none;
+  }
 }
