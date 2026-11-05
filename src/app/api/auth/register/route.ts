@@ -78,11 +78,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!finalAvatarUrl) {
+    if (!isCloudinaryUrl(finalAvatarUrl)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Passport photo is required to create your account.",
+          error: finalAvatarUrl
+            ? "Passport photo could not be stored. Please upload it again."
+            : "Passport photo is required to create your account.",
+        },
+        { status: 400 }
+      );
+    }
+    if (finalIdDocUrl && !isCloudinaryUrl(finalIdDocUrl)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "National ID document could not be stored. Remove it or upload it again.",
         },
         { status: 400 }
       );

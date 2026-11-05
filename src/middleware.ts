@@ -37,6 +37,9 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/auth/me";
   const isAdminContactRead = pathname.startsWith("/api/contact") && request.method !== "POST";
 
+  // `/api/auth/register` and `/api/auth/register/upload` stay public so a logged-out
+  // applicant can store a passport photo and create an account. Do not add them here.
+
   const isIremboWebhook = pathname.startsWith("/api/payments/irembo/webhook");
   if (isIremboWebhook) {
     return NextResponse.next();

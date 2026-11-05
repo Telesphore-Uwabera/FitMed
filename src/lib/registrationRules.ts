@@ -1,3 +1,5 @@
+import { isCloudinaryUrl } from "@/lib/imageUtils";
+
 export function compactPhone(value: string) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -53,4 +55,110 @@ export function applicantRegistrationError(opts: {
     return "National ID must be exactly 16 numbers.";
   }
   return "";
+}
+
+export type ApplicantSignupInput = {
+  name: string;
+  email: string;
+  phone: string;
+  nationalId: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  password: string;
+  confirmPassword: string;
+  acceptedTerms: boolean;
+  profileCloudUrl: string;
+};
+
+export type ApplicantSignupReadiness = {
+  ready: boolean;
+  missing: string[];
+  errors: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    nationalId?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    address?: string;
+    password?: string;
+    confirmPassword?: string;
+    terms?: string;
+    photo?: string;
+  };
+};
+
+const PASSWORD_MIN = 8;
+
+/** Why Create Applicant Account is still disabled. Empty fields and invalid values both appear in `missing`. */
+export function applicantSignupReadiness(input: ApplicantSignupInput): ApplicantSignupReadiness {
+  const errors: ApplicantSignupReadiness["errors"] = {};
+  const missing: string[] = [];
+
+  if (!isCloudinaryUrl(input.profileCloudUrl)) {
+    errors.photo = "Upload a clear passport photo before creating your account.";
+    missing.push("Passport photo");
+  }
+  if (!String(input.name || "").trim()) {
+    errors.name = "Full legal name is required.";
+    missing.push("Full legal name");
+  } else if (!isValidPersonName(input.name)) {
+    errors.name = "Full name must use letters only — no numbers.";
+    missing.push("Full legal name (letters only)");
+  }
+  if (!String(input.email || "").trim()) {
+    errors.email = "Email address is required.";
+    missing.push("Email address");
+  } else if (!isValidApplicantEmail(input.email)) {
+    errors.email = "Enter a valid email whose name (before @) does not contain numbers.";
+    missing.push("Valid email (no numbers before @)");
+  }
+  if (!String(input.phone || "").trim()) {
+    errors.phone = "Phone number is required.";
+    missing.push("Phone number (+25xxxxxxxxxx)");
+  } else if (!isValidRwandaPhone(input.phone)) {
+    errors.phone = "Phone number must be in the format +25xxxxxxxxxx.";
+    missing.push("Phone number in +25xxxxxxxxxx format");
+  }
+  const idDigits = String(input.nationalId || "").replace(/\D/g, "");
+  if (!idDigits) {
+    errors.nationalId = "National ID is required.";
+    missing.push("16-digit National ID");
+  } else if (!isValidNationalId(input.nationalId)) {
+    errors.nationalId = `National ID must be exactly 16 numbers (${idDigits.length} entered).`;
+    missing.push("16-digit National ID");
+  }
+  if (!String(input.dateOfBirth || "").trim()) {
+    errors.dateOfBirth = "Date of birth is required.";
+    missing.push("Date of birth");
+  }
+  if (!String(input.gender || "").trim()) {
+    errors.gender = "Gender is required.";
+    missing.push("Gender");
+  }
+  if (!String(input.address || "").trim()) {
+    errors.address = "Address is required.";
+    missing.push("Address");
+  }
+  if (!input.password) {
+    errors.password = "Create a password of at least 8 characters.";
+    missing.push("Password (at least 8 characters)");
+  } else if (input.password.length < PASSWORD_MIN) {
+    errors.password = "Password must be at least 8 characters.";
+    missing.push("Password (at least 8 characters)");
+  }
+  if (!input.confirmPassword) {
+    errors.confirmPassword = "Confirm your password.";
+    missing.push("Password confirmation");
+  } else if (input.confirmPassword !== input.password) {
+    errors.confirmPassword = "Passwords do not match.";
+    missing.push("Matching passwords");
+  }
+  if (!input.acceptedTerms) {
+    errors.terms = "Accept the Terms of Service and Privacy Policy to continue.";
+    missing.push("Terms of Service and Privacy Policy");
+  }
+
+  return { ready: missing.length === 0, missing, errors };
 }
