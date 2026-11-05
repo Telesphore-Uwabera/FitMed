@@ -50,6 +50,15 @@ export function categoryFromPurpose(purpose?: string, category?: string, jobType
   if (value.includes("driver") || value.includes("transport") || value.includes("taxi")) return "Commercial Driver & Transport";
   if (value.includes("food") || value.includes("hygiene") || value.includes("kitchen")) return "Food Handler & Hygiene Clearance";
   if (value.includes("visa") || value.includes("travel") || value.includes("embassy")) return "Visa & International Travel Medical";
+  if (
+    value.includes("aviat") ||
+    value.includes("pilot") ||
+    value.includes("diving") ||
+    value.includes("marine") ||
+    value.includes("armed")
+  ) {
+    return "Aviation & Specialised Fitness";
+  }
   if (value.includes("height") || value.includes("construction") || value.includes("mining") || value.includes("occup")) {
     return "Construction & Heights Fitness";
   }

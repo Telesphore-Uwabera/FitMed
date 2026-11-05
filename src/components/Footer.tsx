@@ -10,6 +10,8 @@ const footerLinks = {
   Platform: [
     { label: "How It Works",           href: "/#how-it-works",   ext: false },
     { label: "Certificate Categories",  href: "/#certificates",   ext: false },
+    { label: "Pricing",                 href: "/pricing",         ext: false },
+    { label: "Verify a certificate",    href: "/verify",          ext: false },
     { label: "For Employers",           href: "/#employers",      ext: false },
     { label: "Technology",              href: "/#technology",     ext: false },
   ],
@@ -22,14 +24,14 @@ const footerLinks = {
     { label: "Terms of Service", href: "/terms",      ext: false },
     { label: "Cookie Policy",    href: "/cookies",    ext: false },
     { label: "Compliance",       href: "/compliance", ext: false },
-    { label: "Health data notice", href: "/hipaa",      ext: false },
+    { label: "Health Data Notice", href: "/hipaa",      ext: false },
   ],
   Support: [
-    { label: "Help Centre",      href: "/contact",          ext: false },
+    { label: "Help Centre",      href: "/help",              ext: false },
     { label: "Contact Us",       href: "/contact",          ext: false },
-    { label: "Doctor Support",   href: "/contact#doctors",  ext: false },
-    { label: "Employer Support", href: "/contact#employers",ext: false },
-    { label: "Report an Issue",  href: "/contact#report",   ext: false },
+    { label: "Doctor Support",   href: "/support/doctors",  ext: false },
+    { label: "Employer Support", href: "/support/employers",ext: false },
+    { label: "Report an Issue",  href: "/support/report",   ext: false },
   ],
 };
 

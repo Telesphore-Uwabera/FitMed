@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   Shield, ArrowRight, Play, CheckCircle,
-  TrendingUp, Clock, Star, ChevronLeft, ChevronRight,
+  Clock, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { newApplicantHref } from "@/lib/applicantLinks";
 
 /* ────────────────────────────────────────────────────────────────
    Slides — Black African people, fitness & medical context
@@ -42,16 +43,16 @@ const SLIDES = [
 const SLIDE_DURATION = 6000; // ms
 
 const stats = [
-  { icon: TrendingUp, value: "10,000+", label: "Certificates Issued", color: "text-[#12B8B0]"  },
-  { icon: Star,        value: "4.9 / 5",  label: "Doctor Rating",      color: "text-amber-300" },
-  { icon: Clock,       value: "< 2 hrs",  label: "Avg. Turnaround",    color: "text-[#0B2D5C] dark:text-white"  },
+  { icon: Shield,      value: "5,000",    label: "FRW service fee",     color: "text-[#12B8B0]"  },
+  { icon: Clock,       value: "6 months", label: "Certificate validity", color: "text-amber-300" },
+  { icon: CheckCircle, value: "QR",       label: "Public verification", color: "text-[#0B2D5C] dark:text-white"  },
 ];
 
 const trustBadges = [
   "Licensed doctors only",
   "End-to-end encrypted",
-  "Instant QR verification",
-  "24 / 7 availability",
+  "Public QR verification",
+  "A doctor makes the decision",
 ];
 
 /* ECG line ---------------------------------------------------------- */
@@ -213,7 +214,7 @@ export default function Hero() {
                 className="flex-1 min-w-0"
               >
                 <Link
-                  href="/signin"
+                  href={newApplicantHref()}
                   className="group w-full h-full inline-flex items-center justify-center gap-2 md:gap-3 px-3 py-2 md:px-8 md:py-4 rounded-2xl text-sm md:text-base font-bold text-white btn-primary shadow-xl shadow-sky-500/25"
                 >
                   <Shield className="w-5 h-5 flex-shrink-0" />

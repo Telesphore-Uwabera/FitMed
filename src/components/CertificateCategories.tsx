@@ -8,10 +8,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-
-function requestHref(purpose: string) {
-  return `/dashboard/user?tab=request&purpose=${encodeURIComponent(purpose)}`;
-}
+import { newApplicantHref } from "@/lib/applicantLinks";
 
 /* ── All images: Black African people, fitness & medical context ── */
 const categories = [
@@ -88,7 +85,7 @@ const categories = [
   {
     icon: Anchor,
     title: "Aviation & Specialised",
-    purpose: "Construction & Heights Fitness",
+    purpose: "Aviation & Specialised Fitness",
     type: "physical",
     badge: "Physical Exam Required",
     badgeColor: "badge-notfit",
@@ -154,7 +151,7 @@ export default function CertificateCategories() {
                 className="group card-white rounded-3xl overflow-hidden flex flex-col h-full transition-all duration-300"
               >
                 <Link
-                  href={requestHref(cat.purpose)}
+                  href={newApplicantHref(cat.purpose)}
                   className="flex flex-col h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
                 {/* Image with generous height and proper object-position so subjects are never cut */}

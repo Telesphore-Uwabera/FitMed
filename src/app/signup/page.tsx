@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { safeApplicantNext } from "@/lib/applicantLinks";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import {
@@ -30,7 +31,11 @@ import { applicantRegistrationError, compactPhone } from "@/lib/registrationRule
 import { useToast } from "@/components/ToastProvider";
 
 export default function SignUpPage() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const continueHref = (() => {
+    const next = safeApplicantNext(searchParams.get("next"));
+    return next ? `/signin?next=${encodeURIComponent(next)}` : "/signin";
+  })();
   const { success, warning, info } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -252,7 +257,7 @@ export default function SignUpPage() {
 
             <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href="/signin"
+                href={continueHref}
                 className="px-6 py-3 rounded-xl bg-[#0B2D5C] hover:bg-[#082247] text-white font-extrabold text-xs transition-colors shadow-sm"
               >
                 Go to Sign-In Portal
@@ -597,7 +602,7 @@ export default function SignUpPage() {
                   {[
                     "Identity verified against National ID registry",
                     "Assigned a licensed FitMed physician",
-                    "Access to all 7 certificate categories",
+                    "Access to every FitMed certificate category",
                     "Secure telehealth room for live consultation",
                     "Digitally signed & QR-verified certificates",
                   ].map((step, i) => (
@@ -612,7 +617,7 @@ export default function SignUpPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col items-center justify-center text-center">
                 <div className="text-sm font-extrabold text-[#0B2D5C]">Already registered?</div>
                 <p className="text-xs text-slate-500 mt-1 mb-4">Continue to your applicant dashboard.</p>
-                <Link href="/signin" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-bold text-xs hover:bg-[#1dd9d0] transition-colors">
+                <Link href={continueHref} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#12B8B0] text-[#0B2D5C] font-bold text-xs hover:bg-[#1dd9d0] transition-colors">
                   Sign In to Your Account
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>

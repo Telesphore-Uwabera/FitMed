@@ -11,7 +11,7 @@ export const metadata = pageMeta({
 
 export default function HipaaPage() {
   return (
-    <PageLayout title="HIPAA Notice" subtitle="How we protect your health information" lastUpdated="19 August 2026">
+    <PageLayout title="Health Data Notice" subtitle="How FitMed protects health information in Rwanda" lastUpdated="19 August 2026">
       <div className="space-y-8">
         <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-7">
           <p className="text-slate-700 leading-relaxed">
@@ -73,7 +73,7 @@ export default function HipaaPage() {
         <p className="text-center text-xs text-slate-400 flex flex-wrap justify-center gap-3 pt-4">
           <Link href="/" className="hover:text-sky-600">Home</Link><span>·</span>
           <Link href="/privacy" className="hover:text-sky-600">Privacy Policy</Link><span>·</span>
-          <Link href="/hipaa" className="text-sky-600 font-medium">HIPAA Notice</Link>
+          <Link href="/hipaa" className="text-sky-600 font-medium">Health Data Notice</Link>
         </p>
       </div>
     </PageLayout>

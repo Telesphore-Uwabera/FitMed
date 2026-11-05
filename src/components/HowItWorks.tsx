@@ -508,7 +508,7 @@ export default function HowItWorks() {
         {/* CTA Button — Positioned cleanly beneath the content with ample spacing */}
         <div className="text-center mt-12 md:mt-16 pt-2">
           <motion.a
-            href="/signin"
+            href="/signup?next=%2Fdashboard%2Fuser%3Ftab%3Drequest"
             whileHover={{ scale: 1.04, boxShadow: "0 16px 40px rgba(18,184,176,0.3)" }}
             whileTap={{ scale: 0.97 }}
             className="inline-flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-[#0B2D5C] bg-[#12B8B0] hover:bg-[#1dd9d0] shadow-lg shadow-teal-500/20 text-base transition-colors"

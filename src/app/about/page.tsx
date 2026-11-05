@@ -382,7 +382,7 @@ export default async function AboutPage() {
               </p>
             </div>
             <Link
-              href="/signin"
+              href="/contact"
               className="px-6 py-3.5 rounded-2xl bg-[#12B8B0] hover:bg-[#1dd9d0] text-[#0B2D5C] font-extrabold text-sm transition-all whitespace-nowrap flex-shrink-0"
             >
               Learn More

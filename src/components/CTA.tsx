@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 const paths = [
-  { icon: Shield, color: "text-sky-600", bg: "bg-sky-50", border: "border-sky-200 hover:border-sky-400", label: "Start Your Assessment", sub: "Get your medical fitness certificate", shadow: "hover:shadow-sky-100", href: "/signin" },
+  { icon: Shield, color: "text-sky-600", bg: "bg-sky-50", border: "border-sky-200 hover:border-sky-400", label: "Start Your Assessment", sub: "Get your medical fitness certificate", shadow: "hover:shadow-sky-100", href: "/signup?next=%2Fdashboard%2Fuser%3Ftab%3Drequest" },
 ];
 
 export default function CTA() {

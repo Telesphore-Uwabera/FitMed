@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
@@ -7,5 +8,5 @@ export const metadata = pageMeta({
 });
 
 export default function SignUpLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <Suspense fallback={null}>{children}</Suspense>;
 }

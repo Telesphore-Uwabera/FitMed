@@ -103,7 +103,7 @@ export default async function DoctorsPage() {
           <h2 className="text-2xl font-extrabold text-[#0B2D5C] dark:text-white mb-4" style={{ fontFamily: "var(--font-primary)" }}>Join the FitMed Doctor Network</h2>
           <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">Expand your practice with flexible telemedicine assessments. Apply to join our growing network of licensed doctors.</p>
           <Link
-            href="/contact#doctors"
+            href="/support/doctors"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-white btn-primary shadow-xl shadow-sky-500/25 group"
           >
             Apply to Join <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

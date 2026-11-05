@@ -10,8 +10,10 @@ import {
   Utensils,
   Plane,
   HardHat,
+  Anchor,
 } from "lucide-react";
 import { CERTIFICATE_VALIDITY_MONTHS, FITMED_SERVICES } from "@/lib/fitmedServices";
+import { IREMBO_FEE_RWF } from "@/lib/iremboPay";
 
 const serviceIcons = {
   workplace: Briefcase,
@@ -21,6 +23,7 @@ const serviceIcons = {
   food: Utensils,
   travel: Plane,
   construction: HardHat,
+  aviation: Anchor,
 } as const;
 
 const iconColors = {
@@ -31,6 +34,7 @@ const iconColors = {
   food: "text-emerald-600 dark:text-emerald-400",
   travel: "text-indigo-600 dark:text-indigo-400",
   construction: "text-violet-600 dark:text-violet-400",
+  aviation: "text-red-600 dark:text-red-400",
 } as const;
 
 function ServiceCard({
@@ -66,7 +70,7 @@ function ServiceCard({
             className="text-2xl font-black text-slate-900 dark:text-white"
             style={{ fontFamily: "var(--font-primary)" }}
           >
-            5,000 FRW
+            {IREMBO_FEE_RWF.toLocaleString("en-US")} FRW
           </span>
           <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">service fee</span>
         </div>
@@ -105,8 +109,8 @@ export default function Pricing() {
             <span className="gradient-text">Fitness Requirement</span>
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto leading-relaxed">
-            The same seven assessments available in your applicant dashboard.
-            Each includes licensed doctor review and a verifiable digital certificate valid for 6 months.
+            The same assessments available in your applicant dashboard.
+            Each includes licensed doctor review. An issued certificate is valid for {CERTIFICATE_VALIDITY_MONTHS} months.
           </p>
         </motion.div>
       </div>

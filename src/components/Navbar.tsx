@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTheme } from "@/components/ThemeProvider";
 import { dashboardPath } from "@/lib/roles";
+import { newApplicantHref } from "@/lib/applicantLinks";
 
 const navLinks = [
   { label: "Home",          href: "/" },
@@ -106,6 +107,9 @@ export default function Navbar() {
   };
 
   const navH = scrolled ? NAV_H_SCROLLED : NAV_H_TOP;
+  const requestHref = accountHref?.startsWith("/dashboard/user")
+    ? "/dashboard/user?tab=request"
+    : accountHref || newApplicantHref();
 
   return (
     <>
@@ -183,7 +187,7 @@ export default function Navbar() {
               className="flex-shrink-0"
             >
               <Link
-                href={accountHref || "/signin"}
+                href={requestHref}
                 className="flex items-center gap-1.5 px-4 xl:px-5 py-2.5 rounded-xl text-sm font-bold text-white btn-primary shadow-md shadow-sky-500/20 whitespace-nowrap"
               >
                 <span>Request Certificate</span>
@@ -295,7 +299,7 @@ export default function Navbar() {
                   {accountHref ? "Dashboard" : "Sign In"}
                 </Link>
                 <Link
-                  href={accountHref || "/signin"}
+                  href={requestHref}
                   onClick={() => setMobileOpen(false)}
                   className="py-3 text-center rounded-xl font-bold text-white btn-primary text-sm"
                 >

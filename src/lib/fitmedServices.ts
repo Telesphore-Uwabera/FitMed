@@ -48,6 +48,13 @@ export const FITMED_SERVICES = [
     tag: "High Risk Review",
     time: "Under 2 hours",
   },
+  {
+    id: "aviation",
+    title: "Aviation & Specialised Fitness",
+    desc: "Pilots, diving, marine, and other safety-critical roles. These pathways usually need an in-person examination.",
+    tag: "In-person review",
+    time: "Physical exam may be required",
+  },
 ] as const;
 
 export const CERTIFICATE_VALIDITY_MONTHS = 6;
