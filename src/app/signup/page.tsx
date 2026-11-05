@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { safeApplicantNext } from "@/lib/applicantLinks";
@@ -21,13 +21,13 @@ import {
   Camera,
   UploadCloud,
   CheckCircle2,
-  Sparkles,
   MapPin,
 } from "lucide-react";
 import BrandDatePicker from "@/components/BrandDatePicker";
 import BrandSelect from "@/components/BrandSelect";
-import { convertToWebP, uploadToCloudinary, isCloudinaryUrl, WebPConversionResult } from "@/lib/imageUtils";
-import { applicantRegistrationError, compactPhone } from "@/lib/registrationRules";
+import { convertToWebP, isCloudinaryUrl } from "@/lib/imageUtils";
+import { uploadApplicantSignupFile } from "@/lib/applicantSignupUpload";
+import { applicantSignupReadiness, compactPhone } from "@/lib/registrationRules";
 import { useToast } from "@/components/ToastProvider";
 
 export default function SignUpPage() {
@@ -50,16 +50,15 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Profile Image & WebP Conversion State
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [webpResult, setWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConverting, setIsConverting] = useState(false);
 
   // National ID Document Image & WebP Conversion State
   const idFileInputRef = useRef<HTMLInputElement>(null);
   const [nationalIdImage, setNationalIdImage] = useState<string | null>(null);
-  const [idWebpResult, setIdWebpResult] = useState<WebPConversionResult | null>(null);
   const [isConvertingId, setIsConvertingId] = useState(false);
 
   const [profileCloudUrl, setProfileCloudUrl] = useState("");
@@ -77,14 +76,12 @@ export default function SignUpPage() {
       setUploadingProfile(true);
       setProfileCloudUrl("");
       const converted = await convertToWebP(file, 0.85, 800);
-      setWebpResult(converted);
       setProfileImage(converted.dataUrl);
       setIsConverting(false);
-      const uploaded = await uploadToCloudinary(converted.file, "fitmed/applicants");
+      const uploaded = await uploadApplicantSignupFile(converted.file, "fitmed/applicants");
       if (!isCloudinaryUrl(uploaded.url)) {
         warning("Photo not saved", uploaded.error || "Please upload a clear passport photo to proceed.");
         setProfileImage(null);
-        setWebpResult(null);
         return;
       }
       setProfileCloudUrl(uploaded.url);
@@ -93,7 +90,6 @@ export default function SignUpPage() {
       console.error("WebP conversion error:", err);
       warning("Photo not saved", "Could not process the passport photo. Try another image.");
       setProfileImage(null);
-      setWebpResult(null);
     } finally {
       setIsConverting(false);
       setUploadingProfile(false);
@@ -109,14 +105,12 @@ export default function SignUpPage() {
       setUploadingId(true);
       setIdCloudUrl("");
       const converted = await convertToWebP(file, 0.90, 1200);
-      setIdWebpResult(converted);
       setNationalIdImage(converted.dataUrl);
       setIsConvertingId(false);
-      const uploaded = await uploadToCloudinary(converted.file, "fitmed/national_ids");
+      const uploaded = await uploadApplicantSignupFile(converted.file, "fitmed/national_ids");
       if (!isCloudinaryUrl(uploaded.url)) {
         warning("ID document not saved", uploaded.error || "Please upload a readable National ID document copy.");
         setNationalIdImage(null);
-        setIdWebpResult(null);
         return;
       }
       setIdCloudUrl(uploaded.url);
@@ -125,7 +119,6 @@ export default function SignUpPage() {
       console.error("National ID WebP conversion error:", err);
       warning("ID document not saved", "Could not process the National ID photo. Try another image.");
       setNationalIdImage(null);
-      setIdWebpResult(null);
     } finally {
       setIsConvertingId(false);
       setUploadingId(false);
@@ -134,35 +127,32 @@ export default function SignUpPage() {
 
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
 
+  const readiness = useMemo(
+    () =>
+      applicantSignupReadiness({
+        name: fullName,
+        email,
+        phone,
+        nationalId,
+        dateOfBirth,
+        gender,
+        address,
+        password,
+        confirmPassword,
+        acceptedTerms,
+        profileCloudUrl,
+      }),
+    [fullName, email, phone, nationalId, dateOfBirth, gender, address, password, confirmPassword, acceptedTerms, profileCloudUrl]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      warning("Passwords do not match", "Please confirm the same password in both fields.");
+    if (uploadingProfile || uploadingId) {
+      warning("Photo uploading", "Please wait a moment while your photo finishes uploading.");
       return;
     }
-    const fieldError = applicantRegistrationError({
-      name: fullName,
-      email,
-      phone,
-      nationalId,
-    });
-    if (fieldError) {
-      warning("Check your details", fieldError);
-      return;
-    }
-    if (!dateOfBirth || !gender || !address.trim()) {
-      warning("Check your details", "Date of birth, gender, and address are required.");
-      return;
-    }
-    if (!isCloudinaryUrl(profileCloudUrl)) {
-      warning(
-        "Passport Photo required",
-        "Please upload your Passport Photo before submitting."
-      );
-      return;
-    }
-    if (uploadingProfile) {
-      warning("Photo uploading", "Please wait a moment while your passport photo finishes uploading.");
+    if (!readiness.ready) {
+      warning("Check your details", `Still needed: ${readiness.missing.join(", ")}.`);
       return;
     }
     setIsSubmitting(true);
@@ -367,7 +357,9 @@ export default function SignUpPage() {
                         Ready
                       </span>
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="text-[11px] font-semibold text-amber-800">{readiness.errors.photo}</p>
+                  )}
                 </div>
 
                 {/* Full Name */}
@@ -386,6 +378,9 @@ export default function SignUpPage() {
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                     />
                   </div>
+                  {fullName && readiness.errors.name ? (
+                    <p className="mt-1.5 text-[11px] font-semibold text-rose-600">{readiness.errors.name}</p>
+                  ) : null}
                 </div>
 
                 {/* Email & Phone */}
@@ -406,7 +401,11 @@ export default function SignUpPage() {
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-slate-400">Use a real email. The part before @ cannot contain numbers.</p>
+                    {email && readiness.errors.email ? (
+                      <p className="mt-1.5 text-[11px] font-semibold text-rose-600">{readiness.errors.email}</p>
+                    ) : (
+                      <p className="mt-1.5 text-[11px] text-slate-400">Use a real email. The part before @ cannot contain numbers.</p>
+                    )}
                   </div>
 
                   <div>
@@ -429,7 +428,11 @@ export default function SignUpPage() {
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-slate-400">Format: +25xxxxxxxxxx</p>
+                    {phone && readiness.errors.phone ? (
+                      <p className="mt-1.5 text-[11px] font-semibold text-rose-600">{readiness.errors.phone}</p>
+                    ) : (
+                      <p className="mt-1.5 text-[11px] text-slate-400">Format: +25xxxxxxxxxx</p>
+                    )}
                   </div>
                 </div>
 
@@ -451,7 +454,62 @@ export default function SignUpPage() {
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#12B8B0] text-slate-800"
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] text-slate-400">Must be exactly 16 numbers. Each National ID can be registered once.</p>
+                  {nationalId && readiness.errors.nationalId ? (
+                    <p className="mt-1.5 text-[11px] font-semibold text-rose-600">{readiness.errors.nationalId}</p>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] text-slate-400">Must be exactly 16 numbers. Each National ID can be registered once.</p>
+                  )}
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      National ID Document
+                    </label>
+                    <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                      Optional
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-slate-200 border border-slate-300 flex-shrink-0 flex items-center justify-center">
+                      {nationalIdImage ? (
+                        <img src={nationalIdImage} alt="National ID preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <IdCard className="w-7 h-7 text-slate-400" />
+                      )}
+                      {(isConvertingId || uploadingId) && (
+                        <div className="absolute inset-0 bg-[#0B2D5C]/70 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <input
+                        type="file"
+                        ref={idFileInputRef}
+                        onChange={handleIdImageSelect}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => idFileInputRef.current?.click()}
+                        className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#12B8B0] text-[#0B2D5C] font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-[#12B8B0]" />
+                        <span>{nationalIdImage ? "Change National ID photo" : "Upload National ID photo"}</span>
+                      </button>
+                      <p className="text-[11px] text-slate-400">
+                        Optional scan of the ID card. You can still create the account without it.
+                      </p>
+                    </div>
+                  </div>
+                  {idCloudUrl ? (
+                    <div className="p-2.5 rounded-xl bg-teal-50 border border-teal-200 text-[11px] text-teal-900 font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+                      <span>National ID document uploaded</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -521,6 +579,11 @@ export default function SignUpPage() {
                       )}
                     </button>
                   </div>
+                  {password && readiness.errors.password ? (
+                    <p className="mt-1.5 text-[11px] font-semibold text-rose-600">{readiness.errors.password}</p>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] text-slate-400">Minimum 8 characters.</p>
+                  )}
                   </div>
 
                   <div>
@@ -547,9 +610,9 @@ export default function SignUpPage() {
                         {showConfirmPassword ? <EyeOff className="w-4 h-4 text-slate-600" /> : <Eye className="w-4 h-4 text-slate-400" />}
                       </button>
                     </div>
-                    {confirmPassword && confirmPassword !== password && (
-                      <p className="mt-1 text-[11px] text-rose-600">Passwords do not match.</p>
-                    )}
+                    {confirmPassword && readiness.errors.confirmPassword ? (
+                      <p className="mt-1 text-[11px] font-semibold text-rose-600">{readiness.errors.confirmPassword}</p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -557,12 +620,13 @@ export default function SignUpPage() {
                 <div className="flex items-start gap-2 pt-2">
                   <input
                     type="checkbox"
-                    required
                     id="terms"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
                     className="mt-1 rounded text-[#12B8B0] focus:ring-[#12B8B0]"
                   />
                   <label htmlFor="terms" className="text-xs text-slate-600 leading-relaxed">
-                    I agree to FitMed's{" "}
+                    I agree to the FitMed{" "}
                     <Link href="/terms" className="text-[#12B8B0] underline font-semibold">
                       Terms of Service
                     </Link>{" "}
@@ -574,10 +638,27 @@ export default function SignUpPage() {
                   </label>
                 </div>
 
+                {(!readiness.ready || uploadingProfile || uploadingId) && (
+                  <div
+                    id="signup-blockers"
+                    role="status"
+                    className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950"
+                  >
+                    <p className="font-extrabold text-[#0B2D5C]">Create Applicant Account stays off until:</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      {(uploadingProfile || uploadingId) && <li>The photo finishes uploading.</li>}
+                      {readiness.missing.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={isSubmitting || uploadingProfile || !profileCloudUrl}
-                  className="w-full max-w-md mx-auto py-3 rounded-xl font-bold text-white btn-primary text-sm flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 disabled:opacity-75"
+                  disabled={!readiness.ready || isSubmitting || uploadingProfile || uploadingId}
+                  aria-describedby={!readiness.ready ? "signup-blockers" : undefined}
+                  className="w-full max-w-md mx-auto py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#12B8B0] text-white shadow-lg shadow-teal-500/20 hover:bg-[#0d9690] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>
